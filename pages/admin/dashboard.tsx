@@ -81,6 +81,7 @@ export default function AdminDashboard() {
         return {
           id: doc.id,
           ...data,
+          creatorId: data.creatorId as string,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
           updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
         };
@@ -88,7 +89,7 @@ export default function AdminDashboard() {
       
       // Fetch creator information for each submission
       const submissionsWithCreators = await Promise.all(
-        jobSubmissions.map(async (sub) => {
+        jobSubmissions.map(async (sub: any) => {
           try {
             const creatorDoc = await getDoc(doc(db, 'users', sub.creatorId));
             const creator = creatorDoc.exists() ? creatorDoc.data() : null;
