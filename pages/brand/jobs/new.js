@@ -1,7 +1,7 @@
 import { useState, useEffect, useState as useStateHook } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { collection, addDoc, serverTimestamp, query, getDocs, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
@@ -18,12 +18,99 @@ export default function NewJob() {
   const { user, appUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingReuse, setIsLoadingReuse] = useState(false);
 
   useEffect(() => {
     if (appUser && appUser.role !== 'brand') {
       router.push('/brand/dashboard');
     }
   }, [appUser, router]);
+
+  // Load existing job data if reuse parameter is present
+  useEffect(() => {
+    const loadReuseJob = async () => {
+      const reuseJobId = router.query.reuse;
+      if (!reuseJobId || typeof reuseJobId !== 'string' || !user) return;
+
+      setIsLoadingReuse(true);
+      try {
+        const jobDoc = await getDoc(doc(db, 'jobs', reuseJobId));
+        if (!jobDoc.exists()) {
+          toast.error('Campaign not found');
+          router.replace('/brand/jobs/new');
+          return;
+        }
+
+        const existingJob = jobDoc.data();
+        
+        // Check if user owns this job
+        if (existingJob.brandId !== user.uid) {
+          toast.error('You do not have permission to reuse this campaign');
+          router.replace('/brand/jobs/new');
+          return;
+        }
+
+        // Calculate deadline hours from deadlineAt
+        const deadlineAt = existingJob.deadlineAt?.toDate ? existingJob.deadlineAt.toDate() : new Date(existingJob.deadlineAt);
+        const now = new Date();
+        const hoursDiff = Math.max(24, Math.round((deadlineAt.getTime() - now.getTime()) / (1000 * 60 * 60)));
+
+        // Pre-fill form with existing job data (but clear title)
+        setJobData({
+          title: '', // Clear title so they can enter a new one
+          description: existingJob.description || '',
+          productDescription: existingJob.productDescription || '',
+          primaryThing: existingJob.primaryThing || '',
+          secondaryTags: existingJob.secondaryTags || [],
+          payoutType: existingJob.payoutType || 'fixed',
+          basePayout: existingJob.basePayout?.toString() || '',
+          followerRanges: existingJob.followerRanges && existingJob.followerRanges.length > 0 
+            ? existingJob.followerRanges 
+            : [{ min: 0, max: null, payout: 0 }],
+          bonusPool: existingJob.bonusPool?.toString() || '',
+          deadlineHours: hoursDiff,
+          visibility: existingJob.visibility || 'open',
+          targetTags: existingJob.targetTags || [],
+          squadIds: existingJob.squadIds || [],
+          trustScoreMin: existingJob.trustScoreMin?.toString() || '',
+          experienceRequirements: existingJob.experienceRequirements || [],
+          acceptedSubmissionsLimit: existingJob.acceptedSubmissionsLimit || 1,
+          productInVideoRequired: existingJob.productInVideoRequired || false,
+          reimbursementMode: existingJob.reimbursementMode || 'reimbursement',
+          reimbursementCap: existingJob.reimbursementCap?.toString() || '',
+          purchaseWindowHours: existingJob.purchaseWindowHours || 24,
+          deliverables: {
+            videos: existingJob.deliverables?.videos || 0,
+            photos: existingJob.deliverables?.photos || 0,
+            raw: existingJob.deliverables?.raw || false,
+            notes: existingJob.deliverables?.notes || '',
+          },
+          brief: existingJob.brief || {
+            hooks: [''],
+            angles: [''],
+            talkingPoints: [''],
+            do: [''],
+            dont: [''],
+            references: [''],
+          },
+          usageRightsTemplateId: existingJob.usageRightsTemplateId || '',
+          aiComplianceRequired: existingJob.aiComplianceRequired || false,
+          autoApproveWindowHours: existingJob.autoApproveWindowHours || 0,
+        });
+
+        toast.success('Campaign data loaded! Please enter a new title.');
+      } catch (error) {
+        console.error('Error loading campaign to reuse:', error);
+        toast.error('Failed to load campaign data');
+      } finally {
+        setIsLoadingReuse(false);
+      }
+    };
+
+    if (router.isReady && router.query.reuse) {
+      loadReuseJob();
+    }
+  }, [router.isReady, router.query.reuse, user]);
 
   const [jobData, setJobData] = useState({
     title: '',
@@ -61,6 +148,8 @@ export default function NewJob() {
       references: [''],
     },
     usageRightsTemplateId: '',
+    aiComplianceRequired: false,
+    autoApproveWindowHours: 0,
   });
 
   const updateJobData = (updates) => {
@@ -202,6 +291,8 @@ export default function NewJob() {
         },
         usageRightsTemplateId: jobData.usageRightsTemplateId || '',
         usageRightsSnapshot: {}, // Placeholder - should fetch from template
+        aiComplianceRequired: jobData.aiComplianceRequired || false,
+        autoApproveWindowHours: jobData.autoApproveWindowHours || 0,
         status: 'open',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -801,6 +892,16 @@ export default function NewJob() {
     return <LoadingSpinner fullScreen text="Loading..." />;
   }
 
+  if (isLoadingReuse) {
+    return (
+      <Layout>
+        <div className="max-w-4xl mx-auto py-8">
+          <LoadingSpinner text="Loading campaign data..." />
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="max-w-4xl mx-auto py-8">
@@ -808,7 +909,9 @@ export default function NewJob() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold">Create a New Campaign</h1>
-              <p className="text-muted-foreground">Find creators for your UGC needs</p>
+              <p className="text-muted-foreground">
+                {router.query.reuse ? 'Reusing an existing campaign - please enter a new title' : 'Find creators for your UGC needs'}
+              </p>
             </div>
             <Link href="/brand/dashboard">
               <Button variant="outline">Cancel</Button>

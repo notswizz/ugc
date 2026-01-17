@@ -198,8 +198,11 @@ export default function BrandJobDetail() {
                 </span>
               </div>
             </div>
-            <div className="text-right flex-shrink-0">
+            <div className="text-right flex-shrink-0 flex flex-col items-end gap-2">
               <div className="text-2xl font-bold text-orange-600">${job.basePayout || 0}</div>
+              <Link href={`/brand/jobs/new?reuse=${jobId}`}>
+                <Button size="sm" variant="outline">Reuse Campaign</Button>
+              </Link>
             </div>
           </div>
         </div>

@@ -138,29 +138,48 @@ export default function CreatorJobs() {
         createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt),
       }));
 
-      // Check submission counts for each job to filter out jobs that have reached their cap
+      // Check submission counts and creator submissions for each job
       const jobsWithSubmissionCounts = await Promise.all(
         jobsData.map(async (job) => {
           // Count approved submissions for this job
-          const submissionsQuery = query(
+          const approvedSubmissionsQuery = query(
             collection(db, 'submissions'),
             where('jobId', '==', job.id),
             where('status', '==', 'approved')
           );
-          const submissionsSnapshot = await getDocs(submissionsQuery);
-          const approvedCount = submissionsSnapshot.size;
+          const approvedSubmissionsSnapshot = await getDocs(approvedSubmissionsQuery);
+          const approvedCount = approvedSubmissionsSnapshot.size;
+          
+          // Check if creator already submitted to this job (any status)
+          const creatorSubmissionsQuery = query(
+            collection(db, 'submissions'),
+            where('jobId', '==', job.id),
+            where('creatorId', '==', user?.uid || '')
+          );
+          const creatorSubmissionsSnapshot = await getDocs(creatorSubmissionsQuery);
+          const hasCreatorSubmission = creatorSubmissionsSnapshot.size > 0;
           
           return {
             ...job,
             approvedSubmissionsCount: approvedCount,
+            hasCreatorSubmission,
           };
         })
       );
 
-      // Filter out jobs that have reached their submission cap
+      // Filter out jobs that have reached their submission cap or creator already submitted
       const fetchedJobs = jobsWithSubmissionCounts.filter(job => {
         const submissionCap = job.acceptedSubmissionsLimit || 1;
-        return job.approvedSubmissionsCount < submissionCap;
+        const isFull = job.approvedSubmissionsCount >= submissionCap;
+        if (isFull) {
+          console.log(`Job ${job.id} filtered: Campaign is full (${job.approvedSubmissionsCount}/${submissionCap})`);
+          return false;
+        }
+        if (job.hasCreatorSubmission) {
+          console.log(`Job ${job.id} filtered: Creator already submitted`);
+          return false;
+        }
+        return true;
       });
 
       // Filter by creator's Hard No's first (hard filter per plan)
@@ -248,6 +267,19 @@ export default function CreatorJobs() {
           const creatorTrustScore = creatorData?.trustScore ?? 20; // Default to 20 for new users
           if (creatorTrustScore < job.trustScoreMin) {
             console.log(`Job ${job.id} filtered: Trust score ${creatorTrustScore} < ${job.trustScoreMin}`);
+            return false;
+          }
+        }
+
+        // Experience Requirements filter
+        // If job has experience requirements, creator must have at least one matching experience
+        if (job.experienceRequirements && job.experienceRequirements.length > 0) {
+          const creatorExperience = creatorData?.experience || [];
+          const hasMatchingExperience = job.experienceRequirements.some(req => 
+            creatorExperience.includes(req)
+          );
+          if (!hasMatchingExperience) {
+            console.log(`Job ${job.id} filtered: Creator doesn't meet experience requirements (needs: ${job.experienceRequirements.join(', ')}, has: ${creatorExperience.join(', ')})`);
             return false;
           }
         }

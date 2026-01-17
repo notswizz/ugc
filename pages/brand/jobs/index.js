@@ -120,7 +120,10 @@ export default function BrandJobs() {
                         )}
                       </div>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex gap-2">
+                      <Link href={`/brand/jobs/new?reuse=${job.id}`}>
+                        <Button variant="outline" size="sm">Reuse</Button>
+                      </Link>
                       <Link href={`/brand/jobs/${job.id}`}>
                         <Button variant="outline" size="sm">View</Button>
                       </Link>
