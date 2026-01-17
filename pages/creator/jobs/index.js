@@ -250,6 +250,19 @@ export default function CreatorJobs() {
         // Default to 'open' if visibility not set
         const visibility = job.visibility || 'open';
         
+        // Check if job is already accepted by someone else (for single-creator jobs)
+        const isSingleCreatorJob = (job.acceptedSubmissionsLimit || 1) === 1;
+        if (isSingleCreatorJob && job.status === 'accepted' && job.acceptedBy && job.acceptedBy !== user?.uid) {
+          console.log(`Job ${job.id} filtered: Already accepted by another creator (single-creator job)`);
+          return false;
+        }
+        
+        // Filter out jobs that are closed/cancelled/expired
+        if (job.status === 'closed' || job.status === 'cancelled' || job.status === 'expired' || job.status === 'paid') {
+          console.log(`Job ${job.id} filtered: Status is ${job.status}`);
+          return false;
+        }
+        
         // Hard No filter - creators should never see jobs that violate their hard no's
         if (creatorHardNos.includes(job.primaryThing)) {
           console.log(`Job ${job.id} filtered: Hard No match (${job.primaryThing})`);
