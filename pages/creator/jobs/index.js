@@ -356,7 +356,41 @@ export default function CreatorJobs() {
         squadNames: squadNamesMap.get(job.id) || []
       }));
 
-      setJobs(jobsWithSquadNames);
+      // Fetch brand names for all jobs
+      const uniqueBrandIds = [...new Set(jobsWithSquadNames.map(job => job.brandId).filter(Boolean))];
+      const brandNamesMap = new Map();
+      
+      await Promise.all(
+        uniqueBrandIds.map(async (brandId) => {
+          try {
+            // First try brands collection
+            let brandDoc = await getDoc(doc(db, 'brands', brandId));
+            if (brandDoc.exists()) {
+              const brandData = brandDoc.data();
+              if (brandData.companyName) {
+                brandNamesMap.set(brandId, brandData.companyName);
+                return;
+              }
+            }
+            // Fallback to users collection
+            brandDoc = await getDoc(doc(db, 'users', brandId));
+            if (brandDoc.exists()) {
+              const brandData = brandDoc.data();
+              brandNamesMap.set(brandId, brandData.companyName || brandData.name || '');
+            }
+          } catch (error) {
+            console.error('Error fetching brand name:', error);
+          }
+        })
+      );
+
+      // Add brand names to jobs
+      const jobsWithBrandNames = jobsWithSquadNames.map(job => ({
+        ...job,
+        brandName: brandNamesMap.get(job.brandId) || ''
+      }));
+
+      setJobs(jobsWithBrandNames);
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
@@ -407,77 +441,85 @@ export default function CreatorJobs() {
         {loading ? (
           <LoadingSpinner text="Loading campaigns..." />
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-4">
             {jobs.map(job => (
-              <Card key={job.id} className="hover:shadow-md transition-shadow border-l-4 border-l-orange-500">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base font-bold line-clamp-2 mb-2">{job.title}</CardTitle>
-                      <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          {THINGS.find(t => t.id === job.primaryThing)?.icon && (
-                            <span className="text-base">{THINGS.find(t => t.id === job.primaryThing)?.icon}</span>
-                          )}
-                          <span>{THINGS.find(t => t.id === job.primaryThing)?.name || job.primaryThing}</span>
+              <Link key={job.id} href={`/creator/jobs/${job.id}`} className="block">
+                <Card className="hover:shadow-xl hover:border-green-300 transition-all duration-200 border-2 border-gray-200 overflow-hidden bg-white cursor-pointer">
+                  <div className="flex">
+                  {/* Left side: Content */}
+                  <div className="flex-1 p-6 flex flex-col">
+                    {/* Company Name - only show if exists */}
+                    {job.brandName && (
+                      <div className="mb-2">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          {job.brandName}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Title */}
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4 line-clamp-2 leading-tight">
+                      {job.title}
+                    </h3>
+
+                    {/* Category and Tags */}
+                    <div className="flex items-center gap-3 flex-wrap mb-5">
+                      <div className="flex items-center gap-2 text-sm">
+                        {THINGS.find(t => t.id === job.primaryThing)?.icon && (
+                          <span className="text-lg">{THINGS.find(t => t.id === job.primaryThing)?.icon}</span>
+                        )}
+                        <span className="font-semibold text-gray-700">{THINGS.find(t => t.id === job.primaryThing)?.name || job.primaryThing}</span>
+                      </div>
+                      {job.squadNames && job.squadNames.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          {job.squadNames.map((squadName, idx) => (
+                            <span
+                              key={idx}
+                              className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold flex items-center gap-1"
+                            >
+                              <span>👥</span>
+                              <span>{squadName}</span>
+                            </span>
+                          ))}
                         </div>
-                        {job.squadNames && job.squadNames.length > 0 && (
-                          <div className="flex items-center gap-1">
-                            {job.squadNames.map((squadName, idx) => (
-                              <span
-                                key={idx}
-                                className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium flex items-center gap-1"
-                              >
-                                <span>👥</span>
-                                <span>{squadName}</span>
-                              </span>
-                            ))}
-                          </div>
+                      )}
+                    </div>
+
+                    {/* Bottom row: Time and Deliverables */}
+                    <div className="flex items-center gap-4 mt-auto pt-4 border-t border-gray-100">
+                      <span className={`text-sm font-bold ${getUrgencyColor(job.deadlineAt)}`}>
+                        {formatTimeRemaining(job.deadlineAt)}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {job.deliverables.videos > 0 && (
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                            {job.deliverables.videos} video{job.deliverables.videos > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {job.deliverables.photos > 0 && (
+                          <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-xs font-medium">
+                            {job.deliverables.photos} photo{job.deliverables.photos > 1 ? 's' : ''}
+                          </span>
                         )}
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <span className="text-2xl font-bold text-green-600">${job.calculatedPayout || job.basePayout || 0}</span>
+                  </div>
+
+                  {/* Right side: Payout - Prominent Display */}
+                  <div className="w-40 bg-gradient-to-br from-green-400 via-green-500 to-emerald-600 flex flex-col items-center justify-center p-6 shadow-inner">
+                    <div className="text-center w-full">
+                      <div className="text-[10px] text-green-50 font-bold mb-1.5 uppercase tracking-widest opacity-90">Payout</div>
+                      <div className="text-4xl font-extrabold text-white leading-none drop-shadow-lg">
+                        ${(job.calculatedPayout || job.basePayout || 0).toLocaleString()}
+                      </div>
                       {job.payoutType === 'dynamic' && (
-                        <p className="text-[10px] text-gray-500 mt-0.5">Based on followers</p>
+                        <p className="text-[9px] text-green-50 mt-1.5 opacity-75">Based on followers</p>
                       )}
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-2">
-                  {/* Time remaining */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Time left:</span>
-                    <span className={`font-medium ${getUrgencyColor(job.deadlineAt)}`}>
-                      {formatTimeRemaining(job.deadlineAt)}
-                    </span>
-                  </div>
-
-                  {/* Deliverables */}
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-gray-500">Deliverables:</span>
-                    {job.deliverables.videos > 0 && (
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
-                        {job.deliverables.videos} video{job.deliverables.videos > 1 ? 's' : ''}
-                      </span>
-                    )}
-                    {job.deliverables.photos > 0 && (
-                      <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">
-                        {job.deliverables.photos} photo{job.deliverables.photos > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* View Button */}
-                  <div className="pt-1">
-                    <Link href={`/creator/jobs/${job.id}`}>
-                      <Button variant="outline" size="sm" className="w-full text-xs h-8">
-                        View
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
