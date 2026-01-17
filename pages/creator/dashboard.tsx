@@ -28,7 +28,7 @@ export default function CreatorDashboard() {
   const [newSquadName, setNewSquadName] = useState('');
   const [stats, setStats] = useState({
     totalEarnings: 0,
-    completedJobs: 0,
+    acceptedJobs: 0,
     pendingSubmissions: 0,
     activeJobs: 0,
   });
@@ -84,7 +84,9 @@ export default function CreatorDashboard() {
 
       // Calculate stats
       const totalEarnings = payments.reduce((sum: number, payment: any) => sum + (payment.creatorNet || 0), 0);
-      const completedJobs = payments.length; // Jobs that have been paid
+      const acceptedJobs = submissions.filter(
+        (sub: any) => sub.status === 'approved'
+      ).length; // Submissions that have been accepted/approved
       const pendingSubmissions = submissions.filter(
         (sub: any) => sub.status === 'submitted' || sub.status === 'needs_changes'
       ).length;
@@ -94,7 +96,7 @@ export default function CreatorDashboard() {
 
       setStats({
         totalEarnings,
-        completedJobs,
+        acceptedJobs,
         pendingSubmissions,
         activeJobs,
       });
@@ -102,7 +104,7 @@ export default function CreatorDashboard() {
       console.error('Error fetching stats:', error);
       setStats({
         totalEarnings: 0,
-        completedJobs: 0,
+        acceptedJobs: 0,
         pendingSubmissions: 0,
         activeJobs: 0,
       });
@@ -521,8 +523,8 @@ export default function CreatorDashboard() {
                     <p className="text-[10px] text-gray-600 mt-0.5">Earned</p>
                   </div>
                   <div className="bg-blue-50 rounded-lg p-2 text-center">
-                    <div className="text-lg font-bold text-blue-600">{stats.completedJobs}</div>
-                    <p className="text-[10px] text-gray-600 mt-0.5">Completed</p>
+                    <div className="text-lg font-bold text-blue-600">{stats.acceptedJobs}</div>
+                    <p className="text-[10px] text-gray-600 mt-0.5">Accepted</p>
                   </div>
                 </div>
               )}

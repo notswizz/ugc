@@ -31,7 +31,9 @@ export default function NewJob() {
     productDescription: '', // Specific product description for AI evaluation
     primaryThing: '',
     secondaryTags: [],
+    payoutType: 'fixed', // 'fixed' or 'dynamic'
     basePayout: '',
+    followerRanges: [{ min: 0, max: null, payout: 0 }], // Array of { min: number, max: number | null, payout: number }
     bonusPool: '',
     deadlineHours: 24,
     visibility: 'open',
@@ -77,6 +79,64 @@ export default function NewJob() {
       ...prev,
       brief: { ...prev.brief, ...updates }
     }));
+  };
+
+  const addFollowerRange = () => {
+    setJobData(prev => {
+      const ranges = prev.followerRanges || [];
+      const lastRange = ranges[ranges.length - 1];
+      // New range's min should be the previous range's max (or 0 if no previous range)
+      const newMin = lastRange?.max !== null && lastRange?.max !== undefined ? lastRange.max : 0;
+      return {
+        ...prev,
+        followerRanges: [...ranges, { min: newMin, max: null, payout: 0 }]
+      };
+    });
+  };
+
+  const updateFollowerRange = (index, updates) => {
+    setJobData(prev => {
+      const ranges = prev.followerRanges || [];
+      const updatedRanges = ranges.map((range, i) => {
+        if (i === index) {
+          return { ...range, ...updates };
+        }
+        // If previous range's max was updated, update this range's min
+        if (i === index + 1 && updates.max !== undefined) {
+          return { ...range, min: updates.max };
+        }
+        return range;
+      });
+      
+      return {
+        ...prev,
+        followerRanges: updatedRanges
+      };
+    });
+  };
+
+  const removeFollowerRange = (index) => {
+    setJobData(prev => {
+      const ranges = prev.followerRanges.filter((_, i) => i !== index);
+      // After removing, update min values to ensure they're linked properly
+      const updatedRanges = ranges.map((range, i) => {
+        if (i === 0) {
+          // First range can have any min
+          return range;
+        }
+        // Subsequent ranges: min should be previous range's max
+        const prevRange = ranges[i - 1];
+        return {
+          ...range,
+          min: prevRange?.max !== null && prevRange?.max !== undefined ? prevRange.max : range.min
+        };
+      });
+      
+      return {
+        ...prev,
+        followerRanges: updatedRanges
+      };
+    });
   };
 
   const toggleSecondaryTag = (tag) => {
@@ -126,7 +186,9 @@ export default function NewJob() {
         productDescription: jobData.productDescription || '', // Product description for AI evaluation
         primaryThing: jobData.primaryThing,
         secondaryTags: jobData.secondaryTags || [],
-        basePayout: parseFloat(jobData.basePayout) || 0,
+        payoutType: jobData.payoutType || 'fixed',
+        basePayout: jobData.payoutType === 'fixed' ? (parseFloat(jobData.basePayout) || 0) : 0,
+        followerRanges: jobData.payoutType === 'dynamic' ? (jobData.followerRanges || []) : undefined,
         deadlineAt: deadlineAt,
         visibility: jobData.visibility || 'open',
         targetTags: jobData.targetTags || [],
@@ -334,18 +396,141 @@ export default function NewJob() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Base Payout ($) *</label>
-              <Input
-                type="number"
-                placeholder="150"
-                value={jobData.basePayout}
-                onChange={(e) => updateJobData({ basePayout: e.target.value })}
-                required
-                min="1"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Fixed amount the creator will earn upon completion
-              </p>
+              <label className="block text-sm font-medium mb-2">Payout Type *</label>
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => updateJobData({ payoutType: 'fixed' })}
+                  className={`flex-1 px-4 py-2 rounded-lg border text-sm ${
+                    jobData.payoutType === 'fixed'
+                      ? 'bg-blue-50 border-blue-300 text-blue-800'
+                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Fixed Payout
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateJobData({ payoutType: 'dynamic' })}
+                  className={`flex-1 px-4 py-2 rounded-lg border text-sm ${
+                    jobData.payoutType === 'dynamic'
+                      ? 'bg-blue-50 border-blue-300 text-blue-800'
+                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Dynamic by Followers
+                </button>
+              </div>
+
+              {jobData.payoutType === 'fixed' ? (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Base Payout ($) *</label>
+                  <Input
+                    type="number"
+                    placeholder="150"
+                    value={jobData.basePayout}
+                    onChange={(e) => updateJobData({ basePayout: e.target.value })}
+                    required
+                    min="1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Fixed amount the creator will earn upon completion
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Follower Count Ranges & Payouts *</label>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Set different payouts based on creator follower counts. Ranges should not overlap.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    {jobData.followerRanges.map((range, index) => {
+                      const isLastRange = index === jobData.followerRanges.length - 1;
+                      const prevRange = index > 0 ? jobData.followerRanges[index - 1] : null;
+                      
+                      return (
+                        <div key={index} className="p-3 border rounded-lg bg-gray-50">
+                          <div className="flex items-end gap-2 mb-2">
+                            <div className="flex-1">
+                              <label className="text-xs text-gray-600 mb-1 block">Min Followers</label>
+                              <Input
+                                type="number"
+                                placeholder={prevRange?.max || "0"}
+                                value={range.min || ''}
+                                onChange={(e) => {
+                                  const newMin = parseInt(e.target.value) || 0;
+                                  updateFollowerRange(index, { min: newMin });
+                                }}
+                                min={prevRange?.max || 0}
+                                className="text-sm"
+                                disabled={prevRange !== null}
+                              />
+                              {prevRange && (
+                                <p className="text-[10px] text-gray-500 mt-0.5">Auto-set from previous range</p>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-xs text-gray-600 mb-1 block">Max Followers</label>
+                              <Input
+                                type="number"
+                                placeholder={isLastRange ? "Leave empty for ∞" : "1000"}
+                                value={range.max || ''}
+                                onChange={(e) => {
+                                  const newMax = e.target.value ? parseInt(e.target.value) : null;
+                                  updateFollowerRange(index, { max: newMax });
+                                }}
+                                min={range.min || 0}
+                                className="text-sm"
+                              />
+                              <p className="text-[10px] text-gray-500 mt-0.5">
+                                {isLastRange ? 'Leave empty for "and above"' : 'Sets min of next range'}
+                              </p>
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-xs text-gray-600 mb-1 block">Payout ($)</label>
+                              <Input
+                                type="number"
+                                placeholder="25"
+                                value={range.payout || ''}
+                                onChange={(e) => updateFollowerRange(index, { payout: parseFloat(e.target.value) || 0 })}
+                                min="0"
+                                step="0.01"
+                                className="text-sm"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFollowerRange(index)}
+                              className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-sm"
+                              disabled={jobData.followerRanges.length === 1}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {range.min} - {range.max === null ? '∞' : range.max} followers: ${range.payout || 0}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    <button
+                      type="button"
+                      onClick={addFollowerRange}
+                      className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
+                    >
+                      + Add Range
+                    </button>
+                  </div>
+                  
+                  {jobData.followerRanges.length === 0 && (
+                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                      Please add at least one follower range with payout.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>

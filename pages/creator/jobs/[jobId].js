@@ -11,6 +11,7 @@ import { THINGS } from '@/lib/things/constants';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
+import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
 
 export default function JobDetail() {
   const router = useRouter();
@@ -56,6 +57,23 @@ export default function JobDetail() {
         }
       }
 
+      // Fetch creator data to calculate payout for dynamic ranges
+      let creatorFollowingCount = 0;
+      if (user && jobData.payoutType === 'dynamic') {
+        try {
+          const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
+          if (creatorDoc.exists()) {
+            const creatorData = creatorDoc.data();
+            creatorFollowingCount = getCreatorFollowingCount(creatorData);
+          }
+        } catch (err) {
+          console.error('Error fetching creator data:', err);
+        }
+      }
+
+      // Calculate payout based on payout type
+      const calculatedPayout = calculatePayout(jobData, creatorFollowingCount);
+
       // Check approved submissions count to determine if job is still open
       const submissionsQuery = query(
         collection(db, 'submissions'),
@@ -78,7 +96,8 @@ export default function JobDetail() {
         createdAt: jobData.createdAt?.toDate ? jobData.createdAt.toDate() : new Date(jobData.createdAt),
         brandName,
         // Map to display format
-        payout: jobData.basePayout || 0,
+        payout: calculatedPayout || jobData.basePayout || 0,
+        calculatedPayout: calculatedPayout,
         tagsWanted: [jobData.primaryThing, ...(jobData.secondaryTags || [])],
         productType: THINGS.find(t => t.id === jobData.primaryThing)?.name || jobData.primaryThing,
       };
@@ -179,7 +198,10 @@ export default function JobDetail() {
               </div>
             </div>
             <div className="text-right flex-shrink-0">
-              <div className="text-2xl font-bold text-green-600">${job.basePayout || 0}</div>
+              <div className="text-2xl font-bold text-green-600">${job.payout || job.basePayout || 0}</div>
+              {job.payoutType === 'dynamic' && (
+                <p className="text-[10px] text-gray-500 mt-0.5">Based on followers</p>
+              )}
             </div>
           </div>
 

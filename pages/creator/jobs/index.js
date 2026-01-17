@@ -10,6 +10,7 @@ import { canAcceptJob } from '@/lib/trustScore/calculator';
 import { THINGS } from '@/lib/things/constants';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
+import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
 
 export default function CreatorJobs() {
   const { user, appUser } = useAuth();
@@ -214,6 +215,12 @@ export default function CreatorJobs() {
       
       console.log(`Campaigns: ${fetchedJobs.length} fetched, ${filteredJobs.length} visible after filtering`);
 
+      // Calculate payouts for sorting (temporary, will be recalculated later)
+      const creatorFollowingCount = getCreatorFollowingCount(creatorData);
+      filteredJobs.forEach(job => {
+        job.calculatedPayout = calculatePayout(job, creatorFollowingCount);
+      });
+
       // Sort by recommended (interest overlap + payout)
       filteredJobs.sort((a, b) => {
         const creatorInterests = creatorData?.interests || [];
@@ -222,10 +229,12 @@ export default function CreatorJobs() {
         const bOverlap = (b.primaryThing === creatorInterests.find(i => i === b.primaryThing) ? 2 : 0) +
                        (b.secondaryTags?.filter(tag => creatorInterests.includes(tag)).length || 0);
         if (aOverlap !== bOverlap) return bOverlap - aOverlap;
-        return b.basePayout - a.basePayout;
+        const aPayout = a.calculatedPayout || a.basePayout || 0;
+        const bPayout = b.calculatedPayout || b.basePayout || 0;
+        return bPayout - aPayout;
       });
 
-      // Add squad names to jobs
+      // Add squad names (payouts already calculated during sort)
       const jobsWithSquadNames = filteredJobs.map(job => ({
         ...job,
         squadNames: squadNamesMap.get(job.id) || []
@@ -312,7 +321,10 @@ export default function CreatorJobs() {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <span className="text-2xl font-bold text-green-600">${job.basePayout}</span>
+                      <span className="text-2xl font-bold text-green-600">${job.calculatedPayout || job.basePayout || 0}</span>
+                      {job.payoutType === 'dynamic' && (
+                        <p className="text-[10px] text-gray-500 mt-0.5">Based on followers</p>
+                      )}
                     </div>
                   </div>
                 </CardHeader>

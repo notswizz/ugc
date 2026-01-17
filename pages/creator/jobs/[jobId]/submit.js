@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { THINGS } from '@/lib/things/constants';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
+import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
 
 export default function SubmitJob() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function SubmitJob() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [calculatedPayout, setCalculatedPayout] = useState(0);
   
   const [submissionData, setSubmissionData] = useState({
     contentLink: '', // TikTok, YouTube, Instagram link
@@ -62,10 +64,29 @@ export default function SubmitJob() {
         return;
       }
 
+      // Calculate payout if dynamic
+      let payout = jobData.basePayout || 0;
+      if (jobData.payoutType === 'dynamic' && user) {
+        try {
+          const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
+          if (creatorDoc.exists()) {
+            const creatorData = creatorDoc.data();
+            const creatorFollowingCount = getCreatorFollowingCount(creatorData);
+            payout = calculatePayout(jobData, creatorFollowingCount);
+            setCalculatedPayout(payout);
+          }
+        } catch (err) {
+          console.error('Error calculating payout:', err);
+        }
+      } else {
+        setCalculatedPayout(payout);
+      }
+
       setJob({
         id: jobDoc.id,
         ...jobData,
         deadlineAt: jobData.deadlineAt?.toDate ? jobData.deadlineAt.toDate() : new Date(jobData.deadlineAt),
+        calculatedPayout: payout,
       });
     } catch (error) {
       console.error('Error fetching job:', error);
@@ -625,7 +646,10 @@ export default function SubmitJob() {
             <CardContent className="pt-6">
               <div className="flex flex-col gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600 mb-1">${job.basePayout || 0}</div>
+                  <div className="text-2xl font-bold text-orange-600 mb-1">${job.calculatedPayout || job.basePayout || 0}</div>
+                  {job.payoutType === 'dynamic' && (
+                    <p className="text-[10px] text-gray-500 mb-1">Based on your followers</p>
+                  )}
                   <div className="text-sm text-muted-foreground">You'll be paid after approval</div>
                 </div>
                 <Button
@@ -634,7 +658,7 @@ export default function SubmitJob() {
                   className="w-full bg-orange-600 hover:bg-orange-700"
                   size="lg"
                 >
-                  {submitting ? 'Submitting...' : 'Submit Content'}
+                  {submitting ? 'Submitting...' : `Submit Content - $${job.calculatedPayout || job.basePayout || 0}`}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
                   Your submission will be reviewed by AI and the brand before approval

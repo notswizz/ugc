@@ -41,7 +41,35 @@ export async function processPayment(data: PaymentData): Promise<void> {
   }
 
   // Calculate payment amounts
-  const basePayout = parseFloat(job.basePayout) || 0;
+  // If job has dynamic follower ranges, calculate payout based on creator's follower count
+  let basePayout = parseFloat(job.basePayout) || 0;
+  
+  if (job.payoutType === 'dynamic' && job.followerRanges && job.followerRanges.length > 0) {
+    // Get creator data to calculate payout based on follower count
+    const creatorDoc = await adminDb.collection('creators').doc(creatorId).get();
+    if (creatorDoc.exists) {
+      const creator = creatorDoc.data();
+      const followingCount = (creator?.followingCount?.tiktok || 0) + 
+                            (creator?.followingCount?.instagram || 0) + 
+                            (creator?.followingCount?.youtube || 0) + 
+                            (creator?.followingCount?.linkedin || 0);
+      
+      // Find matching range
+      const sortedRanges = [...job.followerRanges].sort((a: any, b: any) => (a.min || 0) - (b.min || 0));
+      for (const range of sortedRanges) {
+        const min = range.min || 0;
+        const max = range.max;
+        
+        if (followingCount >= min) {
+          if (max === null || max === undefined || followingCount <= max) {
+            basePayout = range.payout || 0;
+            break;
+          }
+        }
+      }
+    }
+  }
+  
   const platformFeeRate = 0.10; // 10% platform fee (ONLY on basePayout, not on reimbursement)
   const platformFee = basePayout * platformFeeRate;
   
