@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Menu, Home, History, Briefcase, Plus, Users, UsersRound } from 'lucide-react';
+import { LogOut, Menu, Home, History, Briefcase, Plus, Users, UsersRound, Shield } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -44,6 +44,18 @@ export default function Layout({ children }: LayoutProps) {
               </Link>
 
               <div className="flex items-center gap-2">
+                {appUser?.email === '7jackdsmith@gmail.com' && (
+                  <Link href="/admin/dashboard">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-1.5 p-2 h-9"
+                    >
+                      <Shield className="w-4 h-4" />
+                      <span className="text-xs">Admin</span>
+                    </Button>
+                  </Link>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

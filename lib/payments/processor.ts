@@ -70,7 +70,14 @@ export async function processPayment(data: PaymentData): Promise<void> {
     }
   }
   
-  const platformFeeRate = 0.10; // 10% platform fee (ONLY on basePayout, not on reimbursement)
+  // Get platform fee percentage from environment variable (defaults to 15% if not set)
+  // Support both PLATFORM_FEE_PERCENTAGE and platform_fee_percentage
+  const platformFeePercentage = parseFloat(
+    process.env.PLATFORM_FEE_PERCENTAGE || 
+    process.env.platform_fee_percentage || 
+    '15'
+  );
+  const platformFeeRate = platformFeePercentage / 100; // Convert percentage to decimal
   const platformFee = basePayout * platformFeeRate;
   
   // Reimbursement amount (separate from basePayout, no platform fee on this)

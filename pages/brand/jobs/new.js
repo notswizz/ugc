@@ -188,7 +188,6 @@ export default function NewJob() {
         secondaryTags: jobData.secondaryTags || [],
         payoutType: jobData.payoutType || 'fixed',
         basePayout: jobData.payoutType === 'fixed' ? (parseFloat(jobData.basePayout) || 0) : 0,
-        followerRanges: jobData.payoutType === 'dynamic' ? (jobData.followerRanges || []) : undefined,
         deadlineAt: deadlineAt,
         visibility: jobData.visibility || 'open',
         targetTags: jobData.targetTags || [],
@@ -207,6 +206,11 @@ export default function NewJob() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
+
+      // Only add followerRanges if payoutType is dynamic (Firestore doesn't allow undefined)
+      if (jobData.payoutType === 'dynamic' && jobData.followerRanges && jobData.followerRanges.length > 0) {
+        jobDoc.followerRanges = jobData.followerRanges;
+      }
 
       // Add squad IDs if visibility is squad
       if (jobData.visibility === 'squad' && jobData.squadIds && jobData.squadIds.length > 0) {

@@ -64,21 +64,55 @@ export default async function handler(
     const previousStatus = submission.status;
     const previousEvaluation = submission.aiEvaluation;
 
+    // Debug: Log submission structure
+    console.log('Submission data:', {
+      hasFiles: !!submission.files,
+      filesKeys: submission.files ? Object.keys(submission.files) : [],
+      videos: submission.files?.videos,
+      raw: submission.files?.raw,
+      contentLink: submission.contentLink,
+    });
+
     // Get video URLs from submission - ONLY accept uploaded files, not links
-    const videoFiles = submission.files?.videos || submission.files?.raw?.filter((url: string) => 
-      url.match(/\.(mp4|mov|avi|webm|mkv)$/i)
-    ) || [];
+    // Check files.videos first, then files.raw (filtering for video extensions)
+    let videoFiles: string[] = [];
+    
+    if (submission.files?.videos && Array.isArray(submission.files.videos) && submission.files.videos.length > 0) {
+      videoFiles = submission.files.videos;
+    } else if (submission.files?.raw && Array.isArray(submission.files.raw)) {
+      videoFiles = submission.files.raw.filter((url: string) => 
+        url && typeof url === 'string' && url.match(/\.(mp4|mov|avi|webm|mkv)$/i)
+      );
+    }
+
+    console.log('Found video files:', videoFiles);
 
     if (videoFiles.length === 0) {
+      console.error('No video files found. Submission structure:', JSON.stringify(submission, null, 2));
       return res.status(400).json({ 
         error: 'No video files found in submission',
-        message: 'Please upload video files. Content links are not supported for AI evaluation.'
+        message: 'Please upload video files. Content links are not supported for AI evaluation.',
+        debug: {
+          hasFiles: !!submission.files,
+          filesStructure: submission.files ? Object.keys(submission.files) : [],
+          videosCount: submission.files?.videos?.length || 0,
+          rawCount: submission.files?.raw?.length || 0,
+        }
       });
     }
 
     // Use the first video file for evaluation
     const videoUrl = videoFiles[0];
     console.log('Using uploaded video file for evaluation:', videoUrl);
+    
+    // Validate video URL is accessible
+    if (!videoUrl || typeof videoUrl !== 'string' || !videoUrl.startsWith('http')) {
+      console.error('Invalid video URL:', videoUrl);
+      return res.status(400).json({ 
+        error: 'Invalid video URL',
+        message: 'The video URL is not valid or accessible.'
+      });
+    }
 
     // Evaluate the video using the evaluation service
     const evaluation = await evaluateSubmission({
