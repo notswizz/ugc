@@ -178,16 +178,22 @@ export default function AdminDashboard() {
       // Fetch all payments
       const paymentsQuery = query(collection(db, 'payments'), orderBy('createdAt', 'desc'));
       const paymentsSnapshot = await getDocs(paymentsQuery);
-      const paymentsData = paymentsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt),
-        transferredAt: doc.data().transferredAt?.toDate ? doc.data().transferredAt?.toDate() : null,
-      }));
+      const paymentsData = paymentsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          platformFee: (data.platformFee || 0) as number,
+          basePayout: (data.basePayout || 0) as number,
+          creatorNet: (data.creatorNet || 0) as number,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+          transferredAt: data.transferredAt?.toDate ? data.transferredAt.toDate() : null,
+        };
+      });
       setPayments(paymentsData);
 
       // Calculate stats
-      const totalPlatformFees = paymentsData.reduce((sum, p) => sum + (p.platformFee || 0), 0);
+      const totalPlatformFees = paymentsData.reduce((sum, p: any) => sum + (p.platformFee || 0), 0);
       setStats({
         totalJobs: jobsData.length,
         totalSubmissions: submissionsData.length,
