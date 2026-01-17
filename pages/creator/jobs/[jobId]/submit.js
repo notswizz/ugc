@@ -278,7 +278,16 @@ export default function SubmitJob() {
   };
 
   const handleSubmit = async () => {
-    if (!job || !user || submitting) return;
+    if (!job || !user) {
+      console.error('Cannot submit: missing job or user', { hasJob: !!job, hasUser: !!user });
+      toast.error('Missing required information. Please refresh the page.');
+      return;
+    }
+    
+    if (submitting) {
+      console.log('Already submitting, ignoring duplicate click');
+      return;
+    }
 
     // Validation - check against job requirements
     // If job requires videos, they must be uploaded (content links don't work for AI evaluation)
@@ -322,20 +331,35 @@ export default function SubmitJob() {
       return;
     }
 
+    // Check if uploads are still in progress
+    if (isUploading) {
+      toast.error('Please wait for all files to finish uploading');
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Create submission document
       // Only trigger AI evaluation if video files are uploaded (not just content links)
       const hasVideoFiles = submissionData.videos.length > 0 || submissionData.rawVideos.length > 0;
       
+      console.log('Submitting with data:', {
+        hasVideos: submissionData.videos.length > 0,
+        hasRawVideos: submissionData.rawVideos.length > 0,
+        hasPhotos: submissionData.photos.length > 0,
+        hasRawPhotos: submissionData.rawPhotos.length > 0,
+        hasContentLink: !!submissionData.contentLink,
+        hasVideoFiles,
+      });
+      
       const submissionDoc = {
         jobId: job.id,
         creatorId: user.uid,
         version: 1,
         files: {
-          videos: submissionData.videos.length > 0 ? submissionData.videos : submissionData.rawVideos,
-          photos: submissionData.photos.length > 0 ? submissionData.photos : submissionData.rawPhotos,
-          raw: [...submissionData.rawVideos, ...submissionData.rawPhotos], // All raw files
+          videos: submissionData.videos || [], // Only final video files
+          photos: submissionData.photos || [], // Only final photo files
+          raw: [...(submissionData.rawVideos || []), ...(submissionData.rawPhotos || [])], // All raw files
         },
         contentLink: submissionData.contentLink || null,
         status: 'submitted',
@@ -360,8 +384,10 @@ export default function SubmitJob() {
         }
       }
 
+      console.log('Creating submission document:', submissionDoc);
       const submissionRef = await addDoc(collection(db, 'submissions'), submissionDoc);
       const submissionId = submissionRef.id;
+      console.log('Submission created with ID:', submissionId);
 
       // Don't change job status - keep it 'open' until submission cap is reached
       // The job will remain available for other creators to submit until it hits the cap
@@ -392,7 +418,12 @@ export default function SubmitJob() {
       
     } catch (error) {
       console.error('Error submitting:', error);
-      toast.error('Failed to submit. Please try again.');
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
+      toast.error(`Failed to submit: ${error.message || 'Unknown error. Please try again.'}`);
     } finally {
       setSubmitting(false);
     }

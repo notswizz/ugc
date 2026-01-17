@@ -75,17 +75,56 @@ export default function JobDetail() {
       const calculatedPayout = calculatePayout(jobData, creatorFollowingCount);
 
       // Check approved submissions count to determine if job is still open
-      const submissionsQuery = query(
+      const approvedSubmissionsQuery = query(
         collection(db, 'submissions'),
         where('jobId', '==', jobId),
         where('status', '==', 'approved')
       );
-      const submissionsSnapshot = await getDocs(submissionsQuery);
-      const approvedSubmissionsCount = submissionsSnapshot.size;
+      const approvedSubmissionsSnapshot = await getDocs(approvedSubmissionsQuery);
+      const approvedSubmissionsCount = approvedSubmissionsSnapshot.size;
       const acceptedSubmissionsLimit = jobData.acceptedSubmissionsLimit || 1;
       
+      // Check if creator already submitted to this job (any status)
+      let hasCreatorSubmission = false;
+      if (user) {
+        const creatorSubmissionsQuery = query(
+          collection(db, 'submissions'),
+          where('jobId', '==', jobId),
+          where('creatorId', '==', user.uid)
+        );
+        const creatorSubmissionsSnapshot = await getDocs(creatorSubmissionsQuery);
+        hasCreatorSubmission = creatorSubmissionsSnapshot.size > 0;
+      }
+      
       // Job is considered "open" if it hasn't reached the submission limit
-      const isOpen = (jobData.status === 'open' || !jobData.status) && approvedSubmissionsCount < acceptedSubmissionsLimit;
+      // For single-creator jobs (limit = 1), check if already accepted by someone else
+      // For multi-creator jobs, allow acceptance as long as approved submissions < limit
+      const isSingleCreatorJob = acceptedSubmissionsLimit === 1;
+      const isAlreadyAccepted = isSingleCreatorJob && 
+                                jobData.status === 'accepted' && 
+                                jobData.acceptedBy && 
+                                jobData.acceptedBy !== user?.uid;
+      
+      // Job is open if:
+      // 1. Original status is 'open' or undefined (new jobs)
+      // 2. Hasn't reached submission limit
+      // 3. Not already accepted by someone else (only for single-creator jobs)
+      const isOpen = (jobData.status === 'open' || !jobData.status || jobData.status === 'accepted') && 
+                     approvedSubmissionsCount < acceptedSubmissionsLimit && 
+                     !isAlreadyAccepted;
+
+      console.log('Job status check:', {
+        jobId,
+        originalStatus: jobData.status,
+        approvedCount: approvedSubmissionsCount,
+        limit: acceptedSubmissionsLimit,
+        isSingleCreatorJob,
+        isAlreadyAccepted,
+        isOpen,
+        hasCreatorSubmission,
+        acceptedBy: jobData.acceptedBy,
+        currentUser: user?.uid,
+      });
 
       // Convert Firestore Timestamps to Dates
       const job = {
@@ -100,6 +139,9 @@ export default function JobDetail() {
         calculatedPayout: calculatedPayout,
         tagsWanted: [jobData.primaryThing, ...(jobData.secondaryTags || [])],
         productType: THINGS.find(t => t.id === jobData.primaryThing)?.name || jobData.primaryThing,
+        hasCreatorSubmission, // Track if creator already submitted
+        approvedSubmissionsCount, // Track approved count
+        acceptedSubmissionsLimit, // Track limit
       };
 
       setJob(job);
@@ -315,19 +357,37 @@ export default function JobDetail() {
 
         {/* Accept Button - Above Bottom Nav */}
         <div className="fixed bottom-[64px] left-0 right-0 max-w-[428px] mx-auto bg-white border-t border-gray-200 shadow-lg p-4 z-40">
-          <Button
-            onClick={handleAcceptJob}
-            disabled={accepting || job.status !== 'open'}
-            className="w-full bg-orange-600 hover:bg-orange-700 h-12 text-base font-medium"
-          >
-            {accepting ? 'Accepting Campaign...' : 'Accept Campaign'}
-          </Button>
-          {job.status === 'accepted' && job.acceptedBy === user?.uid && (
-            <Link href={`/creator/jobs/${job.id}/submit`} className="block mt-2">
-              <Button variant="outline" className="w-full h-12 text-base">
+          {job.hasCreatorSubmission ? (
+            <Link href={`/creator/jobs/${job.id}/submit`} className="block">
+              <Button className="w-full bg-orange-600 hover:bg-orange-700 h-12 text-base font-medium">
+                View Submission
+              </Button>
+            </Link>
+          ) : job.status === 'accepted' && job.acceptedBy === user?.uid ? (
+            <Link href={`/creator/jobs/${job.id}/submit`} className="block">
+              <Button className="w-full bg-orange-600 hover:bg-orange-700 h-12 text-base font-medium">
                 Go to Submission
               </Button>
             </Link>
+          ) : job.status !== 'open' ? (
+            <Button
+              disabled
+              className="w-full bg-gray-400 cursor-not-allowed h-12 text-base font-medium"
+            >
+              {job.approvedSubmissionsCount >= job.acceptedSubmissionsLimit 
+                ? 'Campaign Full' 
+                : job.status === 'accepted' && job.acceptedBy && job.acceptedBy !== user?.uid && job.acceptedSubmissionsLimit === 1
+                  ? 'Already Accepted by Another Creator'
+                  : 'Campaign Not Available'}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleAcceptJob}
+              disabled={accepting}
+              className="w-full bg-orange-600 hover:bg-orange-700 h-12 text-base font-medium disabled:opacity-50"
+            >
+              {accepting ? 'Accepting Campaign...' : 'Accept Campaign'}
+            </Button>
           )}
         </div>
       </div>
