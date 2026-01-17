@@ -33,19 +33,21 @@ export default function CreatorJobs() {
         setCreatorData(creatorDoc.data());
       } else {
         // If creator profile doesn't exist yet, use empty defaults
+        // Give new users a minimum trust score so they can see campaigns without trustScoreMin requirements
+        // This matches the initial trust score calculation from onboarding (20 base + socials)
         setCreatorData({
           hardNos: [],
           interests: [],
-          trustScore: 0,
+          trustScore: 20, // Minimum trust score for new users (matches onboarding initial score)
         });
       }
     } catch (error) {
       console.error('Error fetching creator data:', error);
-      // Use empty defaults on error
+      // Use empty defaults on error with minimum trust score
       setCreatorData({
         hardNos: [],
         interests: [],
-        trustScore: 0,
+        trustScore: 20, // Minimum trust score so users can see open campaigns
       });
     }
   };
@@ -183,8 +185,10 @@ export default function CreatorJobs() {
         }
         
         // Trust Score gating
-        if (job.trustScoreMin && creatorData) {
-          const creatorTrustScore = creatorData.trustScore || 0;
+        // Only filter if job has a trustScoreMin requirement AND creator's score is below it
+        // If creatorData is null or trustScore is undefined, use minimum score (20) to allow seeing open campaigns
+        if (job.trustScoreMin) {
+          const creatorTrustScore = creatorData?.trustScore ?? 20; // Default to 20 for new users
           if (creatorTrustScore < job.trustScoreMin) {
             return false;
           }
