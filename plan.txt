@@ -1,0 +1,394 @@
+UGC ON-DEMAND JOB PLATFORM — PRODUCT PLAN
+
+1. Core concept (high level)
+
+This product is a DoorDash-style on-demand marketplace for UGC creation.
+	•	Brands post fixed-price UGC Jobs
+	•	Creators browse a feed, see payout + urgency, and tap Accept
+	•	First valid completion wins (when enabled)
+	•	Quality is enforced by Trust Score + AI evaluation
+	•	Payments are automatic, fast, and transparent
+
+No applications.
+No negotiations.
+No waiting.
+
+⸻
+
+2. Mental model
+	•	Brands = job posters
+	•	Creators = dashers / workers
+	•	Jobs = gigs with a fixed payout, deadline, and requirements
+	•	Squads = tag-based creator groups that brands can target
+	•	Recruiters (Squad Leads) = curators who assemble squads and earn a cut
+	•	AI = compliance + quality judge (not taste dictator)
+
+⸻
+
+3. Job types (all jobs look the same)
+
+Every job uses the same layout.
+The only thing that changes is the visibility badge.
+
+Visibility types
+	•	Open – any creator who meets requirements can accept
+	•	Squad – only creators in eligible squads (via tags)
+	•	Invite – only invited creators can accept
+
+Badges must be visually obvious and consistent.
+
+⸻
+
+4. “Things”, not brands (core abstraction)
+
+The system is built around things / categories, not brand loyalty.
+
+Examples:
+	•	Gambling
+	•	NFL
+	•	College football
+	•	Southern cooking
+	•	Mom life
+	•	Fitness
+	•	Streetwear
+	•	Outdoor gear
+	•	Mobile apps
+
+Creators opt into things, not brands.
+
+This improves:
+	•	Matching
+	•	Trust
+	•	AI learning
+	•	Legal safety
+	•	Scalability
+
+⸻
+
+5. Creator profile model
+
+Each creator has three key tag groups:
+
+Interests (what I like)
+
+Used to boost feed ranking.
+	•	e.g. Gambling, NFL, Cooking
+
+Experience (what I’m good at)
+
+Used to qualify creators.
+	•	Paid ads experience
+	•	On-camera
+	•	Voiceover
+	•	Product demos
+	•	POV filming
+
+Hard No’s (what I won’t promote)
+
+Used as hard filters.
+	•	Gambling
+	•	Alcohol
+	•	Politics
+	•	Supplements
+
+Creators should never see jobs that violate their hard no’s.
+
+⸻
+
+6. Trust Score (anti-spam backbone)
+
+Every creator has a Trust Score (0–100).
+
+Used to:
+	•	Gate access to jobs
+	•	Rank creators in feeds
+	•	Enable reimbursements and higher payouts
+
+Trust Score inputs
+	•	Email + phone verified
+	•	Stripe Connect onboarded
+	•	Connected socials (TikTok, IG, YouTube, LinkedIn optional)
+	•	Platform history:
+	•	jobs completed
+	•	on-time rate
+	•	dispute rate
+	•	refund rate
+	•	Account age
+
+Low-trust creators cannot:
+	•	Accept reimbursement jobs
+	•	Accept high-payout jobs
+	•	Join high-quality squads
+
+⸻
+
+7. Squads (tag-based curation layer)
+
+A Squad is a curated group of creators built around things + style.
+
+Examples:
+	•	Gambling TikTok Squad
+	•	Southern Living Moms
+	•	College Football Fans
+	•	NYC Streetwear POV
+
+Key rules
+	•	Squads are defined by tags, not brands
+	•	Squads are managed by Recruiters (Squad Leads)
+	•	Squads have performance stats (completion rate, avg AI score)
+	•	Brands target tags, and matching squads become eligible
+
+⸻
+
+8. Recruiters / Squad Leads
+
+Recruiters:
+	•	Build and manage squads
+	•	Invite/remove creators
+	•	Maintain quality
+	•	Help brands fill jobs faster
+
+They do not:
+	•	Control payouts
+	•	Approve content
+	•	Override AI or brand decisions
+
+Recruiter incentives
+	•	Earn a % cut from the brand side on completed jobs
+	•	Only paid when jobs are successfully completed
+	•	Rated by brands based on outcomes
+
+Bad recruiters lose visibility automatically.
+
+⸻
+
+9. Job creation (brand flow)
+
+When creating a job, brands define:
+
+Required
+	•	Title
+	•	Primary thing/category (e.g. Gambling)
+	•	Secondary tags
+	•	Deliverables (video/photo/raw)
+	•	Base payout
+	•	Deadline
+
+Optional
+	•	Visibility type: Open / Squad / Invite
+	•	Target tags (for squads)
+	•	Trust Score minimum
+	•	Experience requirements
+	•	Competition mode (see below)
+
+⸻
+
+10. Competition model (urgency engine)
+
+Jobs may enable competition mode:
+
+standard
+	•	First accept wins
+	•	Single creator works the job
+
+first_to_complete
+	•	Multiple eligible creators may attempt
+	•	Only the first approved submission is paid
+	•	Once paid, all other attempts are closed
+
+This drives urgency but must be:
+	•	Clearly labeled
+	•	Fairly enforced
+	•	Locked at payout time
+
+⸻
+
+11. Product in video requirement (real-world constraint)
+
+Some jobs require the physical product to appear in the video.
+
+Two supported modes
+
+A. Reimbursement (MVP default)
+	•	Job defines:
+	•	reimbursement cap
+	•	purchase window (e.g. 24h)
+	•	Creator buys product
+	•	Creator uploads:
+	•	receipt
+	•	product photo
+	•	OCR + sanity checks run
+	•	Reimbursement paid with payout
+
+Rules:
+	•	Reimbursement is capped
+	•	Reimbursement is fee-free
+	•	Only allowed for trusted creators
+
+B. Shipping (invite-heavy)
+	•	Brand ships product directly
+	•	Deadline starts after delivery
+	•	Used for higher-value items
+
+⸻
+
+12. Payments & escrow
+
+Payment model
+	•	Brand pays upfront via Stripe Checkout
+	•	Funds are captured immediately
+	•	Platform tracks balances internally
+	•	Creator is paid only after approval
+
+Fee rules
+	•	Platform fee applies to base payout
+	•	Reimbursements are fee-free
+	•	Bonuses are fee-free (configurable later)
+	•	Recruiter cut (if any) is paid from brand side
+
+⸻
+
+13. AI evaluation (critical)
+
+AI is split into two layers.
+
+Layer 1: Compliance (binary)
+
+Checks:
+	•	Product visible
+	•	Required mentions present
+	•	Duration correct
+	•	Audio clarity
+	•	No prohibited content
+
+If compliance fails:
+	•	Creator can resubmit (within deadline)
+	•	Base pay not locked yet
+
+If compliance passes:
+	•	Base pay is guaranteed
+
+⸻
+
+Layer 2: Quality score (0–100)
+
+AI scores:
+	•	Hook strength
+	•	Lighting/framing
+	•	Product clarity
+	•	Energy/authenticity
+	•	Editing pace
+
+Creators see:
+	•	Score
+	•	Breakdown
+	•	Improvement tips
+
+⸻
+
+14. Bonuses & ranking
+
+Jobs may include a bonus pool.
+
+Bonus logic
+	•	Bonus thresholds based on AI score
+	•	OR top-ranked submissions (brand-funded)
+	•	Bonuses paid after approval window
+
+Example:
+	•	80–89 → +$25
+	•	90+ → +$50
+
+Bonuses are optional but powerful.
+
+⸻
+
+15. Creator job flow
+	1.	See job in feed (boosted by interests)
+	2.	Check payout, deadline, badge
+	3.	Accept job
+	4.	(If required) acquire product
+	5.	Upload submission
+	6.	AI evaluates
+	7.	Brand approves (or auto-approve window)
+	8.	Creator paid
+	9.	Rating prompt
+
+Fast. Predictable. Addictive.
+
+⸻
+
+16. Brand review rules
+	•	Brands can approve or request changes
+	•	Change requests are limited (e.g. max 2)
+	•	Optional auto-approve if brand is inactive
+	•	Brands cannot change payout after acceptance
+
+⸻
+
+17. Ratings & reputation
+
+Creators rated on:
+	•	On-time delivery
+	•	Compliance
+	•	Quality
+
+Recruiters rated on:
+	•	Job success rate
+	•	Squad quality
+	•	Brand satisfaction
+
+Ratings affect:
+	•	Feed ranking
+	•	Job eligibility
+	•	Earnings potential
+
+⸻
+
+18. Admin control
+
+Admins can:
+	•	Enable recruiters
+	•	Resolve disputes
+	•	Override payouts (rare)
+	•	Adjust platform fees
+	•	Suspend bad actors
+
+All money movement happens via backend functions only.
+
+Rules:
+	•	State transitions are Functions-only
+	•	UI can never mutate state directly
+	•	First paid submission locks job permanently
+
+⸻
+
+20. Non-goals (explicit)
+
+This product does NOT:
+	•	Negotiate pricing
+	•	Allow open-ended revisions
+	•	Let recruiters control payouts
+	•	Optimize for influencer follower count alone
+
+It optimizes for:
+	•	Speed
+	•	Trust
+	•	Quality
+	•	Completion
+
+⸻
+
+21. MVP priorities
+
+Must ship with:
+	•	Open jobs
+	•	Trust Score
+	•	AI compliance
+	•	Reimbursement
+	•	Squad visibility (even if admin-only at first)
+
+Can come later:
+	•	Advanced analytics
+	•	Real ad performance data
+	•	Subscription tiers

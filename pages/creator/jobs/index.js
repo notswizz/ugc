@@ -1,0 +1,328 @@
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { collection, query, where, orderBy, getDocs, getDoc, doc, limit, Timestamp } from 'firebase/firestore';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { db } from '@/lib/firebase/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import VisibilityBadge from '@/components/jobs/VisibilityBadge';
+import { canAcceptJob } from '@/lib/trustScore/calculator';
+import { THINGS } from '@/lib/things/constants';
+import Layout from '@/components/layout/Layout';
+import LoadingSpinner from '@/components/ui/loading-spinner';
+
+export default function CreatorJobs() {
+  const { user, appUser } = useAuth();
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchJobs();
+    }
+  }, [user]);
+
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch jobs from Firestore
+      let q = query(
+        collection(db, 'jobs'),
+        where('status', '==', 'open'),
+        orderBy('createdAt', 'desc'),
+        limit(100)
+      );
+
+      const querySnapshot = await getDocs(q);
+      
+      // Fetch submissions for all jobs to check submission caps
+      const jobsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        deadlineAt: doc.data().deadlineAt?.toDate ? doc.data().deadlineAt.toDate() : new Date(doc.data().deadlineAt),
+        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt),
+      }));
+
+      // Check submission counts for each job to filter out jobs that have reached their cap
+      const jobsWithSubmissionCounts = await Promise.all(
+        jobsData.map(async (job) => {
+          // Count approved submissions for this job
+          const submissionsQuery = query(
+            collection(db, 'submissions'),
+            where('jobId', '==', job.id),
+            where('status', '==', 'approved')
+          );
+          const submissionsSnapshot = await getDocs(submissionsQuery);
+          const approvedCount = submissionsSnapshot.size;
+          
+          return {
+            ...job,
+            approvedSubmissionsCount: approvedCount,
+          };
+        })
+      );
+
+      // Filter out jobs that have reached their submission cap
+      const fetchedJobs = jobsWithSubmissionCounts.filter(job => {
+        const submissionCap = job.acceptedSubmissionsLimit || 1;
+        return job.approvedSubmissionsCount < submissionCap;
+      });
+
+      // Filter by creator's Hard No's first (hard filter per plan)
+      const creatorHardNos = appUser?.hardNos || [];
+      
+      // Filter jobs that need squad checking separately
+      const jobsNeedingSquadCheck = fetchedJobs.filter(job => 
+        job.visibility === 'squad' && job.squadIds && job.squadIds.length > 0
+      );
+      
+      // Check squad membership for jobs that need it and fetch squad names
+      const squadMemberships = await Promise.all(
+        jobsNeedingSquadCheck.map(async (job) => {
+          let isInSelectedSquad = false;
+          const squadNames = [];
+          for (const squadId of job.squadIds) {
+            try {
+              const squadDoc = await getDoc(doc(db, 'squads', squadId));
+              if (squadDoc.exists()) {
+                const squadData = squadDoc.data();
+                const memberIds = squadData.memberIds || [];
+                if (memberIds.includes(appUser?.uid || '')) {
+                  isInSelectedSquad = true;
+                  // Store the squad name for display
+                  if (squadData.name) {
+                    squadNames.push(squadData.name);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error checking squad membership:', error);
+            }
+          }
+          return { jobId: job.id, isInSquad: isInSelectedSquad, squadNames };
+        })
+      );
+      
+      const squadMembershipMap = new Map(
+        squadMemberships.map(s => [s.jobId, { isInSquad: s.isInSquad, squadNames: s.squadNames }])
+      );
+      
+      // Also fetch squad names for all squad-visible jobs (not just for membership check)
+      const squadNamesMap = new Map();
+      for (const job of fetchedJobs) {
+        if (job.visibility === 'squad' && job.squadIds && job.squadIds.length > 0) {
+          const squadNames = [];
+          for (const squadId of job.squadIds) {
+            try {
+              const squadDoc = await getDoc(doc(db, 'squads', squadId));
+              if (squadDoc.exists()) {
+                const squadData = squadDoc.data();
+                if (squadData.name) {
+                  squadNames.push(squadData.name);
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching squad name:', error);
+            }
+          }
+          if (squadNames.length > 0) {
+            squadNamesMap.set(job.id, squadNames);
+          }
+        }
+      }
+      
+      // Now filter all jobs with proper squad check
+      let filteredJobs = fetchedJobs.filter(job => {
+        // Hard No filter - creators should never see jobs that violate their hard no's
+        if (creatorHardNos.includes(job.primaryThing)) {
+          return false;
+        }
+        if (job.secondaryTags?.some(tag => creatorHardNos.includes(tag))) {
+          return false;
+        }
+        
+        // Trust Score gating
+        if (job.trustScoreMin && appUser) {
+          if (!canAcceptJob(appUser, job.trustScoreMin)) {
+            return false;
+          }
+        }
+
+        // Visibility filter
+        if (job.visibility === 'invite' && !job.invitedCreatorIds?.includes(appUser?.uid || '')) {
+          return false;
+        }
+        
+        // Squad visibility filter - use the pre-checked membership map
+        if (job.visibility === 'squad' && job.squadIds && job.squadIds.length > 0) {
+          const squadInfo = squadMembershipMap.get(job.id);
+          if (!squadInfo || !squadInfo.isInSquad) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      // Sort by recommended (interest overlap + payout)
+      filteredJobs.sort((a, b) => {
+        const creatorInterests = appUser?.interests || [];
+        const aOverlap = (a.primaryThing === creatorInterests.find(i => i === a.primaryThing) ? 2 : 0) +
+                       (a.secondaryTags?.filter(tag => creatorInterests.includes(tag)).length || 0);
+        const bOverlap = (b.primaryThing === creatorInterests.find(i => i === b.primaryThing) ? 2 : 0) +
+                       (b.secondaryTags?.filter(tag => creatorInterests.includes(tag)).length || 0);
+        if (aOverlap !== bOverlap) return bOverlap - aOverlap;
+        return b.basePayout - a.basePayout;
+      });
+
+      // Add squad names to jobs
+      const jobsWithSquadNames = filteredJobs.map(job => ({
+        ...job,
+        squadNames: squadNamesMap.get(job.id) || []
+      }));
+
+      setJobs(jobsWithSquadNames);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAcceptJob = async (jobId) => {
+    // In real implementation, this would call a Firebase Function
+    // to atomically accept the job (first-come-first-served)
+    console.log('Accepting job:', jobId);
+    alert('Job acceptance functionality coming soon!');
+  };
+
+  const formatTimeRemaining = (deadline) => {
+    const now = new Date();
+    const diff = deadline - now;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days}d ${hours % 24}h`;
+    }
+    return `${hours}h ${minutes}m`;
+  };
+
+  const getUrgencyColor = (deadline) => {
+    const hours = (deadline - new Date()) / (1000 * 60 * 60);
+    if (hours < 6) return 'text-red-600';
+    if (hours < 24) return 'text-orange-600';
+    return 'text-green-600';
+  };
+
+  if (!user || !appUser) {
+    return <LoadingSpinner fullScreen text="Loading campaigns..." />;
+  }
+
+  return (
+    <Layout>
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Available Campaigns</h1>
+        </div>
+
+
+        {/* Jobs Grid */}
+        {loading ? (
+          <LoadingSpinner text="Loading campaigns..." />
+        ) : (
+          <div className="space-y-3">
+            {jobs.map(job => (
+              <Card key={job.id} className="hover:shadow-md transition-shadow border-l-4 border-l-orange-500">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base font-bold line-clamp-2 mb-2">{job.title}</CardTitle>
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                          {THINGS.find(t => t.id === job.primaryThing)?.icon && (
+                            <span className="text-base">{THINGS.find(t => t.id === job.primaryThing)?.icon}</span>
+                          )}
+                          <span>{THINGS.find(t => t.id === job.primaryThing)?.name || job.primaryThing}</span>
+                        </div>
+                        {job.squadNames && job.squadNames.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            {job.squadNames.map((squadName, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium flex items-center gap-1"
+                              >
+                                <span>👥</span>
+                                <span>{squadName}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-2xl font-bold text-green-600">${job.basePayout}</span>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-2">
+                  {/* Time remaining */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500">Time left:</span>
+                    <span className={`font-medium ${getUrgencyColor(job.deadlineAt)}`}>
+                      {formatTimeRemaining(job.deadlineAt)}
+                    </span>
+                  </div>
+
+                  {/* Deliverables */}
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-gray-500">Deliverables:</span>
+                    {job.deliverables.videos > 0 && (
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
+                        {job.deliverables.videos} video{job.deliverables.videos > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {job.deliverables.photos > 0 && (
+                      <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">
+                        {job.deliverables.photos} photo{job.deliverables.photos > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* View Button */}
+                  <div className="pt-1">
+                    <Link href={`/creator/jobs/${job.id}`}>
+                      <Button variant="outline" size="sm" className="w-full text-xs h-8">
+                        View
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!loading && jobs.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-xl font-semibold mb-2">No campaigns found</h3>
+            <Button
+              onClick={() => setFilters({
+                tags: [],
+                minPayout: 0,
+                maxPayout: 1000,
+                deadlineHours: 168,
+                deliverableType: 'any',
+              })}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+}
