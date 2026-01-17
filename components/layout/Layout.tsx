@@ -95,24 +95,24 @@ export default function Layout({ children }: LayoutProps) {
             <Link 
               href="/creator/jobs" 
               className={`flex flex-col items-center justify-center py-3 px-2 transition-colors ${
-                (router.pathname === '/creator/jobs' || (router.pathname.startsWith('/creator/jobs/') && router.pathname !== '/creator/jobs/history'))
+                router.pathname === '/creator/jobs' || router.pathname.startsWith('/creator/jobs/')
                   ? 'text-orange-600 bg-orange-50' 
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
               <Briefcase className="w-6 h-6 mb-1" />
-              <span className="text-xs font-medium">Browse</span>
+              <span className="text-xs font-medium">Jobs</span>
             </Link>
             <Link 
-              href="/creator/jobs/history" 
+              href="/creator/squads" 
               className={`flex flex-col items-center justify-center py-3 px-2 transition-colors ${
-                router.pathname === '/creator/jobs/history'
+                router.pathname === '/creator/squads' || router.pathname.startsWith('/creator/squads/')
                   ? 'text-orange-600 bg-orange-50' 
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <History className="w-6 h-6 mb-1" />
-              <span className="text-xs font-medium">History</span>
+              <UsersRound className="w-6 h-6 mb-1" />
+              <span className="text-xs font-medium">Squads</span>
             </Link>
           </div>
         </div>

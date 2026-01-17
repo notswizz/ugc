@@ -11,9 +11,11 @@ import { THINGS } from '@/lib/things/constants';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
+import HistoryTab from './_history-tab';
 
 export default function CreatorJobs() {
   const { user, appUser } = useAuth();
+  const [activeTab, setActiveTab] = useState('browse'); // 'browse', 'history'
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creatorData, setCreatorData] = useState(null);
@@ -432,12 +434,38 @@ export default function CreatorJobs() {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Available Campaigns</h1>
+        {/* Tab Navigation */}
+        <div className="flex gap-1 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('browse')}
+            className={`px-4 py-3 font-semibold text-sm border-b-2 transition-all ${
+              activeTab === 'browse'
+                ? 'border-orange-600 text-orange-600 bg-orange-50'
+                : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            Browse
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-3 font-semibold text-sm border-b-2 transition-all ${
+              activeTab === 'history'
+                ? 'border-orange-600 text-orange-600 bg-orange-50'
+                : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            History
+          </button>
         </div>
 
+        {/* Browse Tab Content */}
+        {activeTab === 'browse' && (
+          <div>
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold">Available Campaigns</h1>
+            </div>
 
-        {/* Jobs Grid */}
+            {/* Jobs Grid */}
         {loading ? (
           <LoadingSpinner text="Loading campaigns..." />
         ) : (
@@ -524,12 +552,19 @@ export default function CreatorJobs() {
           </div>
         )}
 
-        {!loading && jobs.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold mb-2">No campaigns found</h3>
-            <p className="text-sm text-gray-500">Check back later for new opportunities!</p>
+            {!loading && jobs.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-xl font-semibold mb-2">No campaigns found</h3>
+                <p className="text-sm text-gray-500">Check back later for new opportunities!</p>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* History Tab Content */}
+        {activeTab === 'history' && (
+          <HistoryTab user={user} />
         )}
       </div>
     </Layout>
