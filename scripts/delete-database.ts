@@ -48,7 +48,7 @@ async function deleteCollection(collectionPath: string) {
   console.log(`  ✓ Deleted ${totalDeleted} documents from "${collectionPath}"`);
 }
 
-async function deleteAllSubcollections(docRef: FirebaseFirestore.DocumentReference) {
+async function deleteAllSubcollections(docRef: any) {
   const collections = await docRef.listCollections();
   
   for (const subcollection of collections) {
