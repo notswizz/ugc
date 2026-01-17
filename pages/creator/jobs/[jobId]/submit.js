@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { THINGS } from '@/lib/things/constants';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
+import LoadingSpinner from '@/components/ui/loading-spinner';
 import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
 
 export default function SubmitJob() {
@@ -37,6 +38,7 @@ export default function SubmitJob() {
   });
   const [uploadProgress, setUploadProgress] = useState({}); // Track upload progress: { fileId: { progress: 0-100, fileName: string } }
   const [isUploading, setIsUploading] = useState(false);
+  const [evaluationResult, setEvaluationResult] = useState(null); // { status: 'evaluating' | 'approved' | 'rejected', evaluation: {...}, qualityScore: number }
 
   useEffect(() => {
     if (jobId && typeof jobId === 'string') {
@@ -396,52 +398,55 @@ export default function SubmitJob() {
       // This is the core mechanic - AI grades and scores every submission to move it from pending to approved/rejected
       // Content links cannot be evaluated by AI
       if (hasVideoFiles) {
-        console.log('Triggering AI evaluation for submission:', submissionId);
-        console.log('AI will grade and score this submission to determine approval status');
-        fetch('/api/evaluate-submission', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            submissionId, 
-            jobId: job.id 
-          }),
-        })
-        .then(async (response) => {
-          console.log('AI evaluation response status:', response.status);
+        setSubmitting(false); // Stop submitting state so we can show evaluation screen
+        setEvaluationResult({ status: 'evaluating' });
+        
+        try {
+          console.log('Triggering AI evaluation for submission:', submissionId);
+          console.log('AI will grade and score this submission to determine approval status');
+          
+          const response = await fetch('/api/evaluate-submission', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              submissionId, 
+              jobId: job.id 
+            }),
+          });
+
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error('AI evaluation failed:', errorData);
             throw new Error(errorData.message || `Evaluation failed with status ${response.status}`);
           }
+
           const result = await response.json();
           console.log('AI evaluation successful:', result);
-          if (result.evaluation) {
-            console.log('Evaluation results:', {
-              compliancePassed: result.evaluation.compliance?.passed,
-              qualityScore: result.evaluation.quality?.score,
-            });
-          }
-          return result;
-        })
-        .catch(error => {
-          console.error('Error triggering AI evaluation:', error);
-          console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
+          
+          // Determine if approved or rejected
+          const approved = result.evaluation?.compliance?.passed || false;
+          const qualityScore = result.evaluation?.quality?.score || 0;
+          
+          setEvaluationResult({
+            status: approved ? 'approved' : 'rejected',
+            evaluation: result.evaluation,
+            qualityScore,
+            compliancePassed: approved,
+            payout: job.calculatedPayout || job.basePayout || 0,
           });
-          // AI evaluation is critical - if it fails, submission stays in pending
-          toast.error('Submission created, but AI evaluation failed. Your submission will remain pending until evaluation completes.');
-        });
+        } catch (error) {
+          console.error('Error during AI evaluation:', error);
+          setEvaluationResult({
+            status: 'error',
+            error: error.message,
+          });
+        }
       } else {
-        // No video files - submission can't be evaluated by AI
-        console.warn('No video files uploaded - AI evaluation cannot run. Submission will need manual review.');
-        toast.error('Warning: No video files uploaded. Your submission will need manual review since AI cannot evaluate content links.');
+        // No video files - can't evaluate, redirect to jobs
+        toast.error('Warning: No video files uploaded. Your submission will need manual review.');
+        router.push('/creator/jobs');
       }
-
-      toast.success('Submission submitted! It will be reviewed.');
-      router.push('/creator/jobs');
       
     } catch (error) {
       console.error('Error submitting:', error);
@@ -451,10 +456,180 @@ export default function SubmitJob() {
         stack: error.stack,
       });
       toast.error(`Failed to submit: ${error.message || 'Unknown error. Please try again.'}`);
-    } finally {
       setSubmitting(false);
+      setEvaluationResult(null);
     }
   };
+
+  // Render evaluation result screen
+  if (evaluationResult) {
+    if (evaluationResult.status === 'evaluating') {
+      return (
+        <Layout>
+          <div className="max-w-4xl mx-auto py-8">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+              <div className="mb-8">
+                <div className="text-6xl mb-4 animate-pulse">🤖</div>
+                <h2 className="text-3xl font-bold mb-2">AI is Evaluating Your Submission</h2>
+                <p className="text-gray-600">Please wait while we analyze your video...</p>
+              </div>
+              <LoadingSpinner text="Analyzing video quality, compliance, and content..." />
+            </div>
+          </div>
+        </Layout>
+      );
+    }
+
+    if (evaluationResult.status === 'approved') {
+      return (
+        <Layout>
+          <div className="max-w-4xl mx-auto py-8">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+              <div className="mb-8 animate-bounce">
+                <div className="text-8xl mb-4">💰</div>
+                <div className="text-6xl mb-4 font-bold text-green-600 animate-pulse">CHA CHING!</div>
+                <h2 className="text-4xl font-bold mb-2 text-green-600">APPROVED!</h2>
+                <p className="text-xl text-gray-700 mb-4">Your submission has been approved!</p>
+              </div>
+              
+              <Card className="w-full max-w-md mb-6">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-3xl font-bold text-green-600 mb-1">
+                        ${evaluationResult.payout || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">You'll be paid this amount</div>
+                    </div>
+                    
+                    {evaluationResult.qualityScore !== undefined && (
+                      <div className="pt-4 border-t">
+                        <div className="text-sm text-gray-600 mb-1">AI Quality Score</div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {evaluationResult.qualityScore}/100
+                        </div>
+                      </div>
+                    )}
+                    
+                    {evaluationResult.evaluation?.quality?.improvementTips && 
+                     evaluationResult.evaluation.quality.improvementTips.length > 0 && (
+                      <div className="pt-4 border-t text-left">
+                        <div className="text-sm font-medium text-gray-700 mb-2">Tips for Next Time:</div>
+                        <ul className="space-y-1">
+                          {evaluationResult.evaluation.quality.improvementTips.map((tip, idx) => (
+                            <li key={idx} className="text-sm text-gray-600">• {tip}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex gap-4">
+                <Button
+                  onClick={() => router.push('/creator/jobs')}
+                  className="bg-green-600 hover:bg-green-700"
+                  size="lg"
+                >
+                  View My Campaigns
+                </Button>
+                <Button
+                  onClick={() => router.push('/creator/jobs/history')}
+                  variant="outline"
+                  size="lg"
+                >
+                  View History
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Layout>
+      );
+    }
+
+    if (evaluationResult.status === 'rejected') {
+      return (
+        <Layout>
+          <div className="max-w-4xl mx-auto py-8">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+              <div className="mb-8">
+                <div className="text-8xl mb-4">❌</div>
+                <h2 className="text-4xl font-bold mb-2 text-red-600">NOT APPROVED</h2>
+              </div>
+              
+              <Card className="w-full max-w-md mb-6">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    {evaluationResult.qualityScore !== undefined && (
+                      <div>
+                        <div className="text-sm text-gray-600 mb-1">AI Quality Score</div>
+                        <div className="text-2xl font-bold text-red-600">
+                          {evaluationResult.qualityScore}/100
+                        </div>
+                      </div>
+                    )}
+                    
+                    {evaluationResult.evaluation?.quality?.improvementTips && 
+                     evaluationResult.evaluation.quality.improvementTips.length > 0 && (
+                      <div className="pt-4 border-t text-left">
+                        <div className="text-sm font-medium text-gray-700 mb-2">Improvement Tips:</div>
+                        <ul className="space-y-1">
+                          {evaluationResult.evaluation.quality.improvementTips.map((tip, idx) => (
+                            <li key={idx} className="text-sm text-gray-600">• {tip}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex gap-4">
+                <Button
+                  onClick={() => router.push('/creator/jobs')}
+                  variant="outline"
+                  size="lg"
+                >
+                  Back to Campaigns
+                </Button>
+                <Button
+                  onClick={() => router.push('/creator/jobs/history')}
+                  variant="outline"
+                  size="lg"
+                >
+                  View History
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Layout>
+      );
+    }
+
+    if (evaluationResult.status === 'error') {
+      return (
+        <Layout>
+          <div className="max-w-4xl mx-auto py-8">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+              <div className="mb-8">
+                <div className="text-6xl mb-4">⚠️</div>
+                <h2 className="text-3xl font-bold mb-2">Evaluation Error</h2>
+                <p className="text-gray-600 mb-4">{evaluationResult.error || 'Something went wrong during evaluation'}</p>
+              </div>
+              
+              <Button
+                onClick={() => router.push('/creator/jobs')}
+                size="lg"
+              >
+                Back to Campaigns
+              </Button>
+            </div>
+          </div>
+        </Layout>
+      );
+    }
+  }
 
   if (loading) {
     return (
