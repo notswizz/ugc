@@ -101,6 +101,8 @@ async function deleteAllData() {
     'usageRightsTemplates',
     'campaigns',
     'contracts',
+    'squads',
+    'squadInvitations',
   ];
 
   console.log('Collections to delete:');
