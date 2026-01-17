@@ -26,6 +26,7 @@ export default function BrandJobDetail() {
     rejectedSubmissions: 0,
   });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [evaluatingSubmissions, setEvaluatingSubmissions] = useState(new Set());
 
   useEffect(() => {
     if (jobId && typeof jobId === 'string') {
@@ -128,6 +129,47 @@ export default function BrandJobDetail() {
     }
   };
 
+
+  const handleEvaluateSubmission = async (submissionId) => {
+    if (!submissionId || !jobId) return;
+    
+    setEvaluatingSubmissions(prev => new Set(prev).add(submissionId));
+    
+    try {
+      const response = await fetch('/api/evaluate-submission', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          submissionId,
+          jobId: jobId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Evaluation failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('AI evaluation successful:', result);
+      
+      toast.success('AI evaluation completed! Submission has been scored.');
+      
+      // Refresh the job and submissions data
+      fetchJobAndSubmissions();
+    } catch (error) {
+      console.error('Error evaluating submission:', error);
+      toast.error(`Failed to evaluate submission: ${error.message}`);
+    } finally {
+      setEvaluatingSubmissions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(submissionId);
+        return newSet;
+      });
+    }
+  };
 
   const handleDeleteJob = async () => {
     if (!jobId || typeof jobId !== 'string' || !user) return;
@@ -341,8 +383,21 @@ export default function BrandJobDetail() {
                         )}
                       </div>
                     ) : (
-                      <div className="mt-2 text-xs text-gray-500">
-                        AI evaluation pending...
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="text-xs text-gray-500">
+                          AI evaluation pending...
+                        </div>
+                        {(submission.status === 'submitted' || !submission.status) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEvaluateSubmission(submission.id)}
+                            disabled={evaluatingSubmissions.has(submission.id)}
+                            className="text-xs h-6 px-2"
+                          >
+                            {evaluatingSubmissions.has(submission.id) ? 'Evaluating...' : '🤖 Run AI'}
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>

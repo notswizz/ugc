@@ -8,6 +8,8 @@ import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { Job, Submission, Payment } from '@/lib/models/types';
 import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import toast from 'react-hot-toast';
 
 const ADMIN_EMAIL = '7jackdsmith@gmail.com';
 
@@ -34,6 +36,7 @@ export default function AdminDashboard() {
     jobPayments: any[];
   } | null>(null);
   const [loadingJobDetails, setLoadingJobDetails] = useState(false);
+  const [evaluatingSubmissions, setEvaluatingSubmissions] = useState<Set<string>>(new Set());
 
   // Check admin access
   useEffect(() => {
@@ -204,6 +207,47 @@ export default function AdminDashboard() {
       console.error('Error fetching admin data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEvaluateSubmission = async (submissionId: string, jobId: string) => {
+    if (!submissionId || !jobId) return;
+    
+    setEvaluatingSubmissions(prev => new Set(prev).add(submissionId));
+    
+    try {
+      const response = await fetch('/api/evaluate-submission', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          submissionId,
+          jobId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Evaluation failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('AI evaluation successful:', result);
+      
+      toast.success('AI evaluation completed! Submission has been scored.');
+      
+      // Refresh the data
+      fetchAllData();
+    } catch (error: any) {
+      console.error('Error evaluating submission:', error);
+      toast.error(`Failed to evaluate submission: ${error.message}`);
+    } finally {
+      setEvaluatingSubmissions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(submissionId);
+        return newSet;
+      });
     }
   };
 
@@ -451,6 +495,7 @@ export default function AdminDashboard() {
                       <th className="text-left p-2">Status</th>
                       <th className="text-left p-2">AI Score</th>
                       <th className="text-left p-2">Created</th>
+                      <th className="text-left p-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -479,6 +524,21 @@ export default function AdminDashboard() {
                         </td>
                         <td className="p-2 text-gray-600">
                           {sub.createdAt?.toLocaleDateString()}
+                        </td>
+                        <td className="p-2">
+                          {!sub.aiEvaluation && (sub.status === 'submitted' || !sub.status) ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEvaluateSubmission(sub.id, sub.jobId)}
+                              disabled={evaluatingSubmissions.has(sub.id)}
+                              className="text-xs h-6 px-2"
+                            >
+                              {evaluatingSubmissions.has(sub.id) ? 'Evaluating...' : '🤖 Run AI'}
+                            </Button>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}

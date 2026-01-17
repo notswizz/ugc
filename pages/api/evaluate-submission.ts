@@ -115,10 +115,34 @@ export default async function handler(
     }
 
     // Evaluate the video using the evaluation service
-    const evaluation = await evaluateSubmission({
+    console.log('Starting AI evaluation...', {
       videoUrl,
-      job,
+      jobId,
+      submissionId,
+      hasProductDescription: !!job.productDescription,
+      aiComplianceRequired: job.aiComplianceRequired,
     });
+    
+    let evaluation;
+    try {
+      evaluation = await evaluateSubmission({
+        videoUrl,
+        job,
+      });
+      console.log('AI evaluation completed successfully:', {
+        compliancePassed: evaluation.compliance.passed,
+        qualityScore: evaluation.quality?.score,
+        hasQualityBreakdown: !!evaluation.quality?.breakdown,
+      });
+    } catch (evalError: any) {
+      console.error('Error during AI evaluation:', evalError);
+      console.error('Evaluation error details:', {
+        message: evalError.message,
+        stack: evalError.stack,
+        code: evalError.code,
+      });
+      throw evalError;
+    }
 
     // Prepare evaluation data for Firestore
     const aiEvaluationData = {

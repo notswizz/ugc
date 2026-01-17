@@ -18,6 +18,16 @@ export interface VideoEvaluationOptions {
 export async function evaluateVideo(options: VideoEvaluationOptions): Promise<string> {
   const { videoUrl, prompt } = options;
   
+  console.log('evaluateVideo called with:', {
+    videoUrl: videoUrl?.substring(0, 100) + '...',
+    promptLength: prompt?.length,
+    hasReplicateToken: !!process.env.REPLICATE_API_TOKEN,
+  });
+  
+  if (!process.env.REPLICATE_API_TOKEN) {
+    throw new Error('REPLICATE_API_TOKEN is not set in environment variables');
+  }
+  
   try {
     // Get the model to check its input schema
     let model;

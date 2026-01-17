@@ -392,9 +392,12 @@ export default function SubmitJob() {
       // Don't change job status - keep it 'open' until submission cap is reached
       // The job will remain available for other creators to submit until it hits the cap
 
-      // Trigger AI evaluation in the background ONLY if video files are uploaded
+      // ALWAYS trigger AI evaluation for submissions with video files
+      // This is the core mechanic - AI grades and scores every submission to move it from pending to approved/rejected
       // Content links cannot be evaluated by AI
-      if (hasVideoFiles && job.aiComplianceRequired) {
+      if (hasVideoFiles) {
+        console.log('Triggering AI evaluation for submission:', submissionId);
+        console.log('AI will grade and score this submission to determine approval status');
         fetch('/api/evaluate-submission', {
           method: 'POST',
           headers: {
@@ -404,13 +407,37 @@ export default function SubmitJob() {
             submissionId, 
             jobId: job.id 
           }),
-        }).catch(error => {
-          console.error('Error triggering evaluation:', error);
-          // Don't block submission if evaluation fails
+        })
+        .then(async (response) => {
+          console.log('AI evaluation response status:', response.status);
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('AI evaluation failed:', errorData);
+            throw new Error(errorData.message || `Evaluation failed with status ${response.status}`);
+          }
+          const result = await response.json();
+          console.log('AI evaluation successful:', result);
+          if (result.evaluation) {
+            console.log('Evaluation results:', {
+              compliancePassed: result.evaluation.compliance?.passed,
+              qualityScore: result.evaluation.quality?.score,
+            });
+          }
+          return result;
+        })
+        .catch(error => {
+          console.error('Error triggering AI evaluation:', error);
+          console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+          });
+          // AI evaluation is critical - if it fails, submission stays in pending
+          toast.error('Submission created, but AI evaluation failed. Your submission will remain pending until evaluation completes.');
         });
-      } else if (!hasVideoFiles && job.aiComplianceRequired) {
-        console.warn('AI evaluation required but no video files uploaded. Submission created but will need manual review.');
-        toast.error('Warning: This campaign requires AI evaluation, but no video files were uploaded. Your submission will need manual review.');
+      } else {
+        // No video files - submission can't be evaluated by AI
+        console.warn('No video files uploaded - AI evaluation cannot run. Submission will need manual review.');
+        toast.error('Warning: No video files uploaded. Your submission will need manual review since AI cannot evaluate content links.');
       }
 
       toast.success('Submission submitted! It will be reviewed.');
