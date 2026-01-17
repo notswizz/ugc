@@ -71,7 +71,7 @@ export default function CreatorDashboard() {
       const submissions = submissionsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-      }));
+      })) as any[];
 
       // Fetch all payments for this creator
       const paymentsQuery = query(
@@ -80,16 +80,16 @@ export default function CreatorDashboard() {
         where('status', 'in', ['transferred', 'balance_transferred'])
       );
       const paymentsSnapshot = await getDocs(paymentsQuery);
-      const payments = paymentsSnapshot.docs.map(doc => doc.data());
+      const payments = paymentsSnapshot.docs.map(doc => doc.data()) as any[];
 
       // Calculate stats
-      const totalEarnings = payments.reduce((sum, payment) => sum + (payment.creatorNet || 0), 0);
+      const totalEarnings = payments.reduce((sum: number, payment: any) => sum + (payment.creatorNet || 0), 0);
       const completedJobs = payments.length; // Jobs that have been paid
       const pendingSubmissions = submissions.filter(
-        sub => sub.status === 'submitted' || sub.status === 'needs_changes'
+        (sub: any) => sub.status === 'submitted' || sub.status === 'needs_changes'
       ).length;
       const activeJobs = submissions.filter(
-        sub => sub.status === 'approved'
+        (sub: any) => sub.status === 'approved'
       ).length;
 
       setStats({
