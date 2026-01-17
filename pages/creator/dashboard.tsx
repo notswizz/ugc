@@ -130,17 +130,30 @@ export default function CreatorDashboard() {
         squadsSnapshot.docs.map(async (squadDoc) => {
           const data = squadDoc.data();
           
-          // Fetch creator usernames for members
-          const memberUsernames = await Promise.all(
+          // Fetch creator usernames and roles for members
+          const memberData = await Promise.all(
             (data.memberIds || []).map(async (memberId: string) => {
               try {
                 const creatorDoc = await getDoc(doc(db, 'creators', memberId));
                 if (creatorDoc.exists()) {
-                  return creatorDoc.data().username || 'unknown';
+                  const role = data.memberRoles?.[memberId] || 'member';
+                  return {
+                    uid: memberId,
+                    username: creatorDoc.data().username || 'unknown',
+                    role: role,
+                  };
                 }
-                return 'unknown';
+                return {
+                  uid: memberId,
+                  username: 'unknown',
+                  role: data.memberRoles?.[memberId] || 'member',
+                };
               } catch {
-                return 'unknown';
+                return {
+                  uid: memberId,
+                  username: 'unknown',
+                  role: data.memberRoles?.[memberId] || 'member',
+                };
               }
             })
           );
@@ -149,7 +162,8 @@ export default function CreatorDashboard() {
             id: squadDoc.id,
             ...data,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
-            memberUsernames,
+            memberData,
+            memberUsernames: memberData.map(m => m.username), // Keep for backward compatibility
           };
         })
       );
@@ -189,12 +203,12 @@ export default function CreatorDashboard() {
             }
           } catch {}
           
-          // Fetch inviter name
-          let inviterName = 'Unknown';
+          // Fetch inviter username
+          let inviterUsername = 'unknown';
           try {
-            const inviterDoc = await getDoc(doc(db, 'users', data.inviterId));
-            if (inviterDoc.exists()) {
-              inviterName = inviterDoc.data().name || 'Unknown';
+            const inviterCreatorDoc = await getDoc(doc(db, 'creators', data.inviterId));
+            if (inviterCreatorDoc.exists()) {
+              inviterUsername = inviterCreatorDoc.data().username || 'unknown';
             }
           } catch {}
           
@@ -203,7 +217,7 @@ export default function CreatorDashboard() {
             ...data,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
             squadName,
-            inviterName,
+            inviterUsername,
           };
         })
       );
@@ -226,6 +240,9 @@ export default function CreatorDashboard() {
         name: newSquadName.trim(),
         creatorId: user.uid,
         memberIds: [user.uid],
+        memberRoles: {
+          [user.uid]: 'creator'
+        },
         createdAt: new Date(),
       };
       
@@ -257,9 +274,14 @@ export default function CreatorDashboard() {
       if (squadDoc.exists()) {
         const squadData = squadDoc.data();
         const memberIds = squadData.memberIds || [];
+        const memberRoles = squadData.memberRoles || {};
         if (!memberIds.includes(user.uid)) {
           await updateDoc(doc(db, 'squads', squadId), {
             memberIds: [...memberIds, user.uid],
+            memberRoles: {
+              ...memberRoles,
+              [user.uid]: 'member', // Default role for new members
+            },
             updatedAt: new Date(),
           });
         }
@@ -298,6 +320,27 @@ export default function CreatorDashboard() {
     }
     
     try {
+      // Check if user has permission to invite (creator, president, or VP)
+      const squadDoc = await getDoc(doc(db, 'squads', squadId));
+      if (!squadDoc.exists()) {
+        toast.error('Squad not found');
+        return;
+      }
+      
+      const squadData = squadDoc.data();
+      const memberRoles = squadData.memberRoles || {};
+      let userRole = memberRoles[user.uid] || 'member';
+      
+      // Fallback: check if user is creator
+      if (squadData.creatorId === user.uid && userRole === 'member') {
+        userRole = 'creator';
+      }
+      
+      if (userRole !== 'creator' && userRole !== 'president' && userRole !== 'vp') {
+        toast.error('Only creators, presidents, and VPs can invite members');
+        return;
+      }
+      
       const normalizedUsername = username.trim().toLowerCase();
       
       // Find creator by username
@@ -323,13 +366,10 @@ export default function CreatorDashboard() {
       }
       
       // Check if already in squad
-      const squadDoc = await getDoc(doc(db, 'squads', squadId));
-      if (squadDoc.exists()) {
-        const memberIds = squadDoc.data().memberIds || [];
-        if (memberIds.includes(creatorId)) {
-          toast.error('Creator is already in this squad');
-          return;
-        }
+      const memberIds = squadData.memberIds || [];
+      if (memberIds.includes(creatorId)) {
+        toast.error('Creator is already in this squad');
+        return;
       }
       
       // Check for existing pending invitation
@@ -354,19 +394,54 @@ export default function CreatorDashboard() {
         createdAt: new Date(),
       });
       
-      // Get creator name from users collection
-      let creatorName = normalizedUsername;
-      try {
-        const userDoc = await getDoc(doc(db, 'users', creatorId));
-        if (userDoc.exists()) {
-          creatorName = userDoc.data().name || normalizedUsername;
-        }
-      } catch {}
-      
       toast.success(`Invitation sent to @${normalizedUsername}`);
     } catch (error) {
       console.error('Error inviting creator:', error);
       toast.error('Failed to send invitation');
+    }
+  };
+
+  // Assign role to squad member
+  const assignRole = async (squadId: string, memberId: string, newRole: 'president' | 'vp' | 'member') => {
+    if (!user) return;
+    
+    try {
+      // Check if user has permission (only creator can assign roles)
+      const squadDoc = await getDoc(doc(db, 'squads', squadId));
+      if (!squadDoc.exists()) {
+        toast.error('Squad not found');
+        return;
+      }
+      
+      const squadData = squadDoc.data();
+      const memberRoles = squadData.memberRoles || {};
+      const userRole = memberRoles[user.uid] || 'member';
+      
+      if (userRole !== 'creator') {
+        toast.error('Only the squad creator can assign roles');
+        return;
+      }
+      
+      // Don't change creator role
+      if (memberId === squadData.creatorId) {
+        toast.error('Cannot change creator role');
+        return;
+      }
+      
+      // Update role
+      await updateDoc(doc(db, 'squads', squadId), {
+        memberRoles: {
+          ...memberRoles,
+          [memberId]: newRole,
+        },
+        updatedAt: new Date(),
+      });
+      
+      toast.success(`Role updated successfully`);
+      fetchSquads();
+    } catch (error) {
+      console.error('Error assigning role:', error);
+      toast.error('Failed to assign role');
     }
   };
 
@@ -390,7 +465,7 @@ export default function CreatorDashboard() {
         <div className="mb-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold truncate">Hey {appUser.name?.split(' ')[0] || 'Dasher'}!</h1>
+              <h1 className="text-xl sm:text-2xl font-bold truncate">Hey {creatorData?.username || 'there'}!</h1>
             </div>
           </div>
         </div>
@@ -480,7 +555,7 @@ export default function CreatorDashboard() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-gray-800">{invitation.squadName}</p>
-                            <p className="text-[10px] text-gray-600">Invited by {invitation.inviterName}</p>
+                            <p className="text-[10px] text-gray-600">Invited by @{invitation.inviterUsername}</p>
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
                             <button
@@ -572,15 +647,23 @@ export default function CreatorDashboard() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {squads.map((squad) => (
-                    <SquadCard
-                      key={squad.id}
-                      squad={squad}
-                      onInviteCreator={inviteCreator}
-                      currentUserId={user?.uid}
-                      isCreator={squad.creatorId === user?.uid}
-                    />
-                  ))}
+                  {squads.map((squad) => {
+                    // Determine user role: check memberRoles first, then fall back to checking if they're the creator
+                    let userRole = squad.memberRoles?.[user?.uid || ''] || 'member';
+                    if (squad.creatorId === user?.uid && userRole === 'member') {
+                      userRole = 'creator'; // Fallback for old squads without memberRoles
+                    }
+                    return (
+                      <SquadCard
+                        key={squad.id}
+                        squad={squad}
+                        onInviteCreator={inviteCreator}
+                        onAssignRole={assignRole}
+                        currentUserId={user?.uid}
+                        currentUserRole={userRole}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -778,10 +861,12 @@ export default function CreatorDashboard() {
 }
 
 // Squad Card Component
-function SquadCard({ squad, onInviteCreator, currentUserId, isCreator }: any) {
+function SquadCard({ squad, onInviteCreator, onAssignRole, currentUserId, currentUserRole }: any) {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviting, setInviting] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   const handleInvite = async () => {
     setInviting(true);
@@ -791,61 +876,194 @@ function SquadCard({ squad, onInviteCreator, currentUserId, isCreator }: any) {
     setInviting(false);
   };
 
+  // Check if user is creator (either by role or by creatorId for backward compatibility)
+  const isCreator = currentUserRole === 'creator' || currentUserId === squad.creatorId;
+  const canInvite = isCreator || currentUserRole === 'president' || currentUserRole === 'vp';
+  const canAssignRoles = isCreator;
+
+  // Create memberData if it doesn't exist (for backward compatibility)
+  const memberData = squad.memberData || (squad.memberUsernames?.map((username: string, index: number) => {
+    const memberId = squad.memberIds?.[index] || '';
+    // Determine role: check memberRoles first, then check if they're the creator, then default to member
+    let role = squad.memberRoles?.[memberId];
+    if (!role) {
+      role = (memberId === squad.creatorId) ? 'creator' : 'member';
+    }
+    return {
+      uid: memberId,
+      username: username,
+      role: role,
+    };
+  }) || []);
+
+  const handleMemberClick = (member: any) => {
+    console.log('Member clicked:', member);
+    console.log('canAssignRoles:', canAssignRoles, 'currentUserRole:', currentUserRole);
+    console.log('member.uid:', member.uid, 'squad.creatorId:', squad.creatorId);
+    if (canAssignRoles && member.uid !== squad.creatorId) {
+      console.log('Opening modal for member:', member.username);
+      setSelectedMember(member);
+      setShowRoleModal(true);
+    } else {
+      console.log('Cannot assign role - canAssignRoles:', canAssignRoles, 'isCreator:', member.uid === squad.creatorId);
+    }
+  };
+
+  const handleAssignRoleClick = async (role: 'president' | 'vp' | 'member') => {
+    if (selectedMember) {
+      await onAssignRole(squad.id, selectedMember.uid, role);
+      setShowRoleModal(false);
+      setSelectedMember(null);
+    }
+  };
+
+  const getRoleBadge = (role: string) => {
+    if (role === 'creator') return '👑';
+    if (role === 'president') return '⭐';
+    if (role === 'vp') return '💼';
+    return '';
+  };
+
   return (
-    <div className="p-2 bg-gray-50 rounded-lg border border-gray-200">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-gray-800">{squad.name}</p>
-          <p className="text-[10px] text-gray-600">{squad.memberIds?.length || 0} members</p>
-        </div>
-        {isCreator && (
-          <button
-            onClick={() => setShowInviteForm(!showInviteForm)}
-            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-            title="Invite"
-          >
-            <UserPlus className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-      
-      {showInviteForm && (
-        <div className="mt-2 pt-2 border-t border-gray-200">
-          <div className="flex gap-1">
-                      <Input
-                        type="text"
-                        value={inviteUsername}
-                        onChange={(e) => setInviteUsername(e.target.value)}
-                        placeholder="@username"
-                        className="text-xs h-7 flex-1"
-                      />
-            <Button
-              size="sm"
-              onClick={handleInvite}
-              disabled={inviting || !inviteUsername.trim()}
-              className="bg-orange-600 hover:bg-orange-700 h-7 text-xs px-2"
+    <>
+      <div className="p-2 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-gray-800">{squad.name}</p>
+            <p className="text-[10px] text-gray-600">{squad.memberIds?.length || 0} members</p>
+          </div>
+          {canInvite && (
+            <button
+              onClick={() => setShowInviteForm(!showInviteForm)}
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+              title="Invite"
             >
-              Send
-            </Button>
+              <UserPlus className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+        
+        {showInviteForm && (
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <div className="flex gap-1">
+              <Input
+                type="text"
+                value={inviteUsername}
+                onChange={(e) => setInviteUsername(e.target.value)}
+                placeholder="@username"
+                className="text-xs h-7 flex-1"
+              />
+              <Button
+                size="sm"
+                onClick={handleInvite}
+                disabled={inviting || !inviteUsername.trim()}
+                className="bg-orange-600 hover:bg-orange-700 h-7 text-xs px-2"
+              >
+                Send
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        <div className="mt-2 flex flex-wrap gap-1">
+          {memberData.map((member: any, index: number) => {
+            const isCreator = member.uid === squad.creatorId;
+            const canClick = canAssignRoles && !isCreator;
+            return (
+              <button
+                key={member.uid || index}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('Button clicked:', member.username, 'canClick:', canClick);
+                  if (canClick) {
+                    handleMemberClick(member);
+                  }
+                }}
+                disabled={!canClick}
+                className={`px-1.5 py-0.5 rounded text-[10px] transition-colors ${
+                  canClick
+                    ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 active:bg-blue-300 cursor-pointer'
+                    : 'bg-blue-100 text-blue-800 cursor-default opacity-75'
+                }`}
+                title={canClick ? 'Click to assign role' : isCreator ? 'Creator (cannot change)' : 'You cannot assign roles'}
+              >
+                {getRoleBadge(member.role)} @{member.username}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Role Assignment Modal */}
+      {showRoleModal && selectedMember && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowRoleModal(false);
+              setSelectedMember(null);
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-4 max-w-sm w-full shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-sm font-semibold mb-2">Assign Role</h3>
+            <p className="text-xs text-gray-600 mb-4">
+              Select a role for @{selectedMember.username}
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAssignRoleClick('president');
+                }}
+                className="w-full p-2 text-left border rounded hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <div className="text-xs font-medium">⭐ President</div>
+                <div className="text-[10px] text-gray-500">Can invite members</div>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAssignRoleClick('vp');
+                }}
+                className="w-full p-2 text-left border rounded hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <div className="text-xs font-medium">💼 VP</div>
+                <div className="text-[10px] text-gray-500">Can invite members</div>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAssignRoleClick('member');
+                }}
+                className="w-full p-2 text-left border rounded hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <div className="text-xs font-medium">Member</div>
+                <div className="text-[10px] text-gray-500">Regular member</div>
+              </button>
+            </div>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowRoleModal(false);
+                setSelectedMember(null);
+              }}
+              className="mt-4 w-full text-xs text-gray-600 hover:text-gray-800 py-2"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
-      
-      <div className="mt-2 flex flex-wrap gap-1">
-        {squad.memberUsernames?.slice(0, 3).map((username: string, index: number) => (
-          <span
-            key={index}
-            className="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px]"
-          >
-            @{username}
-          </span>
-        ))}
-        {squad.memberUsernames && squad.memberUsernames.length > 3 && (
-          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px]">
-            +{squad.memberUsernames.length - 3}
-          </span>
-        )}
-      </div>
-    </div>
+    </>
   );
 }

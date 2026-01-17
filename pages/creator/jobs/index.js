@@ -15,14 +15,50 @@ export default function CreatorJobs() {
   const { user, appUser } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [creatorData, setCreatorData] = useState(null);
 
   useEffect(() => {
-    if (user) {
+    if (user && appUser && appUser.role === 'creator') {
+      fetchCreatorData();
+    }
+  }, [user, appUser]);
+
+  const fetchCreatorData = async () => {
+    if (!user || !appUser || appUser.role !== 'creator') return;
+    
+    try {
+      const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
+      if (creatorDoc.exists()) {
+        setCreatorData(creatorDoc.data());
+      } else {
+        // If creator profile doesn't exist yet, use empty defaults
+        setCreatorData({
+          hardNos: [],
+          interests: [],
+          trustScore: 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching creator data:', error);
+      // Use empty defaults on error
+      setCreatorData({
+        hardNos: [],
+        interests: [],
+        trustScore: 0,
+      });
+    }
+  };
+
+  // Fetch jobs when creator data is available
+  useEffect(() => {
+    if (user && appUser && creatorData !== null) {
       fetchJobs();
     }
-  }, [user]);
+  }, [user, appUser, creatorData]);
 
   const fetchJobs = async () => {
+    if (!user || !appUser || creatorData === null) return;
+    
     try {
       setLoading(true);
       
@@ -70,7 +106,7 @@ export default function CreatorJobs() {
       });
 
       // Filter by creator's Hard No's first (hard filter per plan)
-      const creatorHardNos = appUser?.hardNos || [];
+      const creatorHardNos = creatorData?.hardNos || [];
       
       // Filter jobs that need squad checking separately
       const jobsNeedingSquadCheck = fetchedJobs.filter(job => 
@@ -88,7 +124,7 @@ export default function CreatorJobs() {
               if (squadDoc.exists()) {
                 const squadData = squadDoc.data();
                 const memberIds = squadData.memberIds || [];
-                if (memberIds.includes(appUser?.uid || '')) {
+                if (memberIds.includes(user?.uid || '')) {
                   isInSelectedSquad = true;
                   // Store the squad name for display
                   if (squadData.name) {
@@ -134,6 +170,9 @@ export default function CreatorJobs() {
       
       // Now filter all jobs with proper squad check
       let filteredJobs = fetchedJobs.filter(job => {
+        // Default to 'open' if visibility not set
+        const visibility = job.visibility || 'open';
+        
         // Hard No filter - creators should never see jobs that violate their hard no's
         if (creatorHardNos.includes(job.primaryThing)) {
           return false;
@@ -143,31 +182,41 @@ export default function CreatorJobs() {
         }
         
         // Trust Score gating
-        if (job.trustScoreMin && appUser) {
-          if (!canAcceptJob(appUser, job.trustScoreMin)) {
+        if (job.trustScoreMin && creatorData) {
+          const creatorTrustScore = creatorData.trustScore || 0;
+          if (creatorTrustScore < job.trustScoreMin) {
             return false;
           }
         }
 
         // Visibility filter
-        if (job.visibility === 'invite' && !job.invitedCreatorIds?.includes(appUser?.uid || '')) {
-          return false;
+        if (visibility === 'invite') {
+          if (!job.invitedCreatorIds?.includes(user?.uid || '')) {
+            return false;
+          }
         }
         
         // Squad visibility filter - use the pre-checked membership map
-        if (job.visibility === 'squad' && job.squadIds && job.squadIds.length > 0) {
+        if (visibility === 'squad') {
+          if (!job.squadIds || job.squadIds.length === 0) {
+            // Squad visibility but no squads selected - exclude
+            return false;
+          }
           const squadInfo = squadMembershipMap.get(job.id);
           if (!squadInfo || !squadInfo.isInSquad) {
             return false;
           }
         }
 
+        // Open visibility (default) - show it (already passed other filters)
         return true;
       });
+      
+      console.log(`Campaigns: ${fetchedJobs.length} fetched, ${filteredJobs.length} visible after filtering`);
 
       // Sort by recommended (interest overlap + payout)
       filteredJobs.sort((a, b) => {
-        const creatorInterests = appUser?.interests || [];
+        const creatorInterests = creatorData?.interests || [];
         const aOverlap = (a.primaryThing === creatorInterests.find(i => i === a.primaryThing) ? 2 : 0) +
                        (a.secondaryTags?.filter(tag => creatorInterests.includes(tag)).length || 0);
         const bOverlap = (b.primaryThing === creatorInterests.find(i => i === b.primaryThing) ? 2 : 0) +
@@ -309,17 +358,7 @@ export default function CreatorJobs() {
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-semibold mb-2">No campaigns found</h3>
-            <Button
-              onClick={() => setFilters({
-                tags: [],
-                minPayout: 0,
-                maxPayout: 1000,
-                deadlineHours: 168,
-                deliverableType: 'any',
-              })}
-            >
-              Clear Filters
-            </Button>
+            <p className="text-sm text-gray-500">Check back later for new opportunities!</p>
           </div>
         )}
       </div>

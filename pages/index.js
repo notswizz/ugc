@@ -50,7 +50,7 @@ export default function Home() {
       <Head>
         <title>UGC Dash</title>
         <meta name="description" content="Be a UGC Dasher - Get real-time campaign offers and get paid fast" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
         <meta name="theme-color" content="#ea580c" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
