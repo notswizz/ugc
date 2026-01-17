@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { db, storage } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,8 @@ export default function SubmitJob() {
       purchaseDate: '',
     },
   });
+  const [uploadProgress, setUploadProgress] = useState({}); // Track upload progress: { fileId: { progress: 0-100, fileName: string } }
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (jobId && typeof jobId === 'string') {
@@ -100,15 +102,81 @@ export default function SubmitJob() {
   const handleFileUpload = async (file, type) => {
     if (!file || !job || !user) return null;
     
+    const fileId = `${type}_${Date.now()}_${file.name}`;
+    setIsUploading(true);
+    
+    // Add to upload progress immediately
+    setUploadProgress(prev => ({
+      ...prev,
+      [fileId]: {
+        progress: 0,
+        fileName: file.name,
+      },
+    }));
+    
     try {
       const fileName = `${job.id}_${user.uid}_${Date.now()}_${file.name}`;
       const fileRef = ref(storage, `submissions/${job.id}/${user.uid}/${type}/${fileName}`);
-      await uploadBytes(fileRef, file);
-      const downloadURL = await getDownloadURL(fileRef);
-      return downloadURL;
+      
+      // Use uploadBytesResumable for progress tracking
+      const uploadTask = uploadBytesResumable(fileRef, file);
+      
+      return new Promise((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            // Track upload progress
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(prev => ({
+              ...prev,
+              [fileId]: {
+                progress: Math.round(progress),
+                fileName: file.name,
+              },
+            }));
+          },
+          (error) => {
+            console.error(`Error uploading ${type}:`, error);
+            toast.error(`Failed to upload ${file.name}`);
+            setUploadProgress(prev => {
+              const newProgress = { ...prev };
+              delete newProgress[fileId];
+              // Check if all uploads are done
+              if (Object.keys(newProgress).length === 0) {
+                setIsUploading(false);
+              }
+              return newProgress;
+            });
+            reject(error);
+          },
+          async () => {
+            // Upload completed
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            setUploadProgress(prev => {
+              const newProgress = { ...prev };
+              delete newProgress[fileId];
+              // Check if all uploads are done after removing this one
+              if (Object.keys(newProgress).length === 0) {
+                setIsUploading(false);
+              }
+              return newProgress;
+            });
+            
+            resolve(downloadURL);
+          }
+        );
+      });
     } catch (error) {
       console.error(`Error uploading ${type}:`, error);
-      toast.error(`Failed to upload ${type}`);
+      toast.error(`Failed to upload ${file.name}`);
+      setUploadProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[fileId];
+        if (Object.keys(newProgress).length === 0) {
+          setIsUploading(false);
+        }
+        return newProgress;
+      });
       return null;
     }
   };
@@ -213,14 +281,21 @@ export default function SubmitJob() {
     if (!job || !user || submitting) return;
 
     // Validation - check against job requirements
-    const hasVideos = submissionData.videos.length > 0 || submissionData.contentLink;
+    // If job requires videos, they must be uploaded (content links don't work for AI evaluation)
+    const hasUploadedVideos = submissionData.videos.length > 0 || submissionData.rawVideos.length > 0;
     const hasPhotos = submissionData.photos.length > 0;
     const hasRaw = !job.deliverables.raw || (submissionData.rawVideos.length > 0 || submissionData.rawPhotos.length > 0);
     
     // Check if minimum requirements are met
-    if (job.deliverables.videos > 0 && !hasVideos) {
-      toast.error(`Please upload at least ${job.deliverables.videos} video(s) or provide a content link`);
-      return;
+    // If job requires videos AND has AI evaluation, videos must be uploaded (not just a link)
+    if (job.deliverables.videos > 0) {
+      if (job.aiComplianceRequired && !hasUploadedVideos) {
+        toast.error(`This campaign requires AI evaluation. Please upload at least ${job.deliverables.videos} video file(s). Content links are not supported for AI evaluation.`);
+        return;
+      } else if (!hasUploadedVideos && !submissionData.contentLink) {
+        toast.error(`Please upload at least ${job.deliverables.videos} video(s) or provide a content link`);
+        return;
+      }
     }
     
     if (job.deliverables.photos > 0 && !hasPhotos) {
@@ -240,10 +315,19 @@ export default function SubmitJob() {
       toast.error('Please provide a content link or upload files');
       return;
     }
+    
+    // If AI evaluation is required, ensure video files are uploaded
+    if (job.aiComplianceRequired && !hasUploadedVideos) {
+      toast.error('This campaign requires AI evaluation. Please upload video files. Content links are not supported for AI evaluation.');
+      return;
+    }
 
     setSubmitting(true);
     try {
       // Create submission document
+      // Only trigger AI evaluation if video files are uploaded (not just content links)
+      const hasVideoFiles = submissionData.videos.length > 0 || submissionData.rawVideos.length > 0;
+      
       const submissionDoc = {
         jobId: job.id,
         creatorId: user.uid,
@@ -282,20 +366,26 @@ export default function SubmitJob() {
       // Don't change job status - keep it 'open' until submission cap is reached
       // The job will remain available for other creators to submit until it hits the cap
 
-      // Trigger AI evaluation in the background
-      fetch('/api/evaluate-submission', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          submissionId, 
-          jobId: job.id 
-        }),
-      }).catch(error => {
-        console.error('Error triggering evaluation:', error);
-        // Don't block submission if evaluation fails
-      });
+      // Trigger AI evaluation in the background ONLY if video files are uploaded
+      // Content links cannot be evaluated by AI
+      if (hasVideoFiles && job.aiComplianceRequired) {
+        fetch('/api/evaluate-submission', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            submissionId, 
+            jobId: job.id 
+          }),
+        }).catch(error => {
+          console.error('Error triggering evaluation:', error);
+          // Don't block submission if evaluation fails
+        });
+      } else if (!hasVideoFiles && job.aiComplianceRequired) {
+        console.warn('AI evaluation required but no video files uploaded. Submission created but will need manual review.');
+        toast.error('Warning: This campaign requires AI evaluation, but no video files were uploaded. Your submission will need manual review.');
+      }
 
       toast.success('Submission submitted! It will be reviewed.');
       router.push('/creator/jobs');
@@ -382,7 +472,7 @@ export default function SubmitJob() {
                   <input
                     type="file"
                     multiple
-                    accept="video/*"
+                    accept="video/*,.mov,.mp4,.avi,.webm,.mkv"
                     onChange={handleVideoChange}
                     className="w-full p-2 border rounded"
                   />
@@ -390,6 +480,27 @@ export default function SubmitJob() {
                     Upload your final video files
                   </p>
                 </div>
+                {/* Upload Progress */}
+                {Object.keys(uploadProgress).filter(id => id.startsWith('videos_')).length > 0 && (
+                  <div className="space-y-2">
+                    {Object.entries(uploadProgress)
+                      .filter(([id]) => id.startsWith('videos_'))
+                      .map(([id, progress]) => (
+                        <div key={id} className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-600">{progress.fileName}</span>
+                            <span className="text-gray-600">{progress.progress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${progress.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
                 {submissionData.videos.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Uploaded videos ({submissionData.videos.length}/{job.deliverables.videos}):</p>
@@ -426,6 +537,27 @@ export default function SubmitJob() {
                     Upload your final photo files
                   </p>
                 </div>
+                {/* Upload Progress */}
+                {Object.keys(uploadProgress).filter(id => id.startsWith('photos_')).length > 0 && (
+                  <div className="space-y-2">
+                    {Object.entries(uploadProgress)
+                      .filter(([id]) => id.startsWith('photos_'))
+                      .map(([id, progress]) => (
+                        <div key={id} className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-600">{progress.fileName}</span>
+                            <span className="text-gray-600">{progress.progress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${progress.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
                 {submissionData.photos.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Uploaded photos ({submissionData.photos.length}/{job.deliverables.photos}):</p>
@@ -454,7 +586,7 @@ export default function SubmitJob() {
                   <input
                     type="file"
                     multiple
-                    accept="video/*"
+                    accept="video/*,.mov,.mp4,.avi,.webm,.mkv"
                     onChange={handleRawVideoChange}
                     className="w-full p-2 border rounded"
                   />
@@ -462,6 +594,27 @@ export default function SubmitJob() {
                     Upload unedited video files
                   </p>
                 </div>
+                {/* Upload Progress */}
+                {Object.keys(uploadProgress).filter(id => id.startsWith('raw-videos_')).length > 0 && (
+                  <div className="space-y-2">
+                    {Object.entries(uploadProgress)
+                      .filter(([id]) => id.startsWith('raw-videos_'))
+                      .map(([id, progress]) => (
+                        <div key={id} className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-600">{progress.fileName}</span>
+                            <span className="text-gray-600">{progress.progress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${progress.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
                 {submissionData.rawVideos.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Uploaded videos ({submissionData.rawVideos.length}):</p>
@@ -498,6 +651,27 @@ export default function SubmitJob() {
                     Upload unedited photo files
                   </p>
                 </div>
+                {/* Upload Progress */}
+                {Object.keys(uploadProgress).filter(id => id.startsWith('raw-photos_')).length > 0 && (
+                  <div className="space-y-2">
+                    {Object.entries(uploadProgress)
+                      .filter(([id]) => id.startsWith('raw-photos_'))
+                      .map(([id, progress]) => (
+                        <div key={id} className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-600">{progress.fileName}</span>
+                            <span className="text-gray-600">{progress.progress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${progress.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
                 {submissionData.rawPhotos.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Uploaded photos ({submissionData.rawPhotos.length}):</p>
@@ -576,6 +750,27 @@ export default function SubmitJob() {
                   <p className="text-xs text-muted-foreground mt-1">
                     Upload a clear photo of your purchase receipt
                   </p>
+                  {/* Upload Progress */}
+                  {Object.keys(uploadProgress).filter(id => id.startsWith('receipts_')).length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {Object.entries(uploadProgress)
+                        .filter(([id]) => id.startsWith('receipts_'))
+                        .map(([id, progress]) => (
+                          <div key={id} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-600">{progress.fileName}</span>
+                              <span className="text-gray-600">{progress.progress}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${progress.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                   {submissionData.productPurchase.receiptUrl && (
                     <div className="mt-2 text-xs text-green-600">
                       ✓ Receipt uploaded
@@ -596,6 +791,27 @@ export default function SubmitJob() {
                   <p className="text-xs text-muted-foreground mt-1">
                     Optional: Upload a photo of the product you purchased
                   </p>
+                  {/* Upload Progress */}
+                  {Object.keys(uploadProgress).filter(id => id.startsWith('product-photos_')).length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {Object.entries(uploadProgress)
+                        .filter(([id]) => id.startsWith('product-photos_'))
+                        .map(([id, progress]) => (
+                          <div key={id} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-600">{progress.fileName}</span>
+                              <span className="text-gray-600">{progress.progress}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${progress.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                   {submissionData.productPurchase.productPhotoUrl && (
                     <div className="mt-2 text-xs text-green-600">
                       ✓ Product photo uploaded
@@ -654,11 +870,16 @@ export default function SubmitJob() {
                 </div>
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting}
-                  className="w-full bg-orange-600 hover:bg-orange-700"
+                  disabled={submitting || isUploading}
+                  className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   size="lg"
                 >
-                  {submitting ? 'Submitting...' : `Submit Content - $${job.calculatedPayout || job.basePayout || 0}`}
+                  {isUploading 
+                    ? 'Uploading files...' 
+                    : submitting 
+                      ? 'Submitting...' 
+                      : `Submit Content - $${job.calculatedPayout || job.basePayout || 0}`
+                  }
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
                   Your submission will be reviewed by AI and the brand before approval

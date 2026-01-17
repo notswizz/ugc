@@ -25,16 +25,23 @@ export default function CreatorJobs() {
   }, [user, appUser]);
 
   const fetchCreatorData = async () => {
-    if (!user || !appUser || appUser.role !== 'creator') return;
+    if (!user || !appUser || appUser.role !== 'creator') {
+      console.log('Not fetching creator data:', { hasUser: !!user, hasAppUser: !!appUser, role: appUser?.role });
+      return;
+    }
     
     try {
+      console.log('Fetching creator data for:', user.uid);
       const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
       if (creatorDoc.exists()) {
-        setCreatorData(creatorDoc.data());
+        const data = creatorDoc.data();
+        console.log('Creator profile found:', { trustScore: data.trustScore, hardNos: data.hardNos });
+        setCreatorData(data);
       } else {
         // If creator profile doesn't exist yet, use empty defaults
         // Give new users a minimum trust score so they can see campaigns without trustScoreMin requirements
         // This matches the initial trust score calculation from onboarding (20 base + socials)
+        console.log('No creator profile found, using defaults with trustScore: 20');
         setCreatorData({
           hardNos: [],
           interests: [],
@@ -44,6 +51,7 @@ export default function CreatorJobs() {
     } catch (error) {
       console.error('Error fetching creator data:', error);
       // Use empty defaults on error with minimum trust score
+      console.log('Error occurred, using defaults with trustScore: 20');
       setCreatorData({
         hardNos: [],
         interests: [],
@@ -60,12 +68,17 @@ export default function CreatorJobs() {
   }, [user, appUser, creatorData]);
 
   const fetchJobs = async () => {
-    if (!user || !appUser || creatorData === null) return;
+    if (!user || !appUser || creatorData === null) {
+      console.log('Not fetching jobs:', { hasUser: !!user, hasAppUser: !!appUser, creatorData: creatorData });
+      return;
+    }
     
     try {
       setLoading(true);
+      console.log('Fetching jobs for creator:', user.uid);
       
       // Fetch jobs from Firestore
+      // First try to get jobs with status 'open', but if that returns 0, check all jobs
       let q = query(
         collection(db, 'jobs'),
         where('status', '==', 'open'),
@@ -73,7 +86,49 @@ export default function CreatorJobs() {
         limit(100)
       );
 
-      const querySnapshot = await getDocs(q);
+      let querySnapshot = await getDocs(q);
+      console.log(`Found ${querySnapshot.size} jobs with status 'open'`);
+      
+      // If no jobs found with 'open' status, try fetching all jobs and filter client-side
+      if (querySnapshot.size === 0) {
+        console.log('No jobs with status "open" found, fetching all jobs to check statuses...');
+        const allJobsQuery = query(
+          collection(db, 'jobs'),
+          orderBy('createdAt', 'desc'),
+          limit(100)
+        );
+        const allJobsSnapshot = await getDocs(allJobsQuery);
+        console.log(`Found ${allJobsSnapshot.size} total jobs in database`);
+        
+        // Log the statuses we found
+        const statusCounts = {};
+        allJobsSnapshot.docs.forEach(doc => {
+          const status = doc.data().status || 'undefined';
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+        });
+        console.log('Job statuses found:', statusCounts);
+        
+        // Filter to only include jobs that should be visible (open, or no status set, or accepted)
+        // A job should be visible if it doesn't have a status, or has status 'open' or 'accepted'
+        const visibleDocs = allJobsSnapshot.docs.filter(doc => {
+          const status = doc.data().status;
+          const shouldShow = !status || status === 'open' || status === 'accepted';
+          if (!shouldShow) {
+            console.log(`Job ${doc.id} filtered out due to status: ${status}`);
+          }
+          return shouldShow;
+        });
+        
+        // Create a new query snapshot-like object with filtered docs
+        querySnapshot = {
+          docs: visibleDocs,
+          size: visibleDocs.length,
+          empty: visibleDocs.length === 0,
+          forEach: (callback) => visibleDocs.forEach(callback),
+          map: (callback) => visibleDocs.map(callback),
+        };
+        console.log(`After filtering, ${querySnapshot.size} jobs are potentially visible`);
+      }
       
       // Fetch submissions for all jobs to check submission caps
       const jobsData = querySnapshot.docs.map(doc => ({
@@ -178,9 +233,11 @@ export default function CreatorJobs() {
         
         // Hard No filter - creators should never see jobs that violate their hard no's
         if (creatorHardNos.includes(job.primaryThing)) {
+          console.log(`Job ${job.id} filtered: Hard No match (${job.primaryThing})`);
           return false;
         }
         if (job.secondaryTags?.some(tag => creatorHardNos.includes(tag))) {
+          console.log(`Job ${job.id} filtered: Hard No match in secondary tags`);
           return false;
         }
         
@@ -190,6 +247,7 @@ export default function CreatorJobs() {
         if (job.trustScoreMin) {
           const creatorTrustScore = creatorData?.trustScore ?? 20; // Default to 20 for new users
           if (creatorTrustScore < job.trustScoreMin) {
+            console.log(`Job ${job.id} filtered: Trust score ${creatorTrustScore} < ${job.trustScoreMin}`);
             return false;
           }
         }
@@ -197,6 +255,7 @@ export default function CreatorJobs() {
         // Visibility filter
         if (visibility === 'invite') {
           if (!job.invitedCreatorIds?.includes(user?.uid || '')) {
+            console.log(`Job ${job.id} filtered: Not invited (invite-only campaign)`);
             return false;
           }
         }
@@ -205,19 +264,27 @@ export default function CreatorJobs() {
         if (visibility === 'squad') {
           if (!job.squadIds || job.squadIds.length === 0) {
             // Squad visibility but no squads selected - exclude
+            console.log(`Job ${job.id} filtered: Squad visibility but no squads`);
             return false;
           }
           const squadInfo = squadMembershipMap.get(job.id);
           if (!squadInfo || !squadInfo.isInSquad) {
+            console.log(`Job ${job.id} filtered: Not in required squad`);
             return false;
           }
         }
 
         // Open visibility (default) - show it (already passed other filters)
+        console.log(`Job ${job.id} passed all filters - will be shown`);
         return true;
       });
       
       console.log(`Campaigns: ${fetchedJobs.length} fetched, ${filteredJobs.length} visible after filtering`);
+      console.log('Creator data:', { 
+        hasCreatorData: !!creatorData, 
+        trustScore: creatorData?.trustScore ?? 20, 
+        hardNos: creatorHardNos 
+      });
 
       // Calculate payouts for sorting (temporary, will be recalculated later)
       const creatorFollowingCount = getCreatorFollowingCount(creatorData);
