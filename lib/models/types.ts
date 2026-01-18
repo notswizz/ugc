@@ -78,6 +78,9 @@ export interface Creator {
   // Trust Score (0-100)
   trustScore: number;
   
+  // Rep (reputation points)
+  rep: number;
+  
   rates: {
     perGigSuggested?: number;
   };

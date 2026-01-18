@@ -197,6 +197,7 @@ export default function CreatorOnboarding() {
         socials: formData.socials,
         followingCount: formData.followingCount,
         trustScore,
+        rep: 0, // Initialize rep at 0
         rates: {}, // Rates managed by admin
         turnaroundDays: 7, // Default value
         portfolioLinks: formData.portfolioLinks,

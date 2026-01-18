@@ -12,7 +12,8 @@ import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
 import HistoryTab from './_history-tab';
-import { Clock, Play, ArrowRight, Activity, Users, Sparkles } from 'lucide-react';
+import { Clock, Play, ArrowRight, Activity, Users, Sparkles, Lock, Award } from 'lucide-react';
+import { canAccessGig, getRepLevel } from '@/lib/rep/service';
 
 export default function CreatorGigs() {
   const { user, appUser } = useAuth();
@@ -252,7 +253,7 @@ export default function CreatorGigs() {
         }
       }
       
-      // Now filter all gigs with proper squad check
+      // Now filter all gigs with proper squad check and rep-based access
       let filteredGigs = fetchedGigs.filter(gig => {
         // Default to 'open' if visibility not set
         const visibility = gig.visibility || 'open';
@@ -267,6 +268,19 @@ export default function CreatorGigs() {
         // Filter out gigs that are closed/cancelled/expired
         if (gig.status === 'closed' || gig.status === 'cancelled' || gig.status === 'expired' || gig.status === 'paid') {
           console.log(`Gig ${gig.id} filtered: Status is ${gig.status}`);
+          return false;
+        }
+        
+        // Rep-based early access filter
+        // Check if creator's rep level grants them access to this gig yet
+        const creatorRep = creatorData?.rep || 0;
+        const gigAccess = canAccessGig(creatorRep, gig.createdAt);
+        if (!gigAccess.canAccess) {
+          console.log(`Gig ${gig.id} filtered: Rep-based early access locked for ${gigAccess.minutesUntilUnlock} more minutes`);
+          // Still mark it on the gig object so we can show a locked state
+          gig.repLocked = true;
+          gig.unlockAt = gigAccess.unlockAt;
+          gig.minutesUntilUnlock = gigAccess.minutesUntilUnlock;
           return false;
         }
         

@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import { ChevronDown, ChevronUp, MapPin, Heart, Briefcase, XCircle, Globe, Link as LinkIcon, Instagram, Youtube, Linkedin, CheckCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, MapPin, Heart, Briefcase, XCircle, Globe, Link as LinkIcon, Instagram, Youtube, Linkedin, CheckCircle, Award } from 'lucide-react';
 import { THINGS, EXPERIENCE_TYPES, HARD_NO_CATEGORIES } from '@/lib/things/constants';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/router';
+import { getRepLevel } from '@/lib/rep/service';
 
 export default function CreatorDashboard() {
   const { user, appUser } = useAuth();
@@ -199,6 +200,78 @@ export default function CreatorDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Rep Display */}
+        {creatorData && (
+          <Card className="mb-3 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-purple-600" />
+                  <CardTitle className="text-sm font-semibold text-purple-800">Reputation</CardTitle>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const creatorRef = doc(db, 'creators', user.uid);
+                      await updateDoc(creatorRef, {
+                        rep: (creatorData.rep || 0) + 50
+                      });
+                      toast.success('+50 rep added!');
+                      fetchCreatorData();
+                    } catch (error) {
+                      console.error('Error adding rep:', error);
+                      toast.error('Failed to add rep');
+                    }
+                  }}
+                  className="h-7 text-xs px-2 border-purple-300 text-purple-700 hover:bg-purple-100"
+                >
+                  +50
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 px-4 pb-4">
+              {(() => {
+                const rep = creatorData.rep || 0;
+                const { level, title, nextLevelRep } = getRepLevel(rep);
+                const progress = nextLevelRep > 0 ? ((rep % 100) / 100) * 100 : 100;
+                const accessDelay = (7 - level) * 10;
+                
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className="text-2xl font-bold text-purple-700">{rep}</div>
+                        <p className="text-xs text-purple-600">Rep Points</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-semibold text-purple-800">Level {level}</div>
+                        <p className="text-xs text-purple-600">{title}</p>
+                      </div>
+                    </div>
+                    
+                    {level < 7 && (
+                      <div className="mt-3">
+                        <div className="flex justify-between text-xs text-purple-600 mb-1">
+                          <span>Progress to Level {level + 1}</span>
+                          <span>{rep} / {nextLevelRep}</span>
+                        </div>
+                        <div className="w-full bg-purple-200 rounded-full h-2">
+                          <div 
+                            className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${((rep / nextLevelRep) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats - Collapsible */}
         <Card className="mb-3">
