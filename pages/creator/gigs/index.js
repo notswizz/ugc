@@ -307,6 +307,18 @@ export default function CreatorGigs() {
           }
         }
 
+        // Minimum Followers filter
+        // If gig has minimum follower requirement for a platform, check creator's follower count
+        if (gig.minFollowers && gig.minFollowersPlatform) {
+          const platform = gig.minFollowersPlatform.toLowerCase(); // 'TikTok', 'Instagram', 'X'
+          const creatorFollowers = creatorData?.followingCount?.[platform] || 0;
+          
+          if (creatorFollowers < gig.minFollowers) {
+            console.log(`Gig ${gig.id} filtered: ${platform} followers ${creatorFollowers} < ${gig.minFollowers}`);
+            return false;
+          }
+        }
+
         // Experience Requirements filter
         // If gig has experience requirements, creator must have at least one matching experience
         if (gig.experienceRequirements && gig.experienceRequirements.length > 0) {

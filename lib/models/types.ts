@@ -201,6 +201,8 @@ export interface Gig {
   visibility: GigVisibility;
   targetTags?: string[]; // For squad visibility
   trustScoreMin?: number; // Minimum Trust Score required
+  minFollowers?: number; // Minimum followers required
+  minFollowersPlatform?: string; // Platform for follower requirement (TikTok, Instagram, X)
   experienceRequirements?: string[]; // e.g. ["paid_ads", "on_camera"]
   invitedCreatorIds?: string[]; // For invite visibility
   

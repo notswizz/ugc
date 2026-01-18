@@ -26,14 +26,14 @@ export default function NewGig() {
     if (appUser && appUser.role !== 'brand') {
       router.push('/brand/dashboard');
     } else {
-      // Initial fetch with score 0 to show total creators
-      fetchAvailableCreators(0);
+      // Initial fetch with score 0 and no follower filter to show total creators
+      fetchAvailableCreators(0, 0, '');
     }
   }, [appUser, router]);
 
-  // Fetch available creators count based on trust score
-  const fetchAvailableCreators = async (minTrustScore) => {
-    if (!minTrustScore && minTrustScore !== 0) {
+  // Fetch available creators count based on trust score and follower requirements
+  const fetchAvailableCreators = async (minTrustScore, minFollowerCount, platform) => {
+    if ((!minTrustScore && minTrustScore !== 0) && !minFollowerCount) {
       setAvailableCreatorsCount(null);
       return;
     }
@@ -45,8 +45,23 @@ export default function NewGig() {
       
       const count = creatorsSnapshot.docs.filter(doc => {
         const creator = doc.data();
+        
+        // Trust Score filter
         const trustScore = creator.trustScore || 0;
-        return trustScore >= minTrustScore;
+        if (minTrustScore && trustScore < minTrustScore) {
+          return false;
+        }
+        
+        // Follower count filter (only if platform and minFollowers are specified)
+        if (minFollowerCount && platform) {
+          const platformKey = platform.toLowerCase();
+          const creatorFollowers = creator.followingCount?.[platformKey] || 0;
+          if (creatorFollowers < minFollowerCount) {
+            return false;
+          }
+        }
+        
+        return true;
       }).length;
 
       setAvailableCreatorsCount(count);
@@ -90,6 +105,9 @@ export default function NewGig() {
         // Pre-fill form with existing gig data (but clear title)
         setGigData({
           title: '', // Clear title so they can enter a new one
+          platform: existingGig.platform || '',
+          contentType: existingGig.contentType || '',
+          instagramFormat: existingGig.instagramFormat || '',
           description: existingGig.description || '',
           productDescription: existingGig.productDescription || '',
           primaryThing: existingGig.primaryThing || '',
@@ -105,6 +123,7 @@ export default function NewGig() {
           targetTags: existingGig.targetTags || [],
           squadIds: existingGig.squadIds || [],
           trustScoreMin: existingGig.trustScoreMin?.toString() || '',
+          minFollowers: existingGig.minFollowers?.toString() || '',
           experienceRequirements: existingGig.experienceRequirements || [],
           acceptedSubmissionsLimit: existingGig.acceptedSubmissionsLimit || 1,
           productInVideoRequired: existingGig.productInVideoRequired || false,
@@ -162,6 +181,7 @@ export default function NewGig() {
     targetTags: [],
     squadIds: [], // Selected squad IDs for squad visibility
     trustScoreMin: '',
+    minFollowers: '', // Minimum followers for selected platform
     experienceRequirements: [],
     acceptedSubmissionsLimit: 1, // Default to 1 (standard single creator)
     productInVideoRequired: false,
@@ -209,15 +229,25 @@ export default function NewGig() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced trust score update - fetch available creators when trust score changes
+  // Debounced update - fetch available creators when trust score or followers change
   useEffect(() => {
     const timer = setTimeout(() => {
       const score = gigData.trustScoreMin ? parseInt(gigData.trustScoreMin) : 0;
-      fetchAvailableCreators(score);
+      // Only apply follower filter if payout is NOT dynamic
+      const followers = (gigData.payoutType !== 'dynamic' && gigData.minFollowers) ? parseInt(gigData.minFollowers) : 0;
+      const platform = gigData.platform || '';
+      fetchAvailableCreators(score, followers, platform);
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timer);
-  }, [gigData.trustScoreMin]);
+  }, [gigData.trustScoreMin, gigData.minFollowers, gigData.platform, gigData.payoutType]);
+
+  // Clear minFollowers when switching to dynamic payouts
+  useEffect(() => {
+    if (gigData.payoutType === 'dynamic' && gigData.minFollowers) {
+      updateGigData({ minFollowers: '' });
+    }
+  }, [gigData.payoutType]);
 
   const updateGigData = (updates) => {
     setGigData(prev => ({ ...prev, ...updates }));
@@ -385,6 +415,13 @@ export default function NewGig() {
 
       if (gigData.trustScoreMin) {
         gigDoc.trustScoreMin = parseInt(gigData.trustScoreMin);
+      }
+
+      // Add minimum followers requirement if specified (but NOT for dynamic payouts)
+      // Dynamic payouts already filter by follower ranges, so minFollowers would conflict
+      if (gigData.payoutType !== 'dynamic' && gigData.minFollowers && parseInt(gigData.minFollowers) > 0) {
+        gigDoc.minFollowers = parseInt(gigData.minFollowers);
+        gigDoc.minFollowersPlatform = gigData.platform; // Store which platform the requirement is for
       }
 
       // Only add reimbursement fields if product in video is required
@@ -894,28 +931,61 @@ export default function NewGig() {
                   }}
                 />
               </div>
+            </div>
 
-              {/* Available Creators Count */}
-              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-brand-50 to-accent-50 rounded-lg border-2 border-brand-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">👥</span>
-                  <span className="text-sm font-medium text-gray-700">Available Creators</span>
+            {/* Minimum Followers - Only show if platform is selected AND payout is NOT dynamic */}
+            {gigData.platform && gigData.payoutType !== 'dynamic' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium">
+                    Minimum {gigData.platform} Followers
+                  </label>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-brand-600">
+                      {gigData.minFollowers ? parseInt(gigData.minFollowers).toLocaleString() : 0}
+                    </span>
+                    <span className="text-sm text-gray-500 ml-1">followers</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  {loadingCreatorCount ? (
-                    <div className="text-sm text-gray-500">Loading...</div>
-                  ) : availableCreatorsCount !== null ? (
-                    <div>
-                      <div className="text-2xl font-bold text-brand-600">{availableCreatorsCount}</div>
-                      <div className="text-xs text-gray-500">
-                        {availableCreatorsCount === 0 ? 'None available' : 
-                         availableCreatorsCount === 1 ? 'creator' : 'creators'}
-                      </div>
+                
+                {/* Slider */}
+                <div className="relative pt-1">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100000"
+                    step="1000"
+                    value={gigData.minFollowers || 0}
+                    onChange={(e) => updateGigData({ minFollowers: e.target.value })}
+                    className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb"
+                    style={{
+                      background: `linear-gradient(to right, #f97316 0%, #f97316 ${(gigData.minFollowers || 0) / 1000}%, #e5e7eb ${(gigData.minFollowers || 0) / 1000}%, #e5e7eb 100%)`
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Available Creators Count - Shows combined filter results */}
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-brand-50 to-accent-50 rounded-lg border-2 border-brand-200">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👥</span>
+                <span className="text-sm font-medium text-gray-700">Available Creators</span>
+              </div>
+              <div className="text-right">
+                {loadingCreatorCount ? (
+                  <div className="text-sm text-gray-500">Loading...</div>
+                ) : availableCreatorsCount !== null ? (
+                  <div>
+                    <div className="text-2xl font-bold text-brand-600">{availableCreatorsCount}</div>
+                    <div className="text-xs text-gray-500">
+                      {availableCreatorsCount === 0 ? 'None available' : 
+                       availableCreatorsCount === 1 ? 'creator' : 'creators'}
                     </div>
-                  ) : (
-                    <div className="text-sm text-gray-400">Set score</div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-400">Set filters</div>
+                )}
               </div>
             </div>
 
