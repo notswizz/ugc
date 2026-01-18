@@ -7,17 +7,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import { ChevronDown, ChevronUp, MapPin, Heart, Briefcase, XCircle, Globe, Link as LinkIcon, Instagram, Youtube, Linkedin } from 'lucide-react';
+import { ChevronDown, ChevronUp, MapPin, Heart, Briefcase, XCircle, Globe, Link as LinkIcon, Instagram, Youtube, Linkedin, CheckCircle } from 'lucide-react';
 import { THINGS, EXPERIENCE_TYPES, HARD_NO_CATEGORIES } from '@/lib/things/constants';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/router';
 
 export default function CreatorDashboard() {
   const { user, appUser } = useAuth();
+  const router = useRouter();
   const [statsOpen, setStatsOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
   const [creatorData, setCreatorData] = useState<any>(null);
+  const [verifyingTikTok, setVerifyingTikTok] = useState(false);
   const [stats, setStats] = useState({
     totalEarnings: 0,
     acceptedJobs: 0,
@@ -111,6 +115,53 @@ export default function CreatorDashboard() {
       fetchStats();
     }
   }, [user, appUser]);
+
+  // Handle TikTok verification success/error messages
+  useEffect(() => {
+    if (router.query.tiktok_verified === 'true') {
+      const count = router.query.count || '0';
+      toast.success(`TikTok verified! Follower count: ${Number(count).toLocaleString()}`);
+      fetchCreatorData(); // Refresh data
+      // Clean up URL
+      router.replace('/creator/dashboard', undefined, { shallow: true });
+    }
+    if (router.query.tiktok_error) {
+      toast.error(`TikTok verification failed: ${router.query.tiktok_error}`);
+      // Clean up URL
+      router.replace('/creator/dashboard', undefined, { shallow: true });
+    }
+  }, [router.query, router]);
+
+  const handleVerifyTikTok = () => {
+    if (!user || !creatorData?.socials?.tiktok) {
+      toast.error('Please add your TikTok username first');
+      return;
+    }
+
+    if (verifyingTikTok) return;
+
+    setVerifyingTikTok(true);
+
+    // TikTok OAuth URL
+    const TIKTOK_CLIENT_KEY = process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY;
+    const TIKTOK_REDIRECT_URI = `${window.location.origin}/api/tiktok-callback`;
+    
+    if (!TIKTOK_CLIENT_KEY) {
+      toast.error('TikTok integration not configured. Please contact support.');
+      setVerifyingTikTok(false);
+      return;
+    }
+
+    // Generate state parameter (store creatorId)
+    const state = user.uid;
+    
+    // Build TikTok OAuth URL
+    const scope = 'user.info.basic,user.info.profile,user.info.stats';
+    const authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${TIKTOK_CLIENT_KEY}&scope=${encodeURIComponent(scope)}&response_type=code&redirect_uri=${encodeURIComponent(TIKTOK_REDIRECT_URI)}&state=${encodeURIComponent(state)}`;
+
+    // Redirect to TikTok OAuth
+    window.location.href = authUrl;
+  };
 
   if (!user || !appUser) {
     return <LoadingSpinner fullScreen text="Loading dashboard..." />;
@@ -299,15 +350,36 @@ export default function CreatorDashboard() {
                     <p className="text-xs font-semibold text-gray-700 mb-2">Social Links</p>
                     <div className="space-y-2">
                       {creatorData.socials.tiktok && (
-                        <a 
-                          href={`https://tiktok.com/@${creatorData.socials.tiktok}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-xs text-gray-700 hover:text-orange-600 transition-colors"
-                        >
-                          <span className="text-base">🎵</span>
-                          <span>@{creatorData.socials.tiktok}</span>
-                        </a>
+                        <div className="flex items-center justify-between gap-2">
+                          <a 
+                            href={`https://tiktok.com/@${creatorData.socials.tiktok}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-xs text-gray-700 hover:text-orange-600 transition-colors flex-1"
+                          >
+                            <span className="text-base">🎵</span>
+                            <span>@{creatorData.socials.tiktok}</span>
+                            {creatorData.socialVerification?.tiktok?.verified && (
+                              <CheckCircle className="w-3.5 h-3.5 text-green-600 flex-shrink-0" title="Verified" />
+                            )}
+                          </a>
+                          {creatorData.followingCount?.tiktok && (
+                            <span className="text-xs text-gray-600 font-medium">
+                              {creatorData.followingCount.tiktok.toLocaleString()} followers
+                            </span>
+                          )}
+                          {!creatorData.socialVerification?.tiktok?.verified && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-2 text-[10px] flex-shrink-0"
+                              onClick={handleVerifyTikTok}
+                              disabled={verifyingTikTok}
+                            >
+                              {verifyingTikTok ? 'Verifying...' : 'Verify'}
+                            </Button>
+                          )}
+                        </div>
                       )}
                       {creatorData.socials.instagram && (
                         <a 

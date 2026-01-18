@@ -54,6 +54,27 @@ export interface Creator {
     linkedin?: number;
   };
   
+  // Social verification metadata
+  socialVerification?: {
+    tiktok?: {
+      verified: boolean;
+      verifiedAt?: Date;
+      followerCount?: number;
+      username?: string;
+      displayName?: string;
+    };
+    instagram?: {
+      verified: boolean;
+      verifiedAt?: Date;
+      followerCount?: number;
+    };
+    youtube?: {
+      verified: boolean;
+      verifiedAt?: Date;
+      subscriberCount?: number;
+    };
+  };
+  
   // Trust Score (0-100)
   trustScore: number;
   
