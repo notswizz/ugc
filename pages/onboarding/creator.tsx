@@ -183,7 +183,7 @@ export default function CreatorOnboarding() {
       const accountAge = 0; // New account
       const trustScore = 20 + (formData.socials.tiktok ? 7 : 0) + 
                          (formData.socials.instagram ? 7 : 0) + 
-                         (formData.socials.youtube ? 5 : 0);
+                         (formData.socials.x ? 6 : 0);
 
       const creatorData: Omit<Creator, 'id'> = {
         uid: user.uid,
