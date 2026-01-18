@@ -180,15 +180,15 @@ export default function GigHistory() {
       const uniqueGigs = {};
       allGigs.forEach(gig => {
         if (!uniqueGigs[gig.gigId]) {
-          uniqueGigs[gig.gigId] = job;
+          uniqueGigs[gig.gigId] = gig;
         } else if (gig.submission && uniqueGigs[gig.gigId].submission) {
           // If both have submissions, keep the one with later submission date
           if (gig.submission.createdAt > uniqueGigs[gig.gigId].submission.createdAt) {
-            uniqueGigs[gig.gigId] = job;
+            uniqueGigs[gig.gigId] = gig;
           }
         } else if (gig.submission && !uniqueGigs[gig.gigId].submission) {
           // Prefer gigs with submissions over those without
-          uniqueGigs[gig.gigId] = job;
+          uniqueGigs[gig.gigId] = gig;
         }
       });
 
