@@ -1,173 +1,69 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, increment } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import { ChevronDown, ChevronUp, MapPin, Heart, Briefcase, XCircle, Globe, Link as LinkIcon, Instagram, Youtube, Linkedin, CheckCircle, Award, X as XIcon, User, Trophy, ArrowDownToLine } from 'lucide-react';
-import { THINGS, EXPERIENCE_TYPES, HARD_NO_CATEGORIES } from '@/lib/things/constants';
-import toast from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import { getRepLevel } from '@/lib/rep/service';
+import toast from 'react-hot-toast';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Zap, ArrowDownToLine, ArrowRight, User, Trophy } from 'lucide-react';
+import { useCreatorData } from '@/components/dashboard/useCreatorData';
+import { useDashboardData } from '@/components/dashboard/useDashboardData';
+import { useCommunityLeaderboard } from '@/components/dashboard/useCommunityLeaderboard';
+import ProfileModal from '@/components/dashboard/ProfileModal';
+import CommunityModal from '@/components/dashboard/CommunityModal';
+
+// Utility functions
+const formatCurrency = (cents: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+};
+
 
 export default function CreatorDashboard() {
   const { user, appUser } = useAuth();
   const router = useRouter();
-  const [statsOpen, setStatsOpen] = useState(true);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [communityModalOpen, setCommunityModalOpen] = useState(false);
-  const [balance, setBalance] = useState<number | null>(null);
-  const [loadingBalance, setLoadingBalance] = useState(true);
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [creatorData, setCreatorData] = useState<any>(null);
   const [verifyingTikTok, setVerifyingTikTok] = useState(false);
-  const [communityLeaderboard, setCommunityLeaderboard] = useState<any[]>([]);
-  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
-  const [communityName, setCommunityName] = useState<string>('');
-  const [stats, setStats] = useState({
-    totalEarnings: 0,
-    acceptedGigs: 0,
-    pendingSubmissions: 0,
-    activeGigs: 0,
-  });
 
-  // Fetch creator data
-  const fetchCreatorData = async () => {
-    if (!user || !appUser || appUser.role !== 'creator') return;
-    
-    try {
-      const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
-      if (creatorDoc.exists()) {
-        const data = creatorDoc.data();
-        setCreatorData(data);
-        setBalance(data.balance || 0);
-      } else {
-        setBalance(0);
-      }
-    } catch (error) {
-      console.error('Error fetching creator data:', error);
-      setBalance(0);
-    } finally {
-      setLoadingBalance(false);
-    }
-  };
+  // Fetch creator profile data
+  const { creatorData, refetch: refetchCreatorData } = useCreatorData(user, appUser);
 
-  // Fetch creator stats
-  const fetchStats = async () => {
-    if (!user || !appUser || appUser.role !== 'creator') return;
-    
-    try {
-      setLoadingStats(true);
-      
-      // Fetch all submissions by this creator
-      const submissionsQuery = query(
-        collection(db, 'submissions'),
-        where('creatorId', '==', user.uid),
-        orderBy('createdAt', 'desc')
-      );
-      const submissionsSnapshot = await getDocs(submissionsQuery);
-      const submissions = submissionsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as any[];
+  // Fetch dashboard data (balance, stats)
+  const {
+    balance,
+    loadingBalance,
+    stats,
+    loadingStats,
+  } = useDashboardData(user, appUser, creatorData);
 
-      // Fetch all payments for this creator
-      const paymentsQuery = query(
-        collection(db, 'payments'),
-        where('creatorId', '==', user.uid),
-        where('status', 'in', ['transferred', 'balance_transferred'])
-      );
-      const paymentsSnapshot = await getDocs(paymentsQuery);
-      const payments = paymentsSnapshot.docs.map(doc => doc.data()) as any[];
+  // Fetch community leaderboard when modal opens
+  const {
+    leaderboard: communityLeaderboard,
+    communityName,
+    loading: loadingLeaderboard,
+  } = useCommunityLeaderboard(creatorData, user, communityModalOpen);
 
-      // Calculate stats
-      const totalEarnings = payments.reduce((sum: number, payment: any) => sum + (payment.creatorNet || 0), 0);
-      const acceptedGigs = submissions.filter(
-        (sub: any) => sub.status === 'approved'
-      ).length;
-      const pendingSubmissions = submissions.filter(
-        (sub: any) => sub.status === 'submitted' || sub.status === 'needs_changes'
-      ).length;
-      const activeGigs = submissions.filter(
-        (sub: any) => sub.status === 'approved'
-      ).length;
-
-      setStats({
-        totalEarnings,
-        acceptedGigs,
-        pendingSubmissions,
-        activeGigs,
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    } finally {
-      setLoadingStats(false);
-    }
-  };
-
-  // Fetch community leaderboard
-  const fetchCommunityLeaderboard = async () => {
-    if (!creatorData?.communityId || !user) return;
-    
-    setLoadingLeaderboard(true);
-    try {
-      // First get the community name
-      const communityDoc = await getDoc(doc(db, 'communities', creatorData.communityId));
-      if (communityDoc.exists()) {
-        setCommunityName(communityDoc.data().name);
-      }
-
-      // Get all creators in this community
-      const creatorsQuery = query(
-        collection(db, 'creators'),
-        where('communityId', '==', creatorData.communityId)
-      );
-      const creatorsSnapshot = await getDocs(creatorsQuery);
-      
-      // Map and sort by rep points
-      const leaderboard = creatorsSnapshot.docs
-        .map(doc => ({
-          uid: doc.id,
-          username: doc.data().username,
-          rep: doc.data().rep || 0,
-        }))
-        .sort((a, b) => b.rep - a.rep)
-        .map((creator, index) => ({
-          ...creator,
-          rank: index + 1,
-        }));
-
-      setCommunityLeaderboard(leaderboard);
-    } catch (error) {
-      console.error('Error fetching community leaderboard:', error);
-    } finally {
-      setLoadingLeaderboard(false);
-    }
-  };
-
-  // Fetch leaderboard when opening community modal
-  useEffect(() => {
-    if (communityModalOpen && creatorData?.communityId && communityLeaderboard.length === 0) {
-      fetchCommunityLeaderboard();
-    }
-  }, [communityModalOpen, creatorData?.communityId]);
-
-  // Handle TikTok verification success/error messages
+  // Handle TikTok verification
   useEffect(() => {
     if (router.query.tiktok_verified === 'true') {
       const count = router.query.count || '0';
       toast.success(`TikTok verified! Follower count: ${Number(count).toLocaleString()}`);
-      fetchCreatorData();
+      refetchCreatorData();
       router.replace('/creator/dashboard', undefined, { shallow: true });
     }
     if (router.query.tiktok_error) {
       toast.error(`TikTok verification failed: ${router.query.tiktok_error}`);
       router.replace('/creator/dashboard', undefined, { shallow: true });
     }
-  }, [router.query, router]);
+  }, [router.query, router, refetchCreatorData]);
 
   const handleVerifyTikTok = () => {
     if (!user || !creatorData?.socials?.tiktok) {
@@ -185,30 +81,11 @@ export default function CreatorDashboard() {
     window.location.href = authUrl;
   };
 
-  const handleAddTestRep = async () => {
-    if (!user) return;
-    
-    try {
-      const creatorRef = doc(db, 'creators', user.uid);
-      await updateDoc(creatorRef, {
-        rep: increment(50)
-      });
-      toast.success('+50 rep!');
-      fetchCreatorData();
-    } catch (error) {
-      console.error('Error adding rep:', error);
-      toast.error('Failed to add rep');
-    }
-  };
-
   useEffect(() => {
     if (appUser && appUser.role !== 'creator') {
       router.push('/creator/dashboard');
-    } else if (user && appUser) {
-      fetchCreatorData();
-      fetchStats();
     }
-  }, [user, appUser, router]);
+  }, [appUser, router]);
 
   if (!user || !appUser) {
     return (
@@ -222,541 +99,190 @@ export default function CreatorDashboard() {
     return null;
   }
 
+  const rep = creatorData?.rep || 0;
+  const { level, title: levelLabel, nextLevelRep } = getRepLevel(rep);
+  const trustScore = creatorData?.trustScore || 20;
+  const isTrusted = trustScore >= 50;
+  const balanceCents = balance !== null ? Math.round(balance * 100) : 0;
+  const hasInstantPayout = balanceCents >= 0; // Simplified - can be enhanced
+  
+  // Calculate rep delta (mock for now - would come from recent activity)
+  const repDelta = 0; // Could track last rep change
+
   return (
     <Layout>
-      <div className="space-y-4">
-        {/* Balance Card - Glassmorphism */}
-        <Card className="relative overflow-hidden border-0 shadow-2xl">
-          {/* Gradient Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 opacity-90"></div>
-          
-          {/* Glassmorphism Overlay */}
-          <div className="absolute inset-0 backdrop-blur-xl bg-white/10"></div>
-          
-          {/* Decorative Elements */}
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-300/30 rounded-full blur-3xl"></div>
-          
-          {/* Content */}
-          <CardHeader className="pb-2 pt-4 relative z-10">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs text-white/80 font-medium tracking-wide uppercase">Available Balance</CardTitle>
+      <div className="max-w-[430px] mx-auto px-4 pb-6 space-y-4">
+        {/* HERO: Balance Card */}
+        <Card className="border border-gray-200 bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-lg">
+          <CardHeader className="pb-3 pt-5 px-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Available</p>
+          </CardHeader>
+          <CardContent className="px-5 pb-5">
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                {loadingBalance ? (
+                  <div className="text-4xl font-bold text-gray-300">...</div>
+                ) : (
+                  <div className="text-4xl font-bold">{formatCurrency(balanceCents)}</div>
+                )}
+              </div>
               <Button
                 size="sm"
-                className="text-xs h-7 px-3 font-semibold bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm transition-all shadow-lg hover:shadow-xl"
+                disabled={balanceCents === 0}
+                variant="outline"
+                className={`${
+                  balanceCents === 0
+                    ? 'border-gray-600 text-gray-500 cursor-not-allowed'
+                    : 'border-gray-500 text-gray-300 hover:bg-white/10 hover:border-gray-400'
+                } text-xs font-medium`}
               >
-                <ArrowDownToLine className="w-3.5 h-3.5 mr-1" />
+                <ArrowDownToLine className="w-3 h-3 mr-1.5" />
                 Withdraw
               </Button>
             </div>
-          </CardHeader>
-          <CardContent className="pb-4 relative z-10">
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-white drop-shadow-lg">
-                ${loadingBalance ? '...' : balance?.toFixed(2) || '0.00'}
-              </span>
-              <span className="text-sm text-white/70 font-medium">USD</span>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-white/40 rounded-full w-3/4"></div>
+            {balanceCents === 0 ? (
+              <div className="pt-4 border-t border-gray-700">
+                <p className="text-sm text-gray-400 mb-3">Complete 1 job to unlock your first payout</p>
+                <Link href="/creator/gigs">
+                  <Button className="w-full bg-white text-gray-900 hover:bg-gray-100 font-semibold">
+                    Browse Jobs
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
               </div>
-              <span className="text-xs text-white/70">Instant payout</span>
-            </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-gray-400 pt-3 border-t border-gray-700">
+                <Zap className="w-3.5 h-3.5 text-orange-400" />
+                <span>Instant payout enabled</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Reputation Card - Glassmorphism */}
-        {creatorData && (() => {
-          const rep = creatorData.rep || 0;
-          const { level, title, nextLevelRep } = getRepLevel(rep);
-          
-          return (
-            <Card className="relative overflow-hidden border-0 shadow-2xl">
-              {/* Gradient Background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 opacity-90"></div>
-              
-              {/* Glassmorphism Overlay */}
-              <div className="absolute inset-0 backdrop-blur-xl bg-white/10"></div>
-              
-              {/* Decorative Elements */}
-              <div className="absolute -top-10 -left-10 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
-              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-purple-400/30 rounded-full blur-3xl"></div>
-              
-              {/* Content */}
-              <CardHeader className="pb-2 pt-3 relative z-10">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs text-white/80 font-medium tracking-wide uppercase">Reputation</CardTitle>
-                  <Button
-                    size="sm"
-                    onClick={handleAddTestRep}
-                    className="text-[10px] h-6 px-2 bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm transition-all"
-                  >
-                    +50
-                  </Button>
+        {/* Progress Card: Level / Reputation */}
+        {creatorData && (
+          <Card className="border border-gray-200 bg-white shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-1">Level {level}</p>
+                  <p className="text-xl font-bold text-gray-900">{levelLabel}</p>
                 </div>
-              </CardHeader>
-              <CardContent className="pb-3 relative z-10">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-6 h-6 text-white drop-shadow-lg" />
-                    <span className="text-3xl font-bold text-white drop-shadow-lg">{rep}</span>
-                    <span className="text-sm text-white/80">rep</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-base font-bold text-white drop-shadow-lg">Level {level}</div>
-                    <p className="text-xs text-white/80">{title}</p>
-                  </div>
-                </div>
-                
-                {level < 7 && (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs text-white/80 mb-1.5">
-                      <span>Next: Level {level + 1}</span>
-                      <span>{rep} / {nextLevelRep}</span>
-                    </div>
-                    <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-                      <div 
-                        className="bg-white/60 h-2 rounded-full transition-all duration-300 shadow-lg"
-                        style={{ width: `${((rep / nextLevelRep) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
+                {repDelta > 0 && (
+                  <span className="px-2.5 py-1 text-xs font-bold bg-green-100 text-green-700 rounded-full border border-green-200">
+                    +{repDelta} rep
+                  </span>
                 )}
-              </CardContent>
-            </Card>
-          );
-        })()}
-
-        {/* Stats - Collapsible with Modern Design */}
-        <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-gray-50 to-gray-100">
-          <button
-            onClick={() => setStatsOpen(!statsOpen)}
-            className="w-full transition-all hover:bg-white/50"
-          >
-            <CardHeader className="py-3 px-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
-                    <Briefcase className="w-4 h-4 text-white" />
-                  </div>
-                  <CardTitle className="text-sm font-bold text-gray-900">Performance Stats</CardTitle>
-                </div>
-                <div className={`transform transition-transform duration-200 ${statsOpen ? 'rotate-180' : ''}`}>
-                  <ChevronDown className="w-5 h-5 text-gray-600" />
-                </div>
               </div>
-            </CardHeader>
-          </button>
-          {statsOpen && (
-            <CardContent className="pt-0 px-4 pb-4">
-              {loadingStats ? (
-                <div className="text-center py-4">
-                  <div className="text-sm text-gray-500">Loading stats...</div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-3">
-                  {/* Pending */}
-                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 p-3 shadow-md">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/20 rounded-full -mr-8 -mt-8"></div>
-                    <div className="relative z-10">
-                      <div className="text-2xl font-bold text-white drop-shadow">{stats.pendingSubmissions}</div>
-                      <p className="text-xs text-white/90 font-medium mt-1">Pending</p>
-                    </div>
+              {level < 7 && (
+                <div className="space-y-2.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium text-gray-600">Progress to Level {level + 1}</span>
+                    <span className="text-sm font-bold text-gray-900">{rep} / {nextLevelRep}</span>
                   </div>
-                  
-                  {/* Earned */}
-                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 p-3 shadow-md">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/20 rounded-full -mr-8 -mt-8"></div>
-                    <div className="relative z-10">
-                      <div className="text-2xl font-bold text-white drop-shadow">${stats.totalEarnings.toFixed(2)}</div>
-                      <p className="text-xs text-white/90 font-medium mt-1">Earned</p>
-                    </div>
-                  </div>
-                  
-                  {/* Accepted */}
-                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-400 to-indigo-600 p-3 shadow-md">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/20 rounded-full -mr-8 -mt-8"></div>
-                    <div className="relative z-10">
-                      <div className="text-2xl font-bold text-white drop-shadow">{stats.acceptedGigs}</div>
-                      <p className="text-xs text-white/90 font-medium mt-1">Accepted</p>
-                    </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-brand-600 to-accent-600 h-2.5 rounded-full transition-all duration-500 shadow-sm"
+                      style={{ width: `${Math.min((rep / nextLevelRep) * 100, 100)}%` }}
+                    />
                   </div>
                 </div>
               )}
             </CardContent>
-          )}
-        </Card>
+          </Card>
+        )}
 
-        {/* Action Buttons */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Profile Information - Button to open modal */}
-          {creatorData && (
-            <Card 
-              className="cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-200 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200" 
-              onClick={() => setProfileModalOpen(true)}
-            >
-              <CardHeader className="py-4 px-3">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
-                    <User className="w-6 h-6 text-white" strokeWidth={2.5} />
-                  </div>
-                  <CardTitle className="text-sm font-bold text-gray-900 text-center">Profile</CardTitle>
-                </div>
-              </CardHeader>
-            </Card>
-          )}
-
-          {/* Community Leaderboard - Button to open modal */}
-          {creatorData?.communityId && (
-            <Card 
-              className="cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-200 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200"
-              onClick={() => setCommunityModalOpen(true)}
-            >
-              <CardHeader className="py-4 px-3">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-md">
-                    <Trophy className="w-6 h-6 text-white" strokeWidth={2.5} />
-                  </div>
-                  <CardTitle className="text-sm font-bold text-gray-900 text-center">Community</CardTitle>
-                </div>
-              </CardHeader>
-            </Card>
-          )}
-        </div>
-      </div>
-
-      {/* Profile Modal */}
-      {profileModalOpen && creatorData && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setProfileModalOpen(false)}
-        >
-          <div 
-            className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] overflow-hidden shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header with gradient */}
-            <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-indigo-600 p-5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <User className="w-5 h-5 text-white" strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white">@{creatorData.username}</h2>
-                  {creatorData.location && (
-                    <p className="text-xs text-white/80 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> {creatorData.location}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <button 
-                onClick={() => setProfileModalOpen(false)}
-                className="p-2 hover:bg-white/20 rounded-full transition-colors"
-              >
-                <XIcon className="w-5 h-5 text-white" />
-              </button>
-            </div>
-            
-            <div className="overflow-y-auto max-h-[calc(85vh-80px)]">
-              <div className="p-5 space-y-5">
-                {/* Bio */}
-                {creatorData.bio && (
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-                    <p className="text-sm text-gray-700 leading-relaxed italic">&ldquo;{creatorData.bio}&rdquo;</p>
-                  </div>
-                )}
-
-                {/* Social Links - Featured */}
-                {creatorData.socials && (creatorData.socials.tiktok || creatorData.socials.instagram || creatorData.socials.x) && (
-                  <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-4 border-2 border-orange-200">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-                        <span className="text-lg">🔗</span>
-                      </div>
-                      <p className="text-sm font-bold text-gray-900">Social Profiles</p>
-                    </div>
-                    <div className="space-y-2.5">
-                      {creatorData.socials.tiktok && (
-                        <div className="flex items-center justify-between gap-3 bg-white rounded-lg p-3 border border-orange-100">
-                          <a 
-                            href={`https://tiktok.com/@${creatorData.socials.tiktok}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-sm text-gray-900 hover:text-orange-600 transition-colors flex-1 font-medium"
-                          >
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-                            </svg>
-                            <span>@{creatorData.socials.tiktok}</span>
-                            {creatorData.socialVerification?.tiktok?.verified && (
-                              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                            )}
-                          </a>
-                          <div className="flex items-center gap-2">
-                            {creatorData.followingCount?.tiktok && (
-                              <span className="text-xs text-gray-600 font-semibold bg-gray-100 px-2 py-1 rounded-full">
-                                {creatorData.followingCount.tiktok.toLocaleString()}
-                              </span>
-                            )}
-                            {!creatorData.socialVerification?.tiktok?.verified && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={handleVerifyTikTok}
-                                disabled={verifyingTikTok}
-                                className="text-xs h-7 px-2"
-                              >
-                                {verifyingTikTok ? 'Verifying...' : 'Verify'}
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {creatorData.socials.instagram && (
-                        <div className="flex items-center justify-between gap-3 bg-white rounded-lg p-3 border border-orange-100">
-                          <a 
-                            href={`https://instagram.com/${creatorData.socials.instagram}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-sm text-gray-900 hover:text-orange-600 transition-colors flex-1 font-medium"
-                          >
-                            <Instagram className="w-5 h-5" />
-                            <span>@{creatorData.socials.instagram}</span>
-                          </a>
-                          {creatorData.followingCount?.instagram && (
-                            <span className="text-xs text-gray-600 font-semibold bg-gray-100 px-2 py-1 rounded-full">
-                              {creatorData.followingCount.instagram.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {creatorData.socials.x && (
-                        <div className="flex items-center justify-between gap-3 bg-white rounded-lg p-3 border border-orange-100">
-                          <a 
-                            href={`https://x.com/${creatorData.socials.x}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-sm text-gray-900 hover:text-orange-600 transition-colors flex-1 font-medium"
-                          >
-                            <span className="text-lg">𝕏</span>
-                            <span>@{creatorData.socials.x}</span>
-                          </a>
-                          {creatorData.followingCount?.x && (
-                            <span className="text-xs text-gray-600 font-semibold bg-gray-100 px-2 py-1 rounded-full">
-                              {creatorData.followingCount.x.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Interests */}
-                {creatorData.interests && creatorData.interests.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
-                        <Heart className="w-3 h-3 text-white" fill="white" />
-                      </div>
-                      <p className="text-xs font-bold text-gray-900">Interests</p>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {creatorData.interests.map((interestId: string) => {
-                        const thing = THINGS.find(t => t.id === interestId);
-                        return thing ? (
-                          <span key={interestId} className="px-2 py-0.5 text-[10px] rounded-md bg-gradient-to-r from-pink-50 to-rose-50 text-pink-700 border border-pink-200 font-semibold">
-                            {thing.icon} {thing.name}
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Experience */}
-                {creatorData.experience && creatorData.experience.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
-                        <Briefcase className="w-4 h-4 text-white" />
-                      </div>
-                      <p className="text-sm font-bold text-gray-900">Experience</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {creatorData.experience.map((exp: string) => (
-                        <span key={exp} className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-2 border-blue-200 font-semibold shadow-sm capitalize">
-                          {exp.replace(/_/g, ' ')}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Hard No's */}
-                {creatorData.hardNos && creatorData.hardNos.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center">
-                        <XCircle className="w-4 h-4 text-white" />
-                      </div>
-                      <p className="text-sm font-bold text-gray-900">Hard No's</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {creatorData.hardNos.map((no: string) => {
-                        const thing = THINGS.find(t => t.id === no);
-                        return (
-                          <span key={no} className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border-2 border-red-200 font-semibold shadow-sm">
-                            {thing ? `${thing.icon} ${thing.name}` : no}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Portfolio Links */}
-                {creatorData.portfolioLinks && creatorData.portfolioLinks.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
-                        <LinkIcon className="w-4 h-4 text-white" />
-                      </div>
-                      <p className="text-sm font-bold text-gray-900">Portfolio</p>
-                    </div>
-                    <div className="space-y-2">
-                      {creatorData.portfolioLinks.map((link: string, index: number) => (
-                        <a 
-                          key={index} 
-                          href={link} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="flex items-center gap-2 text-sm text-violet-600 hover:text-violet-700 font-medium bg-violet-50 hover:bg-violet-100 rounded-lg p-3 border-2 border-violet-200 transition-all"
-                        >
-                          <LinkIcon className="w-4 h-4 flex-shrink-0" />
-                          <span className="truncate">{link}</span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Community Modal */}
-      {communityModalOpen && creatorData?.communityId && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-          onClick={() => setCommunityModalOpen(false)}
-        >
-          <div 
-            className="bg-white rounded-xl max-w-lg w-full max-h-[80vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Community Leaderboard</h2>
-              <button 
-                onClick={() => setCommunityModalOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded-full"
-              >
-                <XIcon className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-4">
-              {loadingLeaderboard ? (
-                <div className="text-center py-4">
+          {/* Income Card */}
+          <Card className="border border-gray-200 shadow-sm bg-gradient-to-br from-gray-50 to-gray-100">
+            <CardContent className="p-4">
+              {loadingStats ? (
+                <div className="text-center py-2">
                   <div className="text-xs text-gray-500">Loading...</div>
-                </div>
-              ) : communityLeaderboard.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-xs text-gray-500">No leaderboard data</p>
                 </div>
               ) : (
                 <div>
-                  {/* Community Name */}
-                  {communityName && (
-                    <div className="text-center mb-4">
-                      <p className="text-lg font-bold text-purple-700">{communityName}</p>
-                      <p className="text-xs text-gray-600">{communityLeaderboard.length} members</p>
-                    </div>
-                  )}
-
-                  {/* Leaderboard List */}
-                  <div className="space-y-2">
-                    {communityLeaderboard.map((creator) => {
-                      const isCurrentUser = creator.uid === user.uid;
-                      const { level } = getRepLevel(creator.rep);
-                      
-                      return (
-                        <div
-                          key={creator.uid}
-                          className={`flex items-center justify-between p-3 rounded-lg ${
-                            isCurrentUser 
-                              ? 'bg-gradient-to-r from-brand-50 to-accent-50 border-2 border-brand-300' 
-                              : 'bg-gray-50 border border-gray-200'
-                          }`}
-                        >
-                          {/* Rank & User */}
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            {/* Rank Badge */}
-                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                              creator.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
-                              creator.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800' :
-                              creator.rank === 3 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
-                              isCurrentUser ? 'bg-brand-500 text-white' :
-                              'bg-gray-300 text-gray-700'
-                            }`}>
-                              {creator.rank}
-                            </div>
-
-                            {/* Username */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className={`text-sm font-bold truncate ${isCurrentUser ? 'text-brand-900' : 'text-gray-900'}`}>
-                                  @{creator.username}
-                                </p>
-                                {isCurrentUser && (
-                                  <span className="text-[10px] bg-brand-600 text-white px-1.5 py-0.5 rounded-full font-semibold">
-                                    You
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-600">Lvl {level}</p>
-                            </div>
-                          </div>
-
-                          {/* Rep Points */}
-                          <div className="text-right flex-shrink-0">
-                            <div className={`text-lg font-bold ${isCurrentUser ? 'text-brand-700' : 'text-purple-700'}`}>
-                              {creator.rep}
-                            </div>
-                            <p className="text-xs text-gray-600">rep</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Info */}
-                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-xs text-blue-800">
-                      🎯 Complete gigs to climb the ranks and win prizes!
-                    </p>
-                  </div>
+                  <p className="text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Income</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(Math.round((stats.totalEarnings || 0) * 100))}
+                  </p>
                 </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          {/* Accepted Card */}
+          <Card className="border border-green-200 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
+            <CardContent className="p-4">
+              {loadingStats ? (
+                <div className="text-center py-2">
+                  <div className="text-xs text-gray-500">Loading...</div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs font-medium text-green-700 mb-1.5 uppercase tracking-wide">Accepted</p>
+                  <p className="text-2xl font-bold text-green-700">
+                    {stats.acceptedGigs || 0}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      )}
+
+        {/* Bottom Nav Tiles */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Profile */}
+          {creatorData && (
+            <Card 
+              className="cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all border border-gray-200 shadow-sm group"
+              onClick={() => setProfileModalOpen(true)}
+            >
+              <CardContent className="p-4 text-center">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-2.5 shadow-md group-hover:shadow-lg transition-shadow">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <p className="text-sm font-bold text-gray-900">Profile</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Community */}
+          {creatorData?.communityId && (
+            <Card 
+              className="cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all border border-gray-200 shadow-sm group"
+              onClick={() => setCommunityModalOpen(true)}
+            >
+              <CardContent className="p-4 text-center">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mx-auto mb-2.5 shadow-md group-hover:shadow-lg transition-shadow">
+                  <Trophy className="w-6 h-6 text-white" />
+                </div>
+                <p className="text-sm font-bold text-gray-900">Community</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Profile Modal */}
+        <ProfileModal
+          isOpen={profileModalOpen}
+          onClose={() => setProfileModalOpen(false)}
+          creatorData={creatorData}
+          onVerifyTikTok={handleVerifyTikTok}
+          verifyingTikTok={verifyingTikTok}
+        />
+
+        {/* Community Modal */}
+        <CommunityModal
+          isOpen={communityModalOpen}
+          onClose={() => setCommunityModalOpen(false)}
+          communityName={communityName}
+          leaderboard={communityLeaderboard}
+          loadingLeaderboard={loadingLeaderboard}
+          currentUserId={user?.uid || ''}
+        />
+      </div>
     </Layout>
   );
 }

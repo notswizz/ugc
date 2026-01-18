@@ -39,9 +39,9 @@ export default function VisibilityBadge({ visibility, className = '' }: Visibili
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${style.bgColor} ${style.textColor} ${style.borderColor} ${className}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border ${style.bgColor} ${style.textColor} ${style.borderColor} ${className}`}
     >
-      <span>{style.icon}</span>
+      <span className="text-[10px]">{style.icon}</span>
       <span>{style.label}</span>
     </span>
   );

@@ -76,3 +76,20 @@ input[type="range"].slider-thumb::-moz-range-thumb:hover {
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.6);
 }
+
+/* AI Analysis Loading Screen Animations */
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0) translateX(0); 
+  }
+  33% { 
+    transform: translateY(-20px) translateX(10px); 
+  }
+  66% { 
+    transform: translateY(10px) translateX(-10px); 
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
