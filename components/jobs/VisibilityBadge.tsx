@@ -32,6 +32,11 @@ export default function VisibilityBadge({ visibility, className = '' }: Visibili
 
   const style = config[visibility];
 
+  // Return null if visibility is not valid
+  if (!style || !visibility) {
+    return null;
+  }
+
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${style.bgColor} ${style.textColor} ${style.borderColor} ${className}`}

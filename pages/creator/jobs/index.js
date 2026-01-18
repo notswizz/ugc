@@ -12,6 +12,7 @@ import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
 import HistoryTab from './_history-tab';
+import { Clock, Play, ArrowRight, Activity, Users, Sparkles } from 'lucide-react';
 
 export default function CreatorJobs() {
   const { user, appUser } = useAuth();
@@ -472,85 +473,131 @@ export default function CreatorJobs() {
           <LoadingSpinner text="Loading campaigns..." />
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {jobs.map(job => (
-              <Link key={job.id} href={`/creator/jobs/${job.id}`} className="block">
-                <Card className="hover:shadow-xl hover:border-green-300 transition-all duration-200 border-2 border-gray-200 overflow-hidden bg-white cursor-pointer">
-                  <div className="flex">
-                  {/* Left side: Content */}
-                  <div className="flex-1 p-6 flex flex-col">
-                    {/* Company Name - only show if exists */}
-                    {job.brandName && (
-                      <div className="mb-2">
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                          {job.brandName}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Title */}
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4 line-clamp-2 leading-tight">
-                      {job.title}
-                    </h3>
-
-                    {/* Category and Tags */}
-                    <div className="flex items-center gap-3 flex-wrap mb-5">
-                      <div className="flex items-center gap-2 text-sm">
-                        {THINGS.find(t => t.id === job.primaryThing)?.icon && (
-                          <span className="text-lg">{THINGS.find(t => t.id === job.primaryThing)?.icon}</span>
-                        )}
-                        <span className="font-semibold text-gray-700">{THINGS.find(t => t.id === job.primaryThing)?.name || job.primaryThing}</span>
-                      </div>
-                      {job.squadNames && job.squadNames.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          {job.squadNames.map((squadName, idx) => (
-                            <span
-                              key={idx}
-                              className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold flex items-center gap-1"
-                            >
-                              <span>👥</span>
-                              <span>{squadName}</span>
+            {jobs.map(job => {
+              const hoursRemaining = (job.deadlineAt - new Date()) / (1000 * 60 * 60);
+              const isUrgent = hoursRemaining < 24;
+              const isVeryUrgent = hoursRemaining < 6;
+              const urgencyTextClass = getUrgencyColor(job.deadlineAt);
+              const primaryThing = THINGS.find(t => t.id === job.primaryThing);
+              const deliverables = job.deliverables || { videos: 0, photos: 0 };
+              const displayTitle = job.title.endsWith('2') ? job.title.replace(' 2', ' Campaign') : job.title;
+              
+              return (
+                <Link key={job.id} href={`/creator/jobs/${job.id}`} className="block group">
+                  <Card className="relative overflow-hidden bg-[#F9FAFB] border border-[rgba(0,0,0,0.04)] rounded-[20px] shadow-sm hover:shadow-xl hover:-translate-y-0.5 hover:border-[rgba(0,0,0,0.06)] hover:ring-1 hover:ring-black/5 transition-all duration-200 cursor-pointer">
+                    <CardContent className="p-6">
+                      {/* Header with Brand and Payout - Payout spans full height */}
+                      <div className="flex items-stretch justify-between gap-4 mb-5">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          {/* Brand Mark */}
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <span className="text-white text-xs font-bold">
+                              {job.brandName ? job.brandName.charAt(0).toUpperCase() : 'C'}
                             </span>
-                          ))}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0 pr-2">
+                            {/* Company Name */}
+                            {job.brandName && (
+                              <div className="mb-1">
+                                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                                  {job.brandName}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Campaign Title */}
+                            <h3 className="text-xl font-semibold text-gray-900 leading-tight line-clamp-2 group-hover:text-orange-600 transition-colors mb-3">
+                              {displayTitle}
+                            </h3>
+
+                            {/* Tags Section - Moved inside left column */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Primary Tag */}
+                              {primaryThing && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-semibold border border-green-100 hover:bg-green-100 hover:-translate-y-0.5 transition-all duration-150 cursor-default">
+                                  <Activity className="w-3.5 h-3.5" />
+                                  <span>{primaryThing.name}</span>
+                                </span>
+                              )}
+                              
+                              {/* Secondary Tags (Squads) */}
+                              {job.squadNames && job.squadNames.length > 0 && (
+                                job.squadNames.map((squadName, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium border border-purple-200 hover:bg-purple-100 hover:-translate-y-0.5 transition-all duration-150 cursor-default"
+                                  >
+                                    <Users className="w-3.5 h-3.5" />
+                                    <span>{squadName}</span>
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
 
-                    {/* Bottom row: Time and Deliverables */}
-                    <div className="flex items-center gap-4 mt-auto pt-4 border-t border-gray-100">
-                      <span className={`text-sm font-bold ${getUrgencyColor(job.deadlineAt)}`}>
-                        {formatTimeRemaining(job.deadlineAt)}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        {job.deliverables.videos > 0 && (
-                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
-                            {job.deliverables.videos} video{job.deliverables.videos > 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {job.deliverables.photos > 0 && (
-                          <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-xs font-medium">
-                            {job.deliverables.photos} photo{job.deliverables.photos > 1 ? 's' : ''}
-                          </span>
-                        )}
+                        {/* Payout Badge - Taller to fill vertical space */}
+                        <div className="flex-shrink-0 -rotate-1 group-hover:rotate-0 group-hover:scale-[1.02] transition-all duration-200 self-stretch">
+                          <div className="relative overflow-hidden bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 rounded-[16px] px-4 py-7 shadow-md group-hover:shadow-lg min-w-[100px] w-[110px] h-full flex flex-col justify-between before:absolute before:inset-0 before:opacity-0 before:transition-opacity before:duration-200 group-hover:before:opacity-100 before:bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.28),transparent_55%)] after:absolute after:-inset-x-10 after:top-0 after:h-10 after:-skew-y-6 after:bg-white/10 after:translate-y-[-140%] after:transition-transform after:duration-500 group-hover:after:translate-y-[520%]">
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-4">
+                                <Sparkles className="w-3 h-3 text-green-50" />
+                                <span className="text-[9px] text-green-50 font-bold uppercase tracking-wider leading-tight">Payout</span>
+                              </div>
+                              <div className="text-3xl font-extrabold text-white leading-none drop-shadow-sm">
+                                ${(job.calculatedPayout || job.basePayout || 0).toLocaleString()}
+                              </div>
+                            </div>
+                            {job.payoutType === 'dynamic' && (
+                              <p className="text-[8px] text-green-50 mt-auto pt-3 opacity-80 leading-tight">Based on followers</p>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Right side: Payout - Prominent Display */}
-                  <div className="w-40 bg-gradient-to-br from-green-400 via-green-500 to-emerald-600 flex flex-col items-center justify-center p-6 shadow-inner">
-                    <div className="text-center w-full">
-                      <div className="text-[10px] text-green-50 font-bold mb-1.5 uppercase tracking-widest opacity-90">Payout</div>
-                      <div className="text-4xl font-extrabold text-white leading-none drop-shadow-lg">
-                        ${(job.calculatedPayout || job.basePayout || 0).toLocaleString()}
+                      {/* Meta Info Row */}
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                        <div className="flex items-center gap-4">
+                          {/* Countdown */}
+                          <div className={`flex items-center gap-1.5 ${urgencyTextClass} ${isVeryUrgent ? 'animate-pulse' : ''}`}>
+                            <Clock className="w-4 h-4" />
+                            <span className="text-sm font-semibold">
+                              {formatTimeRemaining(job.deadlineAt)} left
+                            </span>
+                          </div>
+                          
+                          {/* Video Count */}
+                          {deliverables.videos > 0 && (
+                            <div className="flex items-center gap-1.5 text-gray-500">
+                              <Play className="w-4 h-4" />
+                              <span className="text-xs font-medium">
+                                {deliverables.videos} video{deliverables.videos > 1 ? 's' : ''} required
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Photo Count */}
+                          {deliverables.photos > 0 && (
+                            <div className="flex items-center gap-1.5 text-gray-500">
+                              <span className="text-xs font-medium">
+                                {deliverables.photos} photo{deliverables.photos > 1 ? 's' : ''} required
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* View Details Link */}
+                        <div className="flex items-center gap-1 text-xs text-gray-400 opacity-90 group-hover:opacity-100 group-hover:text-orange-600 transition-all">
+                          <span className="font-medium">View details</span>
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
                       </div>
-                      {job.payoutType === 'dynamic' && (
-                        <p className="text-[9px] text-green-50 mt-1.5 opacity-75">Based on followers</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                </Card>
-              </Link>
-            ))}
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         )}
 
