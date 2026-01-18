@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
-export default function HistoryTab({ user }) {
+export default function HistoryTab({ user, hideFiltersInComponent = false }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -246,8 +246,8 @@ export default function HistoryTab({ user }) {
 
   return (
     <div>
-      {/* Filter Tabs - Sticky */}
-      <div className="sticky top-[57px] z-30 bg-white border-b border-gray-200 mb-6 pb-2">
+      {/* Filter Tabs */}
+      <div className="border-b border-gray-200 mb-6 pb-2">
         <div className="flex gap-2">
         <button
           onClick={() => setFilter('all')}

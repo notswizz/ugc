@@ -81,60 +81,40 @@ export default function CreatorJobs() {
       console.log('Fetching jobs for creator:', user.uid);
       
       // Fetch jobs from Firestore
-      // First try to get jobs with status 'open', but if that returns 0, check all jobs
-      let q = query(
+      // Fetch all jobs and filter client-side by status (can't use 'in' with multiple statuses in Firestore efficiently)
+      const q = query(
         collection(db, 'jobs'),
-        where('status', '==', 'open'),
         orderBy('createdAt', 'desc'),
         limit(100)
       );
 
-      let querySnapshot = await getDocs(q);
-      console.log(`Found ${querySnapshot.size} jobs with status 'open'`);
+      const querySnapshot = await getDocs(q);
+      console.log(`Found ${querySnapshot.size} total jobs in database`);
       
-      // If no jobs found with 'open' status, try fetching all jobs and filter client-side
-      if (querySnapshot.size === 0) {
-        console.log('No jobs with status "open" found, fetching all jobs to check statuses...');
-        const allJobsQuery = query(
-          collection(db, 'jobs'),
-          orderBy('createdAt', 'desc'),
-          limit(100)
-        );
-        const allJobsSnapshot = await getDocs(allJobsQuery);
-        console.log(`Found ${allJobsSnapshot.size} total jobs in database`);
-        
-        // Log the statuses we found
-        const statusCounts = {};
-        allJobsSnapshot.docs.forEach(doc => {
-          const status = doc.data().status || 'undefined';
-          statusCounts[status] = (statusCounts[status] || 0) + 1;
-        });
-        console.log('Job statuses found:', statusCounts);
-        
-        // Filter to only include jobs that should be visible (open, or no status set, or accepted)
-        // A job should be visible if it doesn't have a status, or has status 'open' or 'accepted'
-        const visibleDocs = allJobsSnapshot.docs.filter(doc => {
-          const status = doc.data().status;
-          const shouldShow = !status || status === 'open' || status === 'accepted';
-          if (!shouldShow) {
-            console.log(`Job ${doc.id} filtered out due to status: ${status}`);
-          }
-          return shouldShow;
-        });
-        
-        // Create a new query snapshot-like object with filtered docs
-        querySnapshot = {
-          docs: visibleDocs,
-          size: visibleDocs.length,
-          empty: visibleDocs.length === 0,
-          forEach: (callback) => visibleDocs.forEach(callback),
-          map: (callback) => visibleDocs.map(callback),
-        };
-        console.log(`After filtering, ${querySnapshot.size} jobs are potentially visible`);
-      }
+      // Log the statuses we found
+      const statusCounts = {};
+      querySnapshot.docs.forEach(doc => {
+        const status = doc.data().status || 'undefined';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+      console.log('Job statuses found:', statusCounts);
+      
+      // Filter to only include jobs that should be visible (open, accepted, or no status set)
+      // Jobs with status 'closed', 'cancelled', 'expired', 'paid' should not show in browse
+      const visibleStatuses = ['open', 'accepted', undefined, null];
+      const visibleDocs = querySnapshot.docs.filter(doc => {
+        const status = doc.data().status;
+        const shouldShow = !status || status === 'open' || status === 'accepted';
+        if (!shouldShow) {
+          console.log(`Job ${doc.id} filtered out due to status: ${status}`);
+        }
+        return shouldShow;
+      });
+      
+      console.log(`After status filtering, ${visibleDocs.length} jobs are potentially visible`);
       
       // Fetch submissions for all jobs to check submission caps
-      const jobsData = querySnapshot.docs.map(doc => ({
+      const jobsData = visibleDocs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         deadlineAt: doc.data().deadlineAt?.toDate ? doc.data().deadlineAt.toDate() : new Date(doc.data().deadlineAt),
@@ -153,24 +133,26 @@ export default function CreatorJobs() {
           const approvedSubmissionsSnapshot = await getDocs(approvedSubmissionsQuery);
           const approvedCount = approvedSubmissionsSnapshot.size;
           
-          // Check if creator already submitted to this job (any status)
-          const creatorSubmissionsQuery = query(
+          // Check if creator already has an APPROVED submission for this job
+          // (rejected or pending submissions should not hide the job)
+          const creatorApprovedSubmissionsQuery = query(
             collection(db, 'submissions'),
             where('jobId', '==', job.id),
-            where('creatorId', '==', user?.uid || '')
+            where('creatorId', '==', user?.uid || ''),
+            where('status', '==', 'approved')
           );
-          const creatorSubmissionsSnapshot = await getDocs(creatorSubmissionsQuery);
-          const hasCreatorSubmission = creatorSubmissionsSnapshot.size > 0;
+          const creatorApprovedSubmissionsSnapshot = await getDocs(creatorApprovedSubmissionsQuery);
+          const hasCreatorApprovedSubmission = creatorApprovedSubmissionsSnapshot.size > 0;
           
           return {
             ...job,
             approvedSubmissionsCount: approvedCount,
-            hasCreatorSubmission,
+            hasCreatorApprovedSubmission,
           };
         })
       );
 
-      // Filter out jobs that have reached their submission cap or creator already submitted
+      // Filter out jobs that have reached their submission cap or creator already has approved submission
       const fetchedJobs = jobsWithSubmissionCounts.filter(job => {
         const submissionCap = job.acceptedSubmissionsLimit || 1;
         const isFull = job.approvedSubmissionsCount >= submissionCap;
@@ -178,8 +160,8 @@ export default function CreatorJobs() {
           console.log(`Job ${job.id} filtered: Campaign is full (${job.approvedSubmissionsCount}/${submissionCap})`);
           return false;
         }
-        if (job.hasCreatorSubmission) {
-          console.log(`Job ${job.id} filtered: Creator already submitted`);
+        if (job.hasCreatorApprovedSubmission) {
+          console.log(`Job ${job.id} filtered: Creator already has approved submission`);
           return false;
         }
         return true;
@@ -456,10 +438,10 @@ export default function CreatorJobs() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto">
-        {/* Tab Navigation - Sticky */}
-        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 mb-6">
-          <div className="flex gap-1">
+      <div className="h-full flex flex-col -mx-4 -my-8">
+        {/* Tab Navigation + Heading - Fixed at top */}
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-4">
+          <div className="flex gap-1 mb-4">
             <button
               onClick={() => setActiveTab('browse')}
               className={`px-4 py-3 font-semibold text-sm border-b-2 transition-all ${
@@ -481,15 +463,21 @@ export default function CreatorJobs() {
               History
             </button>
           </div>
+          
+          {/* Page Title */}
+          {activeTab === 'browse' && (
+            <h1 className="text-2xl font-bold">Available Campaigns</h1>
+          )}
+          {activeTab === 'history' && (
+            <h1 className="text-2xl font-bold">Campaign History</h1>
+          )}
         </div>
 
-        {/* Browse Tab Content */}
-        {activeTab === 'browse' && (
-          <div>
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold">Available Campaigns</h1>
-            </div>
-
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Browse Tab Content */}
+          {activeTab === 'browse' && (
+            <div className="p-4">
             {/* Jobs Grid */}
         {loading ? (
           <LoadingSpinner text="Loading campaigns..." />
@@ -635,8 +623,11 @@ export default function CreatorJobs() {
 
         {/* History Tab Content */}
         {activeTab === 'history' && (
-          <HistoryTab user={user} />
+          <div className="p-4">
+            <HistoryTab user={user} hideFiltersInComponent={true} />
+          </div>
         )}
+        </div>
       </div>
     </Layout>
   );

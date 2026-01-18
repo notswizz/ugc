@@ -1,4 +1,4 @@
-import { useState, useEffect, useState as useStateHook } from 'react';
+import { useState, useEffect, useState as useStateHook, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { collection, addDoc, serverTimestamp, query, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
@@ -114,6 +114,8 @@ export default function NewJob() {
 
   const [jobData, setJobData] = useState({
     title: '',
+    platform: '', // TikTok, Instagram, YouTube, etc.
+    contentType: '', // 'video' or 'photo'
     description: '',
     productDescription: '', // Specific product description for AI evaluation
     primaryThing: '',
@@ -151,6 +153,28 @@ export default function NewJob() {
     aiComplianceRequired: false,
     autoApproveWindowHours: 0,
   });
+
+  // State for category search
+  const [categorySearch, setCategorySearch] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const categoryDropdownRef = useRef(null);
+
+  // Filter categories based on search
+  const filteredCategories = THINGS.filter(thing =>
+    thing.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const updateJobData = (updates) => {
     setJobData(prev => ({ ...prev, ...updates }));
@@ -371,7 +395,7 @@ export default function NewJob() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Campaign Title</label>
+              <label className="block text-sm font-medium mb-2">Campaign Title *</label>
               <Input
                 placeholder="e.g., Authentic Coffee Shop Review"
                 value={jobData.title}
@@ -381,27 +405,138 @@ export default function NewJob() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Primary Thing/Category *</label>
+              <label className="block text-sm font-medium mb-2">Platform *</label>
               <p className="text-sm text-muted-foreground mb-3">
-                Select the main category for this campaign
+                Where will this content be posted?
               </p>
-              <div className="flex flex-wrap gap-2">
-                {THINGS.map(thing => (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { id: 'tiktok', name: 'TikTok', icon: '🎵' },
+                  { id: 'instagram', name: 'Instagram', icon: '📸' },
+                  { id: 'youtube', name: 'YouTube', icon: '▶️' },
+                  { id: 'other', name: 'Other', icon: '🌐' },
+                ].map(platform => (
                   <button
-                    key={thing.id}
+                    key={platform.id}
                     type="button"
-                    onClick={() => updateJobData({ primaryThing: thing.id })}
-                    className={`px-3 py-2 rounded-full text-sm border flex items-center gap-1.5 ${
-                      jobData.primaryThing === thing.id
-                        ? 'bg-green-100 text-green-800 border-green-300'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                    onClick={() => updateJobData({ platform: platform.id })}
+                    className={`p-4 rounded-lg border-2 text-center transition-all ${
+                      jobData.platform === platform.id
+                        ? 'bg-orange-50 border-orange-500 shadow-sm'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <span>{thing.icon}</span>
-                    <span>{thing.name}</span>
+                    <div className="text-3xl mb-2">{platform.icon}</div>
+                    <div className="text-sm font-semibold">{platform.name}</div>
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Content Type *</label>
+              <p className="text-sm text-muted-foreground mb-3">
+                What type of content do you need?
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => updateJobData({ contentType: 'video' })}
+                  className={`p-6 rounded-lg border-2 text-center transition-all ${
+                    jobData.contentType === 'video'
+                      ? 'bg-blue-50 border-blue-500 shadow-sm'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-4xl mb-2">🎥</div>
+                  <div className="text-base font-semibold mb-1">Video</div>
+                  <div className="text-xs text-gray-500">Short-form or long-form video content</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateJobData({ contentType: 'photo' })}
+                  className={`p-6 rounded-lg border-2 text-center transition-all ${
+                    jobData.contentType === 'photo'
+                      ? 'bg-purple-50 border-purple-500 shadow-sm'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-4xl mb-2">📷</div>
+                  <div className="text-base font-semibold mb-1">Photo</div>
+                  <div className="text-xs text-gray-500">Still images and photography</div>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Primary Thing/Category *</label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Search and select the main category for this campaign
+              </p>
+              <div className="relative" ref={categoryDropdownRef}>
+                <Input
+                  placeholder="Search categories (e.g., Food, Beauty, Tech)..."
+                  value={categorySearch}
+                  onChange={(e) => {
+                    setCategorySearch(e.target.value);
+                    setShowCategoryDropdown(true);
+                  }}
+                  onFocus={() => setShowCategoryDropdown(true)}
+                  className="pr-10"
+                />
+                {jobData.primaryThing && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                    <span>{THINGS.find(t => t.id === jobData.primaryThing)?.icon}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateJobData({ primaryThing: '' });
+                        setCategorySearch('');
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+                
+                {/* Dropdown */}
+                {showCategoryDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredCategories.length > 0 ? (
+                      filteredCategories.map(thing => (
+                        <button
+                          key={thing.id}
+                          type="button"
+                          onClick={() => {
+                            updateJobData({ primaryThing: thing.id });
+                            setCategorySearch(thing.name);
+                            setShowCategoryDropdown(false);
+                          }}
+                          className={`w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0 ${
+                            jobData.primaryThing === thing.id ? 'bg-green-50' : ''
+                          }`}
+                        >
+                          <span className="text-xl">{thing.icon}</span>
+                          <span className="font-medium">{thing.name}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-gray-500 text-sm">
+                        No categories found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Selected category display */}
+              {jobData.primaryThing && (
+                <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                  <span>{THINGS.find(t => t.id === jobData.primaryThing)?.icon}</span>
+                  <span>{THINGS.find(t => t.id === jobData.primaryThing)?.name}</span>
+                </div>
+              )}
             </div>
 
             <div>

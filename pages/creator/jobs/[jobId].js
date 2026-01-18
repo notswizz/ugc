@@ -364,6 +364,21 @@ export default function JobDetail() {
                   </div>
                 )}
 
+                {/* Product Description */}
+                {job.productDescription && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                        <span className="text-purple-600 text-base">📦</span>
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900">Product Details</h3>
+                    </div>
+                    <div className="ml-9">
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{job.productDescription}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Right: Deliverables */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">

@@ -27,9 +27,9 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-[428px] bg-white min-h-screen shadow-xl md:shadow-2xl">
+      <div className="w-full max-w-[428px] bg-white h-screen shadow-xl md:shadow-2xl flex flex-col overflow-hidden">
         {user && (
-          <header className="sticky top-0 z-50 w-full border-b bg-white">
+          <header className="flex-shrink-0 z-50 w-full border-b bg-white">
             <div className="px-4">
             <div className="flex h-14 items-center justify-between">
               <Link href={getDashboardPath()} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -73,13 +73,13 @@ export default function Layout({ children }: LayoutProps) {
         </header>
       )}
       
-      <main className="px-4 py-8 pb-20">
+      <main className="flex-1 overflow-y-auto px-4 py-8">
         {children}
       </main>
 
       {/* Bottom Navigation (for creators) */}
       {user && appUser?.role === 'creator' && (
-        <div className="fixed bottom-0 w-full max-w-[428px] bg-white border-t border-gray-200 z-50 safe-area-bottom shadow-lg">
+        <div className="flex-shrink-0 w-full bg-white border-t border-gray-200 z-50 safe-area-bottom shadow-lg">
           <div className="max-w-md mx-auto grid grid-cols-3">
             <Link 
               href="/creator/dashboard" 
@@ -120,7 +120,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Bottom Navigation (for brands) */}
       {user && appUser?.role === 'brand' && (
-        <div className="fixed bottom-0 w-full max-w-[428px] bg-white border-t border-gray-200 z-50 safe-area-bottom shadow-lg">
+        <div className="flex-shrink-0 w-full bg-white border-t border-gray-200 z-50 safe-area-bottom shadow-lg">
           <div className="max-w-md mx-auto grid grid-cols-3">
             <Link 
               href="/brand/dashboard" 
