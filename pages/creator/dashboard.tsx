@@ -360,7 +360,9 @@ export default function CreatorDashboard() {
                             <span className="text-base">🎵</span>
                             <span>@{creatorData.socials.tiktok}</span>
                             {creatorData.socialVerification?.tiktok?.verified && (
-                              <CheckCircle className="w-3.5 h-3.5 text-green-600 flex-shrink-0" title="Verified" />
+                              <span title="Verified">
+                                <CheckCircle className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                              </span>
                             )}
                           </a>
                           {creatorData.followingCount?.tiktok && (
