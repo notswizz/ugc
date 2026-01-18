@@ -188,12 +188,30 @@ export default function CreatorJobs() {
       // Filter by creator's Hard No's first (hard filter per plan)
       const creatorHardNos = creatorData?.hardNos || [];
       
+      // Fetch pending squad invitations for this user
+      let pendingSquadIds = [];
+      if (user) {
+        try {
+          const invitationsQuery = query(
+            collection(db, 'squadInvitations'),
+            where('inviteeId', '==', user.uid),
+            where('status', '==', 'pending')
+          );
+          const invitationsSnapshot = await getDocs(invitationsQuery);
+          pendingSquadIds = invitationsSnapshot.docs.map(doc => doc.data().squadId).filter(Boolean);
+          console.log('Pending squad invitations:', pendingSquadIds);
+        } catch (error) {
+          console.error('Error fetching squad invitations:', error);
+        }
+      }
+      
       // Filter jobs that need squad checking separately
       const jobsNeedingSquadCheck = fetchedJobs.filter(job => 
         job.visibility === 'squad' && job.squadIds && job.squadIds.length > 0
       );
       
       // Check squad membership for jobs that need it and fetch squad names
+      // Include both accepted memberships and pending invitations
       const squadMemberships = await Promise.all(
         jobsNeedingSquadCheck.map(async (job) => {
           let isInSelectedSquad = false;
@@ -204,7 +222,11 @@ export default function CreatorJobs() {
               if (squadDoc.exists()) {
                 const squadData = squadDoc.data();
                 const memberIds = squadData.memberIds || [];
-                if (memberIds.includes(user?.uid || '')) {
+                // Check if user is a member OR has a pending invitation
+                const isMember = memberIds.includes(user?.uid || '');
+                const hasPendingInvite = pendingSquadIds.includes(squadId);
+                
+                if (isMember || hasPendingInvite) {
                   isInSelectedSquad = true;
                   // Store the squad name for display
                   if (squadData.name) {

@@ -158,13 +158,49 @@ export default function AdminDashboard() {
       // Fetch all jobs
       const jobsQuery = query(collection(db, 'jobs'), orderBy('createdAt', 'desc'));
       const jobsSnapshot = await getDocs(jobsQuery);
-      const jobsData = jobsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt),
-        deadlineAt: doc.data().deadlineAt?.toDate ? doc.data().deadlineAt.toDate() : new Date(doc.data().deadlineAt),
-        updatedAt: doc.data().updatedAt?.toDate ? doc.data().updatedAt.toDate() : new Date(doc.data().updatedAt),
-      }));
+      
+      // Calculate actual job status based on approved submissions
+      const jobsData = await Promise.all(
+        jobsSnapshot.docs.map(async (doc) => {
+          const jobData = doc.data();
+          const jobId = doc.id;
+          
+          // Count approved submissions for this job
+          const approvedSubmissionsQuery = query(
+            collection(db, 'submissions'),
+            where('jobId', '==', jobId),
+            where('status', '==', 'approved')
+          );
+          const approvedSubmissionsSnapshot = await getDocs(approvedSubmissionsQuery);
+          const approvedCount = approvedSubmissionsSnapshot.size;
+          const acceptedSubmissionsLimit = jobData.acceptedSubmissionsLimit || 1;
+          
+          // Determine actual status: open or closed
+          // A job is closed if:
+          // 1. It has reached the submission limit
+          // 2. It's explicitly marked as cancelled/expired/paid
+          // Otherwise it's open
+          let actualStatus = 'open';
+          if (jobData.status === 'cancelled' || jobData.status === 'expired' || jobData.status === 'paid') {
+            actualStatus = jobData.status;
+          } else if (approvedCount >= acceptedSubmissionsLimit) {
+            actualStatus = 'closed';
+          } else {
+            actualStatus = 'open';
+          }
+          
+          return {
+            id: doc.id,
+            ...jobData,
+            status: actualStatus, // Override with calculated status
+            approvedSubmissionsCount: approvedCount,
+            acceptedSubmissionsLimit,
+            createdAt: jobData.createdAt?.toDate ? jobData.createdAt.toDate() : new Date(jobData.createdAt),
+            deadlineAt: jobData.deadlineAt?.toDate ? jobData.deadlineAt.toDate() : new Date(jobData.deadlineAt),
+            updatedAt: jobData.updatedAt?.toDate ? jobData.updatedAt.toDate() : new Date(jobData.updatedAt),
+          };
+        })
+      );
       setJobs(jobsData);
 
       // Fetch all submissions
@@ -352,12 +388,19 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
                               job.status === 'open' ? 'bg-green-100 text-green-800' :
-                              job.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                              job.status === 'closed' ? 'bg-gray-100 text-gray-800' :
                               job.status === 'paid' ? 'bg-purple-100 text-purple-800' :
+                              job.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              job.status === 'expired' ? 'bg-orange-100 text-orange-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {job.status}
+                              {job.status?.toUpperCase()}
                             </span>
+                            {job.approvedSubmissionsCount !== undefined && (
+                              <span className="text-xs text-gray-500 whitespace-nowrap">
+                                {job.approvedSubmissionsCount}/{job.acceptedSubmissionsLimit || 1} approved
+                              </span>
+                            )}
                             <span className="text-xs text-gray-500 whitespace-nowrap">{job.createdAt?.toLocaleDateString()}</span>
                           </div>
                         </div>
@@ -423,8 +466,10 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                             jobDetails.job.status === 'open' ? 'bg-green-100 text-green-700 border border-green-200' :
-                            jobDetails.job.status === 'approved' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                            jobDetails.job.status === 'closed' ? 'bg-gray-100 text-gray-700 border border-gray-200' :
                             jobDetails.job.status === 'paid' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                            jobDetails.job.status === 'cancelled' ? 'bg-red-100 text-red-700 border border-red-200' :
+                            jobDetails.job.status === 'expired' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
                             'bg-gray-100 text-gray-700 border border-gray-200'
                           }`}>
                             {jobDetails.job.status?.toUpperCase()}

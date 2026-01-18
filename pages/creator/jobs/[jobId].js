@@ -320,20 +320,20 @@ export default function JobDetail() {
               </div>
             </div>
 
-            {/* Payout Badge - Bottom Right */}
-            <div className="absolute bottom-6 right-6 -rotate-1 hover:rotate-0 hover:scale-[1.02] transition-all duration-200">
-              <div className="relative overflow-hidden bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 rounded-[18px] px-6 py-7 shadow-lg hover:shadow-xl min-w-[140px] flex flex-col justify-between before:absolute before:inset-0 before:opacity-0 before:transition-opacity before:duration-200 hover:before:opacity-100 before:bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.28),transparent_55%)]">
+            {/* Payout Badge - Top Right */}
+            <div className="absolute top-6 right-6 -rotate-1 hover:rotate-0 hover:scale-[1.02] transition-all duration-200">
+              <div className="relative overflow-hidden bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 rounded-[12px] px-3 py-2.5 shadow-md hover:shadow-lg min-w-[90px] flex flex-col before:absolute before:inset-0 before:opacity-0 before:transition-opacity before:duration-200 hover:before:opacity-100 before:bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.28),transparent_55%)]">
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-4 h-4 text-green-50" />
-                    <span className="text-[10px] text-green-50 font-bold uppercase tracking-wider leading-tight relative z-10">Payout</span>
+                  <div className="flex items-center gap-1 mb-1">
+                    <Sparkles className="w-3 h-3 text-green-50" />
+                    <span className="text-[8px] text-green-50 font-bold uppercase tracking-wider leading-tight relative z-10">Payout</span>
                   </div>
-                  <div className="text-4xl font-extrabold text-white leading-none drop-shadow-sm relative z-10">
+                  <div className="text-xl font-extrabold text-white leading-none drop-shadow-sm relative z-10">
                     ${(job.payout || job.basePayout || 0).toLocaleString()}
                   </div>
                 </div>
                 {job.payoutType === 'dynamic' && (
-                  <p className="text-[9px] text-green-50 mt-4 pt-3 opacity-85 leading-tight border-t border-green-400/30 relative z-10">Based on followers</p>
+                  <p className="text-[7px] text-green-50 mt-2 pt-1.5 opacity-85 leading-tight border-t border-green-400/30 relative z-10">Based on followers</p>
                 )}
               </div>
             </div>
