@@ -36,7 +36,7 @@ export default async function handler(
     // Step 1: Exchange OAuth code for access token
     const TIKTOK_CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
     const TIKTOK_CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET;
-    const TIKTOK_REDIRECT_URI = process.env.TIKTOK_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/tiktok-callback`;
+    const TIKTOK_REDIRECT_URI = process.env.TIKTOK_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/tiktok-callback`;
 
     if (!TIKTOK_CLIENT_KEY || !TIKTOK_CLIENT_SECRET) {
       return res.status(500).json({ 

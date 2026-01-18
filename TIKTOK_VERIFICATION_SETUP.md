@@ -21,8 +21,8 @@ The TikTok verification system allows creators to verify their follower counts a
 2. Create a developer account if you don't have one
 3. Create a new app
 4. Note your **Client Key** and **Client Secret**
-5. Add your redirect URI: `https://yourdomain.com/api/tiktok-callback`
-   - For local development: `http://localhost:3000/api/tiktok-callback`
+5. Add your redirect URI: `https://yourdomain.com/tiktok-callback`
+   - For local development: `http://localhost:3000/tiktok-callback`
 
 ### 2. Configure Environment Variables
 
@@ -74,7 +74,7 @@ TikTok requires app review for production use. During development, you can test 
 - **Returns**: `{ success: boolean, followerCount: number, username: string }`
 - **Protected**: Uses server-side credentials
 
-### `/api/tiktok-callback`
+### `/tiktok-callback`
 - **Type**: Next.js page (handles OAuth callback)
 - **Purpose**: Receives OAuth code from TikTok and initiates verification
 

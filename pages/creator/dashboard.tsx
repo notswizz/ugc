@@ -144,7 +144,7 @@ export default function CreatorDashboard() {
 
     // TikTok OAuth URL
     const TIKTOK_CLIENT_KEY = process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY;
-    const TIKTOK_REDIRECT_URI = `${window.location.origin}/api/tiktok-callback`;
+    const TIKTOK_REDIRECT_URI = `${window.location.origin}/tiktok-callback`;
     
     if (!TIKTOK_CLIENT_KEY) {
       toast.error('TikTok integration not configured. Please contact support.');
