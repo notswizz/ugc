@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "delete-db": "node scripts/delete-database.js",
-    "set-jobs-open": "node scripts/set-jobs-open.js"
+    "set-gigs-open": "node scripts/set-gigs-open.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

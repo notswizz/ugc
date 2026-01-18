@@ -2,7 +2,7 @@
  * Builds evaluation prompts for video analysis
  */
 
-export interface JobData {
+export interface GigData {
   title?: string;
   description?: string;
   productDescription?: string; // Specific product description for AI evaluation
@@ -23,15 +23,15 @@ export interface JobData {
 /**
  * Builds a simple evaluation prompt for Qwen2.5-Omni
  */
-export function buildEvaluationPrompt(job: JobData): string {
+export function buildEvaluationPrompt(gig: GigData): string {
   // Use productDescription if provided, otherwise fall back to title/description
-  const productDescription = job.productDescription || job.title || job.description || 'the product';
-  const productContext = job.description || job.primaryThing || '';
+  const productDescription = gig.productDescription || gig.title || gig.description || 'the product';
+  const productContext = gig.description || gig.primaryThing || '';
   
   // Build product information section
   let productInfo = `Product: ${productDescription}`;
-  if (job.productDescription && (job.title || job.description)) {
-    productInfo += `\nCampaign/Job: ${job.title || job.description}`;
+  if (gig.productDescription && (gig.title || gig.description)) {
+    productInfo += `\nGig/Gig: ${gig.title || gig.description}`;
   }
   if (productContext && productContext !== productDescription) {
     productInfo += `\nCategory: ${productContext}`;
@@ -62,41 +62,41 @@ IMPORTANT: Provide your actual evaluation scores based on what you see in the vi
 /**
  * Builds a detailed requirements prompt (for future use)
  */
-export function buildRequirementsPrompt(job: JobData): string {
+export function buildRequirementsPrompt(gig: GigData): string {
   const parts: string[] = [];
   
-  if (job.title) {
-    parts.push(`Job Title: ${job.title}`);
+  if (gig.title) {
+    parts.push(`Gig Title: ${gig.title}`);
   }
   
-  if (job.description) {
-    parts.push(`Description: ${job.description}`);
+  if (gig.description) {
+    parts.push(`Description: ${gig.description}`);
   }
   
-  if (job.productInVideoRequired) {
+  if (gig.productInVideoRequired) {
     parts.push(`✓ Product MUST be visible in the video (this is required)`);
   }
   
-  if (job.brief) {
-    if (job.brief.talkingPoints && job.brief.talkingPoints.length > 0) {
-      parts.push(`Key Talking Points: ${job.brief.talkingPoints.join(', ')}`);
+  if (gig.brief) {
+    if (gig.brief.talkingPoints && gig.brief.talkingPoints.length > 0) {
+      parts.push(`Key Talking Points: ${gig.brief.talkingPoints.join(', ')}`);
     }
-    if (job.brief.hooks && job.brief.hooks.length > 0) {
-      parts.push(`Suggested Hooks: ${job.brief.hooks.join(', ')}`);
+    if (gig.brief.hooks && gig.brief.hooks.length > 0) {
+      parts.push(`Suggested Hooks: ${gig.brief.hooks.join(', ')}`);
     }
-    if (job.brief.angles && job.brief.angles.length > 0) {
-      parts.push(`Story Angles: ${job.brief.angles.join(', ')}`);
+    if (gig.brief.angles && gig.brief.angles.length > 0) {
+      parts.push(`Story Angles: ${gig.brief.angles.join(', ')}`);
     }
-    if (job.brief.do && job.brief.do.length > 0) {
-      parts.push(`Do's: ${job.brief.do.join(', ')}`);
+    if (gig.brief.do && gig.brief.do.length > 0) {
+      parts.push(`Do's: ${gig.brief.do.join(', ')}`);
     }
-    if (job.brief.dont && job.brief.dont.length > 0) {
-      parts.push(`Don'ts: ${job.brief.dont.join(', ')}`);
+    if (gig.brief.dont && gig.brief.dont.length > 0) {
+      parts.push(`Don'ts: ${gig.brief.dont.join(', ')}`);
     }
   }
   
-  if (job.deliverables?.notes) {
-    parts.push(`Additional Notes: ${job.deliverables.notes}`);
+  if (gig.deliverables?.notes) {
+    parts.push(`Additional Notes: ${gig.deliverables.notes}`);
   }
   
   return parts.join('\n');

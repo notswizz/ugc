@@ -1,7 +1,7 @@
-import { JobVisibility } from '@/lib/models/types';
+import { GigVisibility } from '@/lib/models/types';
 
 interface VisibilityBadgeProps {
-  visibility: JobVisibility;
+  visibility: GigVisibility;
   className?: string;
 }
 

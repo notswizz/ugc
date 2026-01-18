@@ -10,7 +10,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 export interface PaymentData {
   submissionId: string;
-  jobId: string;
+  gigId: string;
   creatorId: string;
   brandId: string;
   job: any;
@@ -22,7 +22,7 @@ export interface PaymentData {
  * Uses Stripe if configured, otherwise uses balance system
  */
 export async function processPayment(data: PaymentData): Promise<void> {
-  const { submissionId, jobId, creatorId, brandId, job, submission } = data;
+  const { submissionId, gigId, creatorId, brandId, gig, submission } = data;
   
   if (!adminDb) {
     throw new Error('Firebase Admin not initialized');
@@ -41,10 +41,10 @@ export async function processPayment(data: PaymentData): Promise<void> {
   }
 
   // Calculate payment amounts
-  // If job has dynamic follower ranges, calculate payout based on creator's follower count
-  let basePayout = parseFloat(job.basePayout) || 0;
+  // If gig has dynamic follower ranges, calculate payout based on creator's follower count
+  let basePayout = parseFloat(gig.basePayout) || 0;
   
-  if (job.payoutType === 'dynamic' && job.followerRanges && job.followerRanges.length > 0) {
+  if (gig.payoutType === 'dynamic' && gig.followerRanges && gig.followerRanges.length > 0) {
     // Get creator data to calculate payout based on follower count
     const creatorDoc = await adminDb.collection('creators').doc(creatorId).get();
     if (creatorDoc.exists) {
@@ -55,7 +55,7 @@ export async function processPayment(data: PaymentData): Promise<void> {
                             (creator?.followingCount?.linkedin || 0);
       
       // Find matching range
-      const sortedRanges = [...job.followerRanges].sort((a: any, b: any) => (a.min || 0) - (b.min || 0));
+      const sortedRanges = [...gig.followerRanges].sort((a: any, b: any) => (a.min || 0) - (b.min || 0));
       for (const range of sortedRanges) {
         const min = range.min || 0;
         const max = range.max;
@@ -86,7 +86,7 @@ export async function processPayment(data: PaymentData): Promise<void> {
   // Check for reimbursement - look for productPurchase data
   if (submission.productPurchase) {
     const requestedReimbursement = parseFloat(submission.productPurchase.amount) || 0;
-    const reimbursementCap = parseFloat(job.reimbursementCap) || 0;
+    const reimbursementCap = parseFloat(gig.reimbursementCap) || 0;
     
     // Reimbursement is available if there's an amount (check both ocrVerified and amount)
     // For now, if amount exists, include it (can add ocrVerified check later if needed)
@@ -140,7 +140,7 @@ export async function processPayment(data: PaymentData): Promise<void> {
       try {
         await processStripePayment({
           submissionId,
-          jobId,
+          gigId,
           creatorId,
           brandId,
           basePayout,
@@ -163,7 +163,7 @@ export async function processPayment(data: PaymentData): Promise<void> {
   // Process via balance system (either Stripe not configured or Stripe failed)
   await processBalancePayment({
     submissionId,
-    jobId,
+    gigId,
     creatorId,
     brandId,
     basePayout,
@@ -179,7 +179,7 @@ export async function processPayment(data: PaymentData): Promise<void> {
  */
 async function processStripePayment(data: {
   submissionId: string;
-  jobId: string;
+  gigId: string;
   creatorId: string;
   brandId: string;
   basePayout: number;
@@ -191,7 +191,7 @@ async function processStripePayment(data: {
 }): Promise<void> {
   const {
     submissionId,
-    jobId,
+    gigId,
     creatorId,
     brandId,
     basePayout,
@@ -213,7 +213,7 @@ async function processStripePayment(data: {
       destination: connectAccountId,
       metadata: {
         submissionId,
-        jobId,
+        gigId,
         creatorId,
         brandId,
       },
@@ -222,7 +222,7 @@ async function processStripePayment(data: {
     // Create payment document
     const paymentData: any = {
       submissionId,
-      jobId,
+      gigId,
       brandId,
       creatorId,
       basePayout,
@@ -257,7 +257,7 @@ async function processStripePayment(data: {
     // Create payment document with pending status
     const paymentData: any = {
       submissionId,
-      jobId,
+      gigId,
       brandId,
       creatorId,
       basePayout,
@@ -288,7 +288,7 @@ async function processStripePayment(data: {
  */
 async function processBalancePayment(data: {
   submissionId: string;
-  jobId: string;
+  gigId: string;
   creatorId: string;
   brandId: string;
   basePayout: number;
@@ -299,7 +299,7 @@ async function processBalancePayment(data: {
 }): Promise<void> {
   const {
     submissionId,
-    jobId,
+    gigId,
     creatorId,
     brandId,
     basePayout,
@@ -331,7 +331,7 @@ async function processBalancePayment(data: {
       `Payment for approved submission`,
       {
         submissionId,
-        jobId,
+        gigId,
         basePayout,
         bonusAmount,
         reimbursementAmount,
@@ -351,7 +351,7 @@ async function processBalancePayment(data: {
         `Platform fee for submission ${submissionId}`,
         {
           submissionId,
-          jobId,
+          gigId,
           creatorId,
           platformFee,
           type: 'platform_fee',
@@ -365,7 +365,7 @@ async function processBalancePayment(data: {
         `Platform fee for submission ${submissionId}`,
         {
           submissionId,
-          jobId,
+          gigId,
           brandId,
           creatorId,
           platformFee,
@@ -378,7 +378,7 @@ async function processBalancePayment(data: {
     // Create payment document
     const paymentData: any = {
       submissionId,
-      jobId,
+      gigId,
       brandId,
       creatorId,
       basePayout,
@@ -423,7 +423,7 @@ async function processBalancePayment(data: {
     // Create payment document with pending status
     const paymentData: any = {
       submissionId,
-      jobId,
+      gigId,
       brandId,
       creatorId,
       basePayout,

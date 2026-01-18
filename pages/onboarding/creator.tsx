@@ -209,7 +209,7 @@ export default function CreatorOnboarding() {
         metrics: {
           ratingAvg: 0,
           ratingCount: 0,
-          jobsCompleted: 0,
+          gigsCompleted: 0,
           onTimeRate: 100,
           disputeRate: 0,
           refundRate: 0,
@@ -363,7 +363,7 @@ export default function CreatorOnboarding() {
             <div>
               <label className="block text-sm font-medium mb-2">Experience (What I'm Good At)</label>
               <p className="text-sm text-muted-foreground mb-3">
-                Skills that qualify you for jobs
+                Skills that qualify you for gigs
               </p>
               <div className="flex flex-wrap gap-2">
                 {EXPERIENCE_TYPES.map(exp => (
@@ -386,7 +386,7 @@ export default function CreatorOnboarding() {
             <div>
               <label className="block text-sm font-medium mb-2">Hard No's (What I Won't Promote)</label>
               <p className="text-sm text-muted-foreground mb-3">
-                Categories you'll never see jobs from
+                Categories you'll never see gigs from
               </p>
               <div className="flex flex-wrap gap-2">
                 {HARD_NO_CATEGORIES.map(no => (
@@ -581,19 +581,19 @@ export default function CreatorOnboarding() {
             <div className="text-center">
               <h3 className="text-lg font-semibold mb-2">🚗 Ready to Dash!</h3>
               <p className="text-muted-foreground mb-4">
-                Your profile is complete! Go online to start receiving real-time job offers.
+                Your profile is complete! Go online to start receiving real-time gig offers.
               </p>
               <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
                 <p className="text-sm text-orange-800 mb-3">
                   ✅ Profile created successfully<br/>
                   ✅ Trust Score calculated<br/>
-                  ✅ Ready to go online as a UGC Dasher<br/>
+                  ✅ Ready to go online as a Gigleter<br/>
                   💰 Rates managed by admin for fair pay<br/>
                   📱 Push notifications enabled
                 </p>
                 <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
                   <p className="text-sm text-green-800 font-medium">
-                    💡 Pro tip: Add UGC Dash to your home screen for the best experience!
+                    💡 Pro tip: Add Giglet to your home screen for the best experience!
                   </p>
                 </div>
               </div>

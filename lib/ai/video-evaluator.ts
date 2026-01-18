@@ -84,7 +84,7 @@ export async function evaluateVideo(options: VideoEvaluationOptions): Promise<st
       
       // Set system_prompt for Qwen2.5-Omni (optional but recommended)
       if (inputSchema.system_prompt !== undefined) {
-        inputParams.system_prompt = "You are an AI video evaluator for a UGC (User Generated Content) platform. Your role is to analyze video submissions created by creators for brand advertising campaigns. You evaluate videos based on product visibility, commercial quality, visual appeal, and effectiveness as advertisements. Provide objective, detailed assessments in JSON format.";
+        inputParams.system_prompt = "You are an AI video evaluator for a UGC (User Generated Content) platform. Your role is to analyze video submissions created by creators for brand advertising gigs. You evaluate videos based on product visibility, commercial quality, visual appeal, and effectiveness as advertisements. Provide objective, detailed assessments in JSON format.";
       }
       
       // Set generate_audio to false to only get text/JSON output (boolean type)

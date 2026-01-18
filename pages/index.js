@@ -10,7 +10,7 @@ export default function Home() {
   const { user, appUser, loading } = useAuth();
 
   if (loading) {
-    return <LoadingSpinner fullScreen text="Loading UGC Dash..." size="lg" />;
+    return <LoadingSpinner fullScreen text="Loading Giglet..." size="lg" />;
   }
 
   // If user is logged in, redirect to their dashboard
@@ -48,8 +48,8 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>UGC Dash</title>
-        <meta name="description" content="Be a UGC Dasher - Get real-time campaign offers and get paid fast" />
+        <title>Giglet</title>
+        <meta name="description" content="Be a Gigleter - Get real-time gig offers and get paid fast" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
         <meta name="theme-color" content="#ea580c" />
         <link rel="icon" href="/favicon.ico" />
@@ -63,12 +63,12 @@ export default function Home() {
               <div className="flex justify-between items-center h-16">
                 <div className="flex items-center gap-2">
                   <img 
-                    src="/logo1.PNG" 
-                    alt="UGC Dash Logo" 
+                    src="/logo1.png" 
+                    alt="Giglet Logo" 
                     className="h-8 w-auto"
                   />
                   <span className="text-lg font-semibold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">
-                    UGC Dash
+                    Giglet
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -85,8 +85,8 @@ export default function Home() {
             <div className="text-center">
               <div className="mb-6 flex justify-center">
                 <img 
-                  src="/logotext.PNG" 
-                  alt="UGC Dash" 
+                  src="/logotext.png" 
+                  alt="Giglet" 
                   className="h-16 w-auto"
                 />
               </div>
@@ -94,7 +94,7 @@ export default function Home() {
                 DoorDash for UGC
               </h1>
               <p className="text-sm text-gray-600 mb-8">
-                Get campaigns. Create content. Get paid fast.
+                Get gigs. Create content. Get paid fast.
               </p>
               <div className="flex flex-col gap-3">
                 <Link href="/auth/signup">
@@ -153,7 +153,7 @@ export default function Home() {
           {/* Footer - Minimal */}
           <footer className="px-4 py-6 border-t">
             <div className="text-center">
-              <p className="text-xs text-gray-500">© 2025 UGC Dash</p>
+              <p className="text-xs text-gray-500">© 2025 Giglet</p>
             </div>
           </footer>
         </div>

@@ -55,10 +55,10 @@ export const getCreatorById = (creatorId: string) =>
 export const getBrandById = (brandId: string) =>
   getDocument('brands', brandId);
 
-// Campaign queries
-export const getPublishedCampaigns = (lastDoc?: QueryDocumentSnapshot) => {
+// Gig queries
+export const getPublishedGigs = (lastDoc?: QueryDocumentSnapshot) => {
   let q = query(
-    collection(db, 'campaigns'),
+    collection(db, 'gigs'),
     where('status', '==', 'published'),
     orderBy('createdAt', 'desc'),
     limit(20)
@@ -68,26 +68,26 @@ export const getPublishedCampaigns = (lastDoc?: QueryDocumentSnapshot) => {
     q = query(q, startAfter(lastDoc));
   }
 
-  return getCollection('campaigns', [], q);
+  return getCollection('gigs', [], q);
 };
 
-export const getCampaignById = (campaignId: string) =>
-  getDocument('campaigns', campaignId);
+export const getGigById = (gigId: string) =>
+  getDocument('gigs', gigId);
 
-export const getCampaignsByBrand = (brandId: string) =>
-  getCollection('campaigns', [
+export const getGigsByBrand = (brandId: string) =>
+  getCollection('gigs', [
     where('brandId', '==', brandId),
     orderBy('createdAt', 'desc')
   ]);
 
 // Application queries
-export const getApplicationsByCampaign = (campaignId: string) =>
-  getCollection('campaigns/' + campaignId + '/applications', [
+export const getApplicationsByGig = (gigId: string) =>
+  getCollection('gigs/' + gigId + '/applications', [
     orderBy('createdAt', 'desc')
   ]);
 
 export const getApplicationsByCreator = (creatorId: string) =>
-  getCollection('campaigns', [
+  getCollection('gigs', [
     where('applications', 'array-contains', { creatorId }),
     orderBy('createdAt', 'desc')
   ]);

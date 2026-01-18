@@ -52,7 +52,7 @@ export interface AIEvaluation {
  */
 export async function evaluateCompliance(
   submissionId: string,
-  jobId: string,
+  gigId: string,
   requirements?: {
     productRequired?: boolean;
     requiredMentions?: string[];
@@ -66,7 +66,7 @@ export async function evaluateCompliance(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ submissionId, jobId }),
+      body: JSON.stringify({ submissionId, gigId }),
     });
 
     if (!response.ok) {
@@ -98,7 +98,7 @@ export async function evaluateCompliance(
  */
 export async function evaluateQuality(
   submissionId: string,
-  jobId: string
+  gigId: string
 ): Promise<QualityScore> {
   try {
     const response = await fetch('/api/evaluate-submission', {
@@ -106,7 +106,7 @@ export async function evaluateQuality(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ submissionId, jobId }),
+      body: JSON.stringify({ submissionId, gigId }),
     });
 
     if (!response.ok) {
@@ -143,16 +143,16 @@ export async function evaluateQuality(
  */
 export async function evaluateSubmission(
   submissionId: string,
-  jobId: string,
+  gigId: string,
   requirements?: any
 ): Promise<AIEvaluation> {
   // Layer 1: Compliance check
-  const compliance = await evaluateCompliance(submissionId, jobId, requirements);
+  const compliance = await evaluateCompliance(submissionId, gigId, requirements);
   
   // Layer 2: Quality score (only if compliance passes)
   let quality: QualityScore | undefined;
   if (compliance.passed) {
-    quality = await evaluateQuality(submissionId, jobId);
+    quality = await evaluateQuality(submissionId, gigId);
   }
   
   return {

@@ -73,8 +73,8 @@ export default function Login() {
               <AnimatedLogo size="xl" />
             </div>
             <img 
-              src="/logotext.PNG" 
-              alt="UGC Dash" 
+              src="/logotext.png" 
+              alt="Giglet" 
               className="h-14 md:h-16 w-auto"
             />
           </div>
@@ -108,7 +108,7 @@ export default function Login() {
             </Button>
 
             <p className="text-center text-xs text-gray-500">
-              By continuing, you agree to UGC Dash's{' '}
+              By continuing, you agree to Giglet's{' '}
               <a href="#" className="text-orange-600 hover:underline">Terms</a>
               {' '}and{' '}
               <a href="#" className="text-orange-600 hover:underline">Privacy Policy</a>

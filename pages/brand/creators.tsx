@@ -88,7 +88,7 @@ export default function BrandCreators() {
 
       if (filters.maxRate < 500) {
         fetchedCreators = fetchedCreators.filter(creator =>
-          creator.rates.perJobSuggested && creator.rates.perJobSuggested <= filters.maxRate
+          creator.rates.perGigSuggested && creator.rates.perGigSuggested <= filters.maxRate
         );
       }
 
@@ -124,7 +124,7 @@ export default function BrandCreators() {
       fetchedCreators.sort((a, b) => {
         switch (sortBy) {
           case 'lowest_rate':
-            return (a.rates.perJobSuggested || 999) - (b.rates.perJobSuggested || 999);
+            return (a.rates.perGigSuggested || 999) - (b.rates.perGigSuggested || 999);
           case 'fastest':
             return a.turnaroundDays - b.turnaroundDays;
           case 'recommended':
@@ -156,8 +156,8 @@ export default function BrandCreators() {
     // Rating weight
     score += creator.metrics.ratingAvg * 10;
 
-    // Jobs completed weight
-    score += creator.metrics.jobsCompleted * 2;
+    // Gigs completed weight
+    score += creator.metrics.gigsCompleted * 2;
 
     // Response time weight (lower is better)
     score += Math.max(0, 50 - creator.metrics.responseTimeHoursAvg);
@@ -308,7 +308,7 @@ export default function BrandCreators() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">
-                        {creator.rates.perJobSuggested ? `$${creator.rates.perJobSuggested}/job` : 'Rate on request'}
+                        {creator.rates.perGigSuggested ? `$${creator.rates.perGigSuggested}/job` : 'Rate on request'}
                       </p>
                       <p className="text-xs text-muted-foreground">{creator.turnaroundDays} days</p>
                     </div>
@@ -335,7 +335,7 @@ export default function BrandCreators() {
 
                   <div className="flex items-center justify-between text-sm mb-4">
                     <span>⭐ {creator.metrics.ratingAvg.toFixed(1)} ({creator.metrics.ratingCount})</span>
-                    <span>✅ {creator.metrics.jobsCompleted} jobs</span>
+                    <span>✅ {creator.metrics.gigsCompleted} gigs</span>
                   </div>
 
                   <div className="flex gap-2">

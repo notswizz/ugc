@@ -14,11 +14,11 @@ import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
 
-export default function SubmitJob() {
+export default function SubmitGig() {
   const router = useRouter();
-  const { jobId } = router.query;
+  const { gigId } = router.query;
   const { user } = useAuth();
-  const [job, setJob] = useState(null);
+  const [gig, setGig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [calculatedPayout, setCalculatedPayout] = useState(0);
@@ -41,42 +41,42 @@ export default function SubmitJob() {
   const [evaluationResult, setEvaluationResult] = useState(null); // { status: 'evaluating' | 'approved' | 'rejected', evaluation: {...}, qualityScore: number }
 
   useEffect(() => {
-    if (jobId && typeof jobId === 'string') {
-      fetchJob();
+    if (gigId && typeof gigId === 'string') {
+      fetchGig();
     }
-  }, [jobId]);
+  }, [gigId]);
 
-  const fetchJob = async () => {
-    if (!jobId || typeof jobId !== 'string') return;
+  const fetchGig = async () => {
+    if (!gigId || typeof gigId !== 'string') return;
     
     try {
       setLoading(true);
-      const jobDoc = await getDoc(doc(db, 'jobs', jobId));
+      const gigDoc = await getDoc(doc(db, 'gigs', gigId));
       
-      if (!jobDoc.exists()) {
-        toast.error('Job not found');
-        router.push('/creator/jobs');
+      if (!gigDoc.exists()) {
+        toast.error('Gig not found');
+        router.push('/creator/gigs');
         return;
       }
 
-      const jobData = jobDoc.data();
+      const gigData = gigDoc.data();
       
       // Check if user has accepted this job
-      if (jobData.acceptedBy !== user?.uid) {
+      if (gigData.acceptedBy !== user?.uid) {
         toast.error('You have not accepted this job');
-        router.push(`/creator/jobs/${jobId}`);
+        router.push(`/creator/gigs/${gigId}`);
         return;
       }
 
       // Calculate payout if dynamic
-      let payout = jobData.basePayout || 0;
-      if (jobData.payoutType === 'dynamic' && user) {
+      let payout = gigData.basePayout || 0;
+      if (gigData.payoutType === 'dynamic' && user) {
         try {
           const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
           if (creatorDoc.exists()) {
             const creatorData = creatorDoc.data();
             const creatorFollowingCount = getCreatorFollowingCount(creatorData);
-            payout = calculatePayout(jobData, creatorFollowingCount);
+            payout = calculatePayout(gigData, creatorFollowingCount);
             setCalculatedPayout(payout);
           }
         } catch (err) {
@@ -86,16 +86,16 @@ export default function SubmitJob() {
         setCalculatedPayout(payout);
       }
 
-      setJob({
-        id: jobDoc.id,
-        ...jobData,
-        deadlineAt: jobData.deadlineAt?.toDate ? jobData.deadlineAt.toDate() : new Date(jobData.deadlineAt),
+      setGig({
+        id: gigDoc.id,
+        ...gigData,
+        deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
         calculatedPayout: payout,
       });
     } catch (error) {
       console.error('Error fetching job:', error);
       toast.error('Failed to load job');
-      router.push('/creator/jobs');
+      router.push('/creator/gigs');
     } finally {
       setLoading(false);
     }
@@ -117,8 +117,8 @@ export default function SubmitJob() {
     }));
     
     try {
-      const fileName = `${job.id}_${user.uid}_${Date.now()}_${file.name}`;
-      const fileRef = ref(storage, `submissions/${job.id}/${user.uid}/${type}/${fileName}`);
+      const fileName = `${gig.id}_${user.uid}_${Date.now()}_${file.name}`;
+      const fileRef = ref(storage, `submissions/${gig.id}/${user.uid}/${type}/${fileName}`);
       
       // Use uploadBytesResumable for progress tracking
       const uploadTask = uploadBytesResumable(fileRef, file);
@@ -281,7 +281,7 @@ export default function SubmitJob() {
 
   const handleSubmit = async () => {
     if (!job || !user) {
-      console.error('Cannot submit: missing job or user', { hasJob: !!job, hasUser: !!user });
+      console.error('Cannot submit: missing gig or user', { hasGig: !!gig, hasUser: !!user });
       toast.error('Missing required information. Please refresh the page.');
       return;
     }
@@ -291,30 +291,30 @@ export default function SubmitJob() {
       return;
     }
 
-    // Validation - check against job requirements
-    // If job requires videos, they must be uploaded (content links don't work for AI evaluation)
+    // Validation - check against gig requirements
+    // If gig requires videos, they must be uploaded (content links don't work for AI evaluation)
     const hasUploadedVideos = submissionData.videos.length > 0 || submissionData.rawVideos.length > 0;
     const hasPhotos = submissionData.photos.length > 0;
-    const hasRaw = !job.deliverables.raw || (submissionData.rawVideos.length > 0 || submissionData.rawPhotos.length > 0);
+    const hasRaw = !gig.deliverables.raw || (submissionData.rawVideos.length > 0 || submissionData.rawPhotos.length > 0);
     
     // Check if minimum requirements are met
-    // If job requires videos AND has AI evaluation, videos must be uploaded (not just a link)
-    if (job.deliverables.videos > 0) {
-      if (job.aiComplianceRequired && !hasUploadedVideos) {
-        toast.error(`This campaign requires AI evaluation. Please upload at least ${job.deliverables.videos} video file(s). Content links are not supported for AI evaluation.`);
+    // If gig requires videos AND has AI evaluation, videos must be uploaded (not just a link)
+    if (gig.deliverables.videos > 0) {
+      if (gig.aiComplianceRequired && !hasUploadedVideos) {
+        toast.error(`This gig requires AI evaluation. Please upload at least ${gig.deliverables.videos} video file(s). Content links are not supported for AI evaluation.`);
         return;
       } else if (!hasUploadedVideos && !submissionData.contentLink) {
-        toast.error(`Please upload at least ${job.deliverables.videos} video(s) or provide a content link`);
+        toast.error(`Please upload at least ${gig.deliverables.videos} video(s) or provide a content link`);
         return;
       }
     }
     
-    if (job.deliverables.photos > 0 && !hasPhotos) {
-      toast.error(`Please upload at least ${job.deliverables.photos} photo(s)`);
+    if (gig.deliverables.photos > 0 && !hasPhotos) {
+      toast.error(`Please upload at least ${gig.deliverables.photos} photo(s)`);
       return;
     }
     
-    if (job.deliverables.raw && !hasRaw) {
+    if (gig.deliverables.raw && !hasRaw) {
       toast.error('Please upload raw footage files');
       return;
     }
@@ -328,8 +328,8 @@ export default function SubmitJob() {
     }
     
     // If AI evaluation is required, ensure video files are uploaded
-    if (job.aiComplianceRequired && !hasUploadedVideos) {
-      toast.error('This campaign requires AI evaluation. Please upload video files. Content links are not supported for AI evaluation.');
+    if (gig.aiComplianceRequired && !hasUploadedVideos) {
+      toast.error('This gig requires AI evaluation. Please upload video files. Content links are not supported for AI evaluation.');
       return;
     }
 
@@ -355,7 +355,7 @@ export default function SubmitJob() {
       });
       
       const submissionDoc = {
-        jobId: job.id,
+        gigId: gig.id,
         creatorId: user.uid,
         version: 1,
         files: {
@@ -371,7 +371,7 @@ export default function SubmitJob() {
       };
 
       // Add product purchase data if reimbursement is required
-      if (job.productInVideoRequired && job.reimbursementMode === 'reimbursement') {
+      if (gig.productInVideoRequired && gig.reimbursementMode === 'reimbursement') {
         if (submissionData.productPurchase.receiptUrl && 
             submissionData.productPurchase.amount) {
           submissionDoc.productPurchase = {
@@ -391,8 +391,8 @@ export default function SubmitJob() {
       const submissionId = submissionRef.id;
       console.log('Submission created with ID:', submissionId);
 
-      // Don't change job status - keep it 'open' until submission cap is reached
-      // The job will remain available for other creators to submit until it hits the cap
+      // Don't change gig status - keep it 'open' until submission cap is reached
+      // The gig will remain available for other creators to submit until it hits the cap
 
       // ALWAYS trigger AI evaluation for submissions with video files
       // This is the core mechanic - AI grades and scores every submission to move it from pending to approved/rejected
@@ -412,7 +412,7 @@ export default function SubmitJob() {
             },
             body: JSON.stringify({ 
               submissionId, 
-              jobId: job.id 
+              gigId: gig.id 
             }),
           });
 
@@ -433,7 +433,7 @@ export default function SubmitJob() {
             evaluation: result.evaluation,
             qualityScore,
             compliancePassed: approved,
-            payout: job.calculatedPayout || job.basePayout || 0,
+            payout: gig.calculatedPayout || gig.basePayout || 0,
           });
         } catch (error) {
           console.error('Error during AI evaluation:', error);
@@ -443,9 +443,9 @@ export default function SubmitJob() {
           });
         }
       } else {
-        // No video files - can't evaluate, redirect to jobs
+        // No video files - can't evaluate, redirect to gigs
         toast.error('Warning: No video files uploaded. Your submission will need manual review.');
-        router.push('/creator/jobs');
+        router.push('/creator/gigs');
       }
       
     } catch (error) {
@@ -528,14 +528,14 @@ export default function SubmitJob() {
 
               <div className="flex gap-4">
                 <Button
-                  onClick={() => router.push('/creator/jobs')}
+                  onClick={() => router.push('/creator/gigs')}
                   className="bg-green-600 hover:bg-green-700"
                   size="lg"
                 >
-                  View My Campaigns
+                  View My Gigs
                 </Button>
                 <Button
-                  onClick={() => router.push('/creator/jobs/history')}
+                  onClick={() => router.push('/creator/gigs/history')}
                   variant="outline"
                   size="lg"
                 >
@@ -587,14 +587,14 @@ export default function SubmitJob() {
 
               <div className="flex gap-4">
                 <Button
-                  onClick={() => router.push('/creator/jobs')}
+                  onClick={() => router.push('/creator/gigs')}
                   variant="outline"
                   size="lg"
                 >
-                  Back to Campaigns
+                  Back to Gigs
                 </Button>
                 <Button
-                  onClick={() => router.push('/creator/jobs/history')}
+                  onClick={() => router.push('/creator/gigs/history')}
                   variant="outline"
                   size="lg"
                 >
@@ -619,10 +619,10 @@ export default function SubmitJob() {
               </div>
               
               <Button
-                onClick={() => router.push('/creator/jobs')}
+                onClick={() => router.push('/creator/gigs')}
                 size="lg"
               >
-                Back to Campaigns
+                Back to Gigs
               </Button>
             </div>
           </div>
@@ -641,13 +641,13 @@ export default function SubmitJob() {
     );
   }
 
-  if (!job) {
+  if (!gig) {
     return (
       <Layout>
         <div className="max-w-4xl mx-auto py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Job Not Found</h1>
-          <Link href="/creator/jobs">
-            <Button>Back to Jobs</Button>
+          <h1 className="text-2xl font-bold mb-4">Gig Not Found</h1>
+          <Link href="/creator/gigs">
+            <Button>Back to Gigs</Button>
           </Link>
         </div>
       </Layout>
@@ -659,40 +659,53 @@ export default function SubmitJob() {
       <div className="max-w-4xl mx-auto py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link href={`/creator/jobs/${job.id}`} className="text-orange-600 hover:underline mb-4 inline-block">
-            ← Back to Job Details
+          <Link href={`/creator/gigs/${gig.id}`} className="text-orange-600 hover:underline mb-4 inline-block">
+            ← Back to Gig Details
           </Link>
           <h1 className="text-3xl font-bold mb-2">Submit Content</h1>
-          <p className="text-lg text-muted-foreground">{job.title}</p>
+          <p className="text-lg text-muted-foreground">{gig.title}</p>
         </div>
 
         <div className="space-y-6">
-          {/* Content Link */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Content Link {job.deliverables.videos > 0 && submissionData.videos.length === 0 ? '*' : ''}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Share your content link (TikTok, YouTube, Instagram, etc.)
-                </label>
-                <Input
-                  type="url"
-                  placeholder="https://www.tiktok.com/@username/video/..."
-                  value={submissionData.contentLink}
-                  onChange={(e) => setSubmissionData(prev => ({ ...prev, contentLink: e.target.value }))}
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Link to your published video/content on any platform (optional if uploading files)
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Content Link - Show based on platform */}
+          {(gig.platform === 'tiktok' || gig.platform === 'instagram' || gig.platform === 'x') && (
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {gig.platform === 'tiktok' && 'TikTok Link'}
+                  {gig.platform === 'instagram' && `Instagram ${gig.instagramFormat === 'story' ? 'Story' : 'Post'} Link`}
+                  {gig.platform === 'x' && 'X (Twitter) Post Link'}
+                  {gig.contentType === 'video' && gig.deliverables?.videos > 0 && submissionData.videos.length === 0 ? ' *' : ''}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    {gig.platform === 'tiktok' && 'Share your TikTok video link'}
+                    {gig.platform === 'instagram' && `Share your Instagram ${gig.instagramFormat === 'story' ? 'story' : 'post'} link`}
+                    {gig.platform === 'x' && 'Share your X (Twitter) post link'}
+                  </label>
+                  <Input
+                    type="url"
+                    placeholder={
+                      gig.platform === 'tiktok' ? 'https://www.tiktok.com/@username/video/...' :
+                      gig.platform === 'instagram' ? 'https://www.instagram.com/p/...' :
+                      'https://x.com/username/status/...'
+                    }
+                    value={submissionData.contentLink}
+                    onChange={(e) => setSubmissionData(prev => ({ ...prev, contentLink: e.target.value }))}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Link to your published content (optional if uploading files)
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Video Files */}
-          {job.deliverables.videos > 0 && (
+          {/* Video Files - Only show if contentType is video */}
+          {gig.contentType === 'video' && gig.deliverables?.videos > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Video Files *</CardTitle>
@@ -700,7 +713,7 @@ export default function SubmitJob() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Upload video files ({job.deliverables.videos} required)
+                    Upload video files ({gig.deliverables.videos} required)
                   </label>
                   <input
                     type="file"
@@ -736,7 +749,7 @@ export default function SubmitJob() {
                 )}
                 {submissionData.videos.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Uploaded videos ({submissionData.videos.length}/{job.deliverables.videos}):</p>
+                    <p className="text-sm font-medium">Uploaded videos ({submissionData.videos.length}/{gig.deliverables.videos}):</p>
                     {submissionData.videos.map((url, index) => (
                       <div key={index} className="text-xs text-green-600 flex items-center gap-2">
                         ✓ Video {index + 1} uploaded
@@ -748,8 +761,8 @@ export default function SubmitJob() {
             </Card>
           )}
 
-          {/* Photo Files */}
-          {job.deliverables.photos > 0 && (
+          {/* Photo Files - Only show if contentType is photo */}
+          {gig.contentType === 'photo' && gig.deliverables?.photos > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Photo Files *</CardTitle>
@@ -757,7 +770,7 @@ export default function SubmitJob() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Upload photo files ({job.deliverables.photos} required)
+                    Upload photo files ({gig.deliverables.photos} required)
                   </label>
                   <input
                     type="file"
@@ -793,7 +806,7 @@ export default function SubmitJob() {
                 )}
                 {submissionData.photos.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Uploaded photos ({submissionData.photos.length}/{job.deliverables.photos}):</p>
+                    <p className="text-sm font-medium">Uploaded photos ({submissionData.photos.length}/{gig.deliverables.photos}):</p>
                     {submissionData.photos.map((url, index) => (
                       <div key={index} className="text-xs text-green-600 flex items-center gap-2">
                         ✓ Photo {index + 1} uploaded
@@ -806,7 +819,7 @@ export default function SubmitJob() {
           )}
 
           {/* Raw Videos */}
-          {job.deliverables.raw && (
+          {gig.deliverables.raw && (
             <Card>
               <CardHeader>
                 <CardTitle>Raw Videos</CardTitle>
@@ -863,7 +876,7 @@ export default function SubmitJob() {
           )}
 
           {/* Raw Photos */}
-          {job.deliverables.raw && (
+          {gig.deliverables.raw && (
             <Card>
               <CardHeader>
                 <CardTitle>Raw Photos</CardTitle>
@@ -920,7 +933,7 @@ export default function SubmitJob() {
           )}
 
           {/* Reimbursement Section */}
-          {job.productInVideoRequired && job.reimbursementMode === 'reimbursement' && (
+          {gig.productInVideoRequired && gig.reimbursementMode === 'reimbursement' && (
             <Card className="border-green-200 bg-green-50">
               <CardHeader>
                 <CardTitle>Product Purchase Reimbursement</CardTitle>
@@ -934,7 +947,7 @@ export default function SubmitJob() {
                     type="number"
                     step="0.01"
                     min="0"
-                    max={job.reimbursementCap || 9999}
+                    max={gig.reimbursementCap || 9999}
                     placeholder="0.00"
                     value={submissionData.productPurchase.amount}
                     onChange={(e) => setSubmissionData(prev => ({
@@ -947,7 +960,7 @@ export default function SubmitJob() {
                     className="w-full"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Maximum reimbursement: ${job.reimbursementCap || 0}
+                    Maximum reimbursement: ${gig.reimbursementCap || 0}
                   </p>
                 </div>
 
@@ -1068,19 +1081,19 @@ export default function SubmitJob() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {job.deliverables.videos > 0 && (
+                {gig.deliverables.videos > 0 && (
                   <div className="flex justify-between">
                     <span>Videos:</span>
-                    <span className="font-medium">{job.deliverables.videos}</span>
+                    <span className="font-medium">{gig.deliverables.videos}</span>
                   </div>
                 )}
-                {job.deliverables.photos > 0 && (
+                {gig.deliverables.photos > 0 && (
                   <div className="flex justify-between">
                     <span>Photos:</span>
-                    <span className="font-medium">{job.deliverables.photos}</span>
+                    <span className="font-medium">{gig.deliverables.photos}</span>
                   </div>
                 )}
-                {job.deliverables.raw && (
+                {gig.deliverables.raw && (
                   <div className="flex justify-between">
                     <span>Raw Footage:</span>
                     <span className="font-medium text-green-600">Required</span>
@@ -1095,8 +1108,8 @@ export default function SubmitJob() {
             <CardContent className="pt-6">
               <div className="flex flex-col gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600 mb-1">${job.calculatedPayout || job.basePayout || 0}</div>
-                  {job.payoutType === 'dynamic' && (
+                  <div className="text-2xl font-bold text-orange-600 mb-1">${gig.calculatedPayout || gig.basePayout || 0}</div>
+                  {gig.payoutType === 'dynamic' && (
                     <p className="text-[10px] text-gray-500 mb-1">Based on your followers</p>
                   )}
                   <div className="text-sm text-muted-foreground">You'll be paid after approval</div>
@@ -1111,7 +1124,7 @@ export default function SubmitJob() {
                     ? 'Uploading files...' 
                     : submitting 
                       ? 'Submitting...' 
-                      : `Submit Content - $${job.calculatedPayout || job.basePayout || 0}`
+                      : `Submit Content - $${gig.calculatedPayout || gig.basePayout || 0}`
                   }
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">

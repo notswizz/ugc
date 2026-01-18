@@ -1,5 +1,5 @@
-// This file exports the HistoryTab component for use in jobs/index.js
-// It's extracted from pages/creator/jobs/history.js to be used as a tab
+// This file exports the HistoryTab component for use in gigs/index.js
+// It's extracted from pages/creator/gigs/history.js to be used as a tab
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -10,29 +10,29 @@ import { Card, CardContent } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
 export default function HistoryTab({ user, hideFiltersInComponent = false }) {
-  const [jobs, setJobs] = useState([]);
+  const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [expandedFeedback, setExpandedFeedback] = useState(new Set());
 
   useEffect(() => {
     if (user) {
-      fetchJobHistory();
+      fetchGigHistory();
     }
   }, [user, filter]);
 
-  const fetchJobHistory = async () => {
+  const fetchGigHistory = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
       
-      const acceptedJobsQuery = query(
-        collection(db, 'jobs'),
+      const acceptedGigsQuery = query(
+        collection(db, 'gigs'),
         where('acceptedBy', '==', user.uid)
       );
-      const acceptedJobsSnapshot = await getDocs(acceptedJobsQuery);
-      const acceptedJobIds = new Set(acceptedJobsSnapshot.docs.map(doc => doc.id));
+      const acceptedGigsSnapshot = await getDocs(acceptedGigsQuery);
+      const acceptedGigIds = new Set(acceptedGigsSnapshot.docs.map(doc => doc.id));
 
       const submissionsQuery = query(
         collection(db, 'submissions'),
@@ -49,21 +49,21 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
         updatedAt: subDoc.data().updatedAt?.toDate ? subDoc.data().updatedAt.toDate() : new Date(subDoc.data().updatedAt),
       }));
 
-      const submittedJobIds = new Set(submissionDocs.map(sub => sub.jobId));
+      const submittedGigIds = new Set(submissionDocs.map(sub => sub.gigId));
 
-      const acceptedNotSubmittedJobs = await Promise.all(
-        acceptedJobsSnapshot.docs
-          .filter(jobDoc => !submittedJobIds.has(jobDoc.id))
-          .map(async (jobDoc) => {
-            const jobData = jobDoc.data();
+      const acceptedNotSubmittedGigs = await Promise.all(
+        acceptedGigsSnapshot.docs
+          .filter(gigDoc => !submittedGigIds.has(gigDoc.id))
+          .map(async (gigDoc) => {
+            const gigData = gigDoc.data();
             
             let brandName = '';
             try {
-              const brandDoc = await getDoc(doc(db, 'brands', jobData.brandId));
+              const brandDoc = await getDoc(doc(db, 'brands', gigData.brandId));
               if (brandDoc.exists()) {
                 brandName = brandDoc.data().companyName || '';
               } else {
-                const userDoc = await getDoc(doc(db, 'users', jobData.brandId));
+                const userDoc = await getDoc(doc(db, 'users', gigData.brandId));
                 if (userDoc.exists()) {
                   brandName = userDoc.data().name || '';
                 }
@@ -73,36 +73,36 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
             }
 
             return {
-              jobId: jobDoc.id,
-              jobTitle: jobData.title,
+              gigId: gigDoc.id,
+              jobTitle: gigData.title,
               brandName,
               submission: null,
-              job: {
-                basePayout: jobData.basePayout || 0,
-                bonusPool: jobData.bonusPool,
-                deadlineAt: jobData.deadlineAt?.toDate ? jobData.deadlineAt.toDate() : new Date(jobData.deadlineAt),
-                primaryThing: jobData.primaryThing,
-                status: jobData.status,
+              gig: {
+                basePayout: gigData.basePayout || 0,
+                bonusPool: gigData.bonusPool,
+                deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
+                primaryThing: gigData.primaryThing,
+                status: gigData.status,
               },
               payment: null,
             };
           })
       );
 
-      const jobsWithDetails = await Promise.all(
+      const gigsWithDetails = await Promise.all(
         submissionDocs.map(async (submission) => {
-          const jobDoc = await getDoc(doc(db, 'jobs', submission.jobId));
-          if (!jobDoc.exists()) return null;
+          const gigDoc = await getDoc(doc(db, 'gigs', submission.jobId)); // Database still uses jobId field
+          if (!gigDoc.exists()) return null;
 
-          const jobData = jobDoc.data();
+          const gigData = gigDoc.data();
           
           let brandName = '';
           try {
-            const brandDoc = await getDoc(doc(db, 'brands', jobData.brandId));
+            const brandDoc = await getDoc(doc(db, 'brands', gigData.brandId));
             if (brandDoc.exists()) {
               brandName = brandDoc.data().companyName || '';
             } else {
-              const userDoc = await getDoc(doc(db, 'users', jobData.brandId));
+              const userDoc = await getDoc(doc(db, 'users', gigData.brandId));
               if (userDoc.exists()) {
                 brandName = userDoc.data().name || '';
               }
@@ -113,7 +113,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
 
           const paymentsQuery = query(
             collection(db, 'payments'),
-            where('jobId', '==', submission.jobId),
+            where('jobId', '==', submission.jobId), // Database still uses jobId field
             where('creatorId', '==', user.uid)
           );
           const paymentsSnapshot = await getDocs(paymentsQuery);
@@ -127,8 +127,8 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
           const payment = payments[0];
 
           return {
-            jobId: jobData.id || submission.jobId,
-            jobTitle: jobData.title,
+            gigId: gigData.id || submission.jobId, // Use jobId from submission
+            gigTitle: gigData.title,
             brandName,
             submission: {
               id: submission.id,
@@ -138,91 +138,91 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
               updatedAt: submission.updatedAt,
               aiEvaluation: submission.aiEvaluation,
             },
-            job: {
-              basePayout: jobData.basePayout || 0,
-              bonusPool: jobData.bonusPool,
-              deadlineAt: jobData.deadlineAt?.toDate ? jobData.deadlineAt.toDate() : new Date(jobData.deadlineAt),
-              primaryThing: jobData.primaryThing,
-              status: jobData.status,
+            gig: {
+              basePayout: gigData.basePayout || 0,
+              bonusPool: gigData.bonusPool,
+              deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
+              primaryThing: gigData.primaryThing,
+              status: gigData.status,
             },
             payment: payment || null,
           };
         })
       );
 
-      let allJobs = [...acceptedNotSubmittedJobs, ...jobsWithDetails.filter(job => job !== null)];
+      let allGigs = [...acceptedNotSubmittedGigs, ...gigsWithDetails.filter(gig => gig !== null)];
 
       if (filter === 'pending') {
-        allJobs = allJobs.filter(job => 
-          !job.submission || 
-          job.submission.status === 'submitted' || 
-          job.submission.status === 'needs_changes'
+        allGigs = allGigs.filter(gig => 
+          !gig.submission || 
+          gig.submission.status === 'submitted' || 
+          gig.submission.status === 'needs_changes'
         );
       } else if (filter === 'paid') {
-        allJobs = allJobs.filter(job => 
-          job.payment && job.payment.status === 'transferred'
+        allGigs = allGigs.filter(gig => 
+          gig.payment && gig.payment.status === 'transferred'
         );
       } else if (filter === 'completed') {
-        allJobs = allJobs.filter(job => 
-          job.submission && (
-            job.submission.status === 'approved' || 
-            job.submission.status === 'rejected' || 
-            job.payment?.status === 'transferred'
+        allGigs = allGigs.filter(gig => 
+          gig.submission && (
+            gig.submission.status === 'approved' || 
+            gig.submission.status === 'rejected' || 
+            gig.payment?.status === 'transferred'
           )
         );
       }
 
-      const uniqueJobs = {};
-      allJobs.forEach(job => {
-        if (!uniqueJobs[job.jobId]) {
-          uniqueJobs[job.jobId] = job;
-        } else if (job.submission && uniqueJobs[job.jobId].submission) {
-          if (job.submission.createdAt > uniqueJobs[job.jobId].submission.createdAt) {
-            uniqueJobs[job.jobId] = job;
+      const uniqueGigs = {};
+      allGigs.forEach(gig => {
+        if (!uniqueGigs[gig.gigId]) {
+          uniqueGigs[gig.gigId] = job;
+        } else if (gig.submission && uniqueGigs[gig.gigId].submission) {
+          if (gig.submission.createdAt > uniqueGigs[gig.gigId].submission.createdAt) {
+            uniqueGigs[gig.gigId] = job;
           }
-        } else if (job.submission && !uniqueJobs[job.jobId].submission) {
-          uniqueJobs[job.jobId] = job;
+        } else if (gig.submission && !uniqueGigs[gig.gigId].submission) {
+          uniqueGigs[gig.gigId] = job;
         }
       });
 
-      setJobs(Object.values(uniqueJobs));
+      setGigs(Object.values(uniqueGigs));
     } catch (error) {
-      console.error('Error fetching job history:', error);
+      console.error('Error fetching gig history:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getPaymentStatus = (job) => {
-    if (!job.submission) {
+  const getPaymentStatus = (gig) => {
+    if (!gig.submission) {
       return { status: 'pending_submission', text: 'Pending Submission', color: 'text-blue-600' };
     }
 
-    if (!job.payment) {
-      if (job.submission.status === 'approved') {
+    if (!gig.payment) {
+      if (gig.submission.status === 'approved') {
         return { status: 'approved', text: 'Approved - Payment Pending', color: 'text-yellow-600' };
-      } else if (job.submission.status === 'rejected') {
+      } else if (gig.submission.status === 'rejected') {
         return { status: 'rejected', text: 'Rejected', color: 'text-red-600' };
-      } else if (job.submission.status === 'submitted') {
+      } else if (gig.submission.status === 'submitted') {
         return { status: 'pending', text: 'Pending Approval', color: 'text-blue-600' };
-      } else if (job.submission.status === 'needs_changes') {
+      } else if (gig.submission.status === 'needs_changes') {
         return { status: 'needs_changes', text: 'Needs Changes', color: 'text-orange-600' };
       }
-      return { status: job.submission.status || 'unknown', text: job.submission.status || 'Unknown', color: 'text-gray-600' };
+      return { status: gig.submission.status || 'unknown', text: gig.submission.status || 'Unknown', color: 'text-gray-600' };
     }
 
-    if (job.payment.status === 'transferred' || job.payment.status === 'balance_transferred') {
+    if (gig.payment.status === 'transferred' || gig.payment.status === 'balance_transferred') {
       return { status: 'paid', text: 'Paid', color: 'text-green-600' };
-    } else if (job.payment.status === 'captured') {
+    } else if (gig.payment.status === 'captured') {
       return { status: 'captured', text: 'Payment Captured - Transferring Soon', color: 'text-yellow-600' };
-    } else if (job.payment.status === 'pending') {
+    } else if (gig.payment.status === 'pending') {
       return { status: 'pending', text: 'Payment Pending', color: 'text-blue-600' };
     }
     return { status: 'unknown', text: 'Payment Status Unknown', color: 'text-gray-600' };
   };
 
   if (loading) {
-    return <LoadingSpinner text="Loading campaign history..." />;
+    return <LoadingSpinner text="Loading gig history..." />;
   }
 
   const getStatusConfig = (status) => {
@@ -257,7 +257,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
-          All ({jobs.length})
+          All ({gigs.length})
         </button>
         <button
           onClick={() => setFilter('pending')}
@@ -282,26 +282,26 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
         </div>
       </div>
 
-      {/* Jobs List */}
-      {jobs.length > 0 ? (
+      {/* Gigs List */}
+      {gigs.length > 0 ? (
         <div className="space-y-3">
-          {jobs.map((job) => {
-            const paymentStatus = getPaymentStatus(job);
-            const qualityScore = job.submission?.aiEvaluation?.qualityScore;
-            const amountPaid = job.payment?.creatorNet || (job.submission?.status === 'approved' ? job.job.basePayout : null);
+          {gigs.map((gig) => {
+            const paymentStatus = getPaymentStatus(gig);
+            const qualityScore = gig.submission?.aiEvaluation?.qualityScore;
+            const amountPaid = gig.payment?.creatorNet || (gig.submission?.status === 'approved' ? gig.basePayout : null);
             
             const badgeStatus = paymentStatus.status === 'paid' 
               ? 'paid' 
-              : (job.submission?.status || paymentStatus.status || 'unknown');
+              : (gig.submission?.status || paymentStatus.status || 'unknown');
             const statusConfig = getStatusConfig(badgeStatus);
             
             return (
-              <Card key={job.jobId} className="hover:shadow-md transition-all border-l-4 border-l-orange-500">
+              <Card key={gig.gigId} className="hover:shadow-md transition-all border-l-4 border-l-orange-500">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-2 mb-2">
-                        <h3 className="text-base font-bold line-clamp-2 flex-1">{job.jobTitle}</h3>
+                        <h3 className="text-base font-bold line-clamp-2 flex-1">{gig.gigTitle}</h3>
                         <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap flex-shrink-0 ${statusConfig.bg} ${statusConfig.text}`}>
                           {statusConfig.icon} {statusConfig.label}
                         </span>
@@ -310,7 +310,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
                       <div className="flex items-center gap-4 text-xs mb-3">
                         <div className="flex items-center gap-1">
                           <span className="text-gray-400">📅</span>
-                          <span className="text-gray-600">{job.submission?.createdAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || job.job.deadlineAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'N/A'}</span>
+                          <span className="text-gray-600">{gig.submission?.createdAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || gig.deadlineAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'N/A'}</span>
                         </div>
                       </div>
 
@@ -325,9 +325,9 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
                         </div>
                       )}
 
-                      {!job.submission && (
+                      {!gig.submission && (
                         <div className="mt-2">
-                          <Link href={`/creator/jobs/${job.jobId}/submit`}>
+                          <Link href={`/creator/gigs/${gig.gigId}/submit`}>
                             <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white text-xs h-7 px-3">
                               Submit Content
                             </Button>
@@ -349,16 +349,16 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
                   </div>
 
                   {/* AI Feedback Section */}
-                  {job.submission?.aiEvaluation && (
+                  {gig.submission?.aiEvaluation && (
                     <div className="mt-4 pt-4 border-t">
                       <button
                         onClick={() => {
                           setExpandedFeedback(prev => {
                             const newSet = new Set(prev);
-                            if (newSet.has(job.jobId)) {
-                              newSet.delete(job.jobId);
+                            if (newSet.has(gig.gigId)) {
+                              newSet.delete(gig.gigId);
                             } else {
-                              newSet.add(job.jobId);
+                              newSet.add(gig.gigId);
                             }
                             return newSet;
                           });
@@ -367,15 +367,15 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
                       >
                         <span className="text-sm font-semibold text-gray-700">AI Feedback</span>
                         <span className="text-gray-500">
-                          {expandedFeedback.has(job.jobId) ? '▼' : '▶'}
+                          {expandedFeedback.has(gig.gigId) ? '▼' : '▶'}
                         </span>
                       </button>
                       
-                      {expandedFeedback.has(job.jobId) && (
+                      {expandedFeedback.has(gig.gigId) && (
                         <div className={`mt-2 p-4 rounded-lg border-2 transition-all ${
-                          job.submission.status === 'rejected' 
+                          gig.submission.status === 'rejected' 
                             ? 'bg-red-50 border-red-200' 
-                            : job.submission.status === 'approved'
+                            : gig.submission.status === 'approved'
                             ? 'bg-green-50 border-green-200'
                             : 'bg-blue-50 border-blue-200'
                         }`}>
@@ -404,41 +404,41 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
                             </div>
                           )}
 
-                          {job.submission.aiEvaluation.compliancePassed !== undefined && (
+                          {gig.submission.aiEvaluation.compliancePassed !== undefined && (
                             <div className="mb-3 flex items-center gap-2">
                               <span className="text-xs font-semibold text-gray-700">Compliance:</span>
                               <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                                job.submission.aiEvaluation.compliancePassed 
+                                gig.submission.aiEvaluation.compliancePassed 
                                   ? 'bg-green-100 text-green-800' 
                                   : 'bg-red-100 text-red-800'
                               }`}>
-                                {job.submission.aiEvaluation.compliancePassed ? '✅ Passed' : '❌ Failed'}
+                                {gig.submission.aiEvaluation.compliancePassed ? '✅ Passed' : '❌ Failed'}
                               </span>
                             </div>
                           )}
 
-                          {job.submission.aiEvaluation.complianceIssues && 
-                           job.submission.aiEvaluation.complianceIssues.length > 0 && (
+                          {gig.submission.aiEvaluation.complianceIssues && 
+                           gig.submission.aiEvaluation.complianceIssues.length > 0 && (
                             <div className="mb-3">
                               <div className="text-xs font-semibold text-red-800 mb-1.5">Issues Found:</div>
                               <ul className="list-disc list-inside space-y-1">
-                                {job.submission.aiEvaluation.complianceIssues.map((issue, idx) => (
+                                {gig.submission.aiEvaluation.complianceIssues.map((issue, idx) => (
                                   <li key={idx} className="text-xs text-red-700 leading-relaxed">{issue}</li>
                                 ))}
                               </ul>
                             </div>
                           )}
 
-                          {job.submission.aiEvaluation.improvementTips && 
-                           job.submission.aiEvaluation.improvementTips.length > 0 && (
+                          {gig.submission.aiEvaluation.improvementTips && 
+                           gig.submission.aiEvaluation.improvementTips.length > 0 && (
                             <div>
                               <div className={`text-xs font-semibold mb-1.5 ${
-                                job.submission.status === 'approved' ? 'text-green-800' : 'text-blue-800'
+                                gig.submission.status === 'approved' ? 'text-green-800' : 'text-blue-800'
                               }`}>
-                                {job.submission.status === 'approved' ? 'Feedback & Tips:' : 'Improvement Tips:'}
+                                {gig.submission.status === 'approved' ? 'Feedback & Tips:' : 'Improvement Tips:'}
                               </div>
                               <ul className="list-disc list-inside space-y-1">
-                                {job.submission.aiEvaluation.improvementTips.map((tip, idx) => (
+                                {gig.submission.aiEvaluation.improvementTips.map((tip, idx) => (
                                   <li key={idx} className="text-xs text-gray-800 leading-relaxed">{tip}</li>
                                 ))}
                               </ul>
@@ -458,11 +458,11 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
           <CardContent className="py-12 text-center">
             <p className="text-gray-500 mb-4">
               {filter === 'all' 
-                ? "No campaign history yet. Accept and complete campaigns to see them here."
-                : `No ${filter} campaigns found.`}
+                ? "No gig history yet. Accept and complete gigs to see them here."
+                : `No ${filter} gigs found.`}
             </p>
-            <Link href="/creator/jobs">
-              <Button>Browse Available Campaigns</Button>
+            <Link href="/creator/gigs">
+              <Button>Browse Available Gigs</Button>
             </Link>
           </CardContent>
         </Card>

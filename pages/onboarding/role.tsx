@@ -129,12 +129,12 @@ export default function RoleSelection() {
                 🏢 Brand
               </CardTitle>
               <CardDescription>
-                Find creators and run successful UGC campaigns
+                Find creators and run successful UGC gigs
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
-                <li>• Post campaigns and briefs</li>
+                <li>• Post gigs and briefs</li>
                 <li>• Discover talented creators</li>
                 <li>• Manage contracts and payments</li>
                 <li>• Review and approve content</li>

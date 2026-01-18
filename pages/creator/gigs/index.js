@@ -5,8 +5,8 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import VisibilityBadge from '@/components/jobs/VisibilityBadge';
-import { canAcceptJob } from '@/lib/trustScore/calculator';
+import VisibilityBadge from '@/components/gigs/VisibilityBadge';
+import { canAcceptGig } from '@/lib/trustScore/calculator';
 import { THINGS } from '@/lib/things/constants';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
@@ -14,10 +14,10 @@ import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calcul
 import HistoryTab from './_history-tab';
 import { Clock, Play, ArrowRight, Activity, Users, Sparkles } from 'lucide-react';
 
-export default function CreatorJobs() {
+export default function CreatorGigs() {
   const { user, appUser } = useAuth();
   const [activeTab, setActiveTab] = useState('browse'); // 'browse', 'history'
-  const [jobs, setJobs] = useState([]);
+  const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creatorData, setCreatorData] = useState(null);
 
@@ -42,7 +42,7 @@ export default function CreatorJobs() {
         setCreatorData(data);
       } else {
         // If creator profile doesn't exist yet, use empty defaults
-        // Give new users a minimum trust score so they can see campaigns without trustScoreMin requirements
+        // Give new users a minimum trust score so they can see gigs without trustScoreMin requirements
         // This matches the initial trust score calculation from onboarding (20 base + socials)
         console.log('No creator profile found, using defaults with trustScore: 20');
         setCreatorData({
@@ -58,38 +58,38 @@ export default function CreatorJobs() {
       setCreatorData({
         hardNos: [],
         interests: [],
-        trustScore: 20, // Minimum trust score so users can see open campaigns
+        trustScore: 20, // Minimum trust score so users can see open gigs
       });
     }
   };
 
-  // Fetch jobs when creator data is available
+  // Fetch gigs when creator data is available
   useEffect(() => {
     if (user && appUser && creatorData !== null) {
-      fetchJobs();
+      fetchGigs();
     }
   }, [user, appUser, creatorData]);
 
-  const fetchJobs = async () => {
+  const fetchGigs = async () => {
     if (!user || !appUser || creatorData === null) {
-      console.log('Not fetching jobs:', { hasUser: !!user, hasAppUser: !!appUser, creatorData: creatorData });
+      console.log('Not fetching gigs:', { hasUser: !!user, hasAppUser: !!appUser, creatorData: creatorData });
       return;
     }
     
     try {
       setLoading(true);
-      console.log('Fetching jobs for creator:', user.uid);
+      console.log('Fetching gigs for creator:', user.uid);
       
-      // Fetch jobs from Firestore
-      // Fetch all jobs and filter client-side by status (can't use 'in' with multiple statuses in Firestore efficiently)
+      // Fetch gigs from Firestore
+      // Fetch all gigs and filter client-side by status (can't use 'in' with multiple statuses in Firestore efficiently)
       const q = query(
-        collection(db, 'jobs'),
+        collection(db, 'gigs'),
         orderBy('createdAt', 'desc'),
         limit(100)
       );
 
       const querySnapshot = await getDocs(q);
-      console.log(`Found ${querySnapshot.size} total jobs in database`);
+      console.log(`Found ${querySnapshot.size} total gigs in database`);
       
       // Log the statuses we found
       const statusCounts = {};
@@ -97,24 +97,24 @@ export default function CreatorJobs() {
         const status = doc.data().status || 'undefined';
         statusCounts[status] = (statusCounts[status] || 0) + 1;
       });
-      console.log('Job statuses found:', statusCounts);
+      console.log('Gig statuses found:', statusCounts);
       
-      // Filter to only include jobs that should be visible (open, accepted, or no status set)
-      // Jobs with status 'closed', 'cancelled', 'expired', 'paid' should not show in browse
+      // Filter to only include gigs that should be visible (open, accepted, or no status set)
+      // Gigs with status 'closed', 'cancelled', 'expired', 'paid' should not show in browse
       const visibleStatuses = ['open', 'accepted', undefined, null];
       const visibleDocs = querySnapshot.docs.filter(doc => {
         const status = doc.data().status;
         const shouldShow = !status || status === 'open' || status === 'accepted';
         if (!shouldShow) {
-          console.log(`Job ${doc.id} filtered out due to status: ${status}`);
+          console.log(`Gig ${doc.id} filtered out due to status: ${status}`);
         }
         return shouldShow;
       });
       
-      console.log(`After status filtering, ${visibleDocs.length} jobs are potentially visible`);
+      console.log(`After status filtering, ${visibleDocs.length} gigs are potentially visible`);
       
-      // Fetch submissions for all jobs to check submission caps
-      const jobsData = visibleDocs.map(doc => ({
+      // Fetch submissions for all gigs to check submission caps
+      const gigsData = visibleDocs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         deadlineAt: doc.data().deadlineAt?.toDate ? doc.data().deadlineAt.toDate() : new Date(doc.data().deadlineAt),
@@ -122,22 +122,22 @@ export default function CreatorJobs() {
       }));
 
       // Check submission counts and creator submissions for each job
-      const jobsWithSubmissionCounts = await Promise.all(
-        jobsData.map(async (job) => {
+      const gigsWithSubmissionCounts = await Promise.all(
+        gigsData.map(async (gig) => {
           // Count approved submissions for this job
           const approvedSubmissionsQuery = query(
             collection(db, 'submissions'),
-            where('jobId', '==', job.id),
+            where('gigId', '==', gig.id),
             where('status', '==', 'approved')
           );
           const approvedSubmissionsSnapshot = await getDocs(approvedSubmissionsQuery);
           const approvedCount = approvedSubmissionsSnapshot.size;
           
           // Check if creator already has an APPROVED submission for this job
-          // (rejected or pending submissions should not hide the job)
+          // (rejected or pending submissions should not hide the gig)
           const creatorApprovedSubmissionsQuery = query(
             collection(db, 'submissions'),
-            where('jobId', '==', job.id),
+            where('gigId', '==', gig.id),
             where('creatorId', '==', user?.uid || ''),
             where('status', '==', 'approved')
           );
@@ -145,23 +145,23 @@ export default function CreatorJobs() {
           const hasCreatorApprovedSubmission = creatorApprovedSubmissionsSnapshot.size > 0;
           
           return {
-            ...job,
+            ...gig,
             approvedSubmissionsCount: approvedCount,
             hasCreatorApprovedSubmission,
           };
         })
       );
 
-      // Filter out jobs that have reached their submission cap or creator already has approved submission
-      const fetchedJobs = jobsWithSubmissionCounts.filter(job => {
-        const submissionCap = job.acceptedSubmissionsLimit || 1;
-        const isFull = job.approvedSubmissionsCount >= submissionCap;
+      // Filter out gigs that have reached their submission cap or creator already has approved submission
+      const fetchedGigs = gigsWithSubmissionCounts.filter(gig => {
+        const submissionCap = gig.acceptedSubmissionsLimit || 1;
+        const isFull = gig.approvedSubmissionsCount >= submissionCap;
         if (isFull) {
-          console.log(`Job ${job.id} filtered: Campaign is full (${job.approvedSubmissionsCount}/${submissionCap})`);
+          console.log(`Gig ${gig.id} filtered: Gig is full (${gig.approvedSubmissionsCount}/${submissionCap})`);
           return false;
         }
-        if (job.hasCreatorApprovedSubmission) {
-          console.log(`Job ${job.id} filtered: Creator already has approved submission`);
+        if (gig.hasCreatorApprovedSubmission) {
+          console.log(`Gig ${gig.id} filtered: Creator already has approved submission`);
           return false;
         }
         return true;
@@ -187,18 +187,18 @@ export default function CreatorJobs() {
         }
       }
       
-      // Filter jobs that need squad checking separately
-      const jobsNeedingSquadCheck = fetchedJobs.filter(job => 
-        job.visibility === 'squad' && job.squadIds && job.squadIds.length > 0
+      // Filter gigs that need squad checking separately
+      const gigsNeedingSquadCheck = fetchedGigs.filter(gig => 
+        gig.visibility === 'squad' && gig.squadIds && gig.squadIds.length > 0
       );
       
-      // Check squad membership for jobs that need it and fetch squad names
+      // Check squad membership for gigs that need it and fetch squad names
       // Include both accepted memberships and pending invitations
       const squadMemberships = await Promise.all(
-        jobsNeedingSquadCheck.map(async (job) => {
+        gigsNeedingSquadCheck.map(async (gig) => {
           let isInSelectedSquad = false;
           const squadNames = [];
-          for (const squadId of job.squadIds) {
+          for (const squadId of gig.squadIds) {
             try {
               const squadDoc = await getDoc(doc(db, 'squads', squadId));
               if (squadDoc.exists()) {
@@ -220,20 +220,20 @@ export default function CreatorJobs() {
               console.error('Error checking squad membership:', error);
             }
           }
-          return { jobId: job.id, isInSquad: isInSelectedSquad, squadNames };
+          return { gigId: gig.id, isInSquad: isInSelectedSquad, squadNames };
         })
       );
       
       const squadMembershipMap = new Map(
-        squadMemberships.map(s => [s.jobId, { isInSquad: s.isInSquad, squadNames: s.squadNames }])
+        squadMemberships.map(s => [s.gigId, { isInSquad: s.isInSquad, squadNames: s.squadNames }])
       );
       
-      // Also fetch squad names for all squad-visible jobs (not just for membership check)
+      // Also fetch squad names for all squad-visible gigs (not just for membership check)
       const squadNamesMap = new Map();
-      for (const job of fetchedJobs) {
-        if (job.visibility === 'squad' && job.squadIds && job.squadIds.length > 0) {
+      for (const gig of fetchedGigs) {
+        if (gig.visibility === 'squad' && gig.squadIds && gig.squadIds.length > 0) {
           const squadNames = [];
-          for (const squadId of job.squadIds) {
+          for (const squadId of gig.squadIds) {
             try {
               const squadDoc = await getDoc(doc(db, 'squads', squadId));
               if (squadDoc.exists()) {
@@ -247,91 +247,91 @@ export default function CreatorJobs() {
             }
           }
           if (squadNames.length > 0) {
-            squadNamesMap.set(job.id, squadNames);
+            squadNamesMap.set(gig.id, squadNames);
           }
         }
       }
       
-      // Now filter all jobs with proper squad check
-      let filteredJobs = fetchedJobs.filter(job => {
+      // Now filter all gigs with proper squad check
+      let filteredGigs = fetchedGigs.filter(gig => {
         // Default to 'open' if visibility not set
-        const visibility = job.visibility || 'open';
+        const visibility = gig.visibility || 'open';
         
-        // Check if job is already accepted by someone else (for single-creator jobs)
-        const isSingleCreatorJob = (job.acceptedSubmissionsLimit || 1) === 1;
-        if (isSingleCreatorJob && job.status === 'accepted' && job.acceptedBy && job.acceptedBy !== user?.uid) {
-          console.log(`Job ${job.id} filtered: Already accepted by another creator (single-creator job)`);
+        // Check if gig is already accepted by someone else (for single-creator gigs)
+        const isSingleCreatorGig = (gig.acceptedSubmissionsLimit || 1) === 1;
+        if (isSingleCreatorGig && gig.status === 'accepted' && gig.acceptedBy && gig.acceptedBy !== user?.uid) {
+          console.log(`Gig ${gig.id} filtered: Already accepted by another creator (single-creator gig)`);
           return false;
         }
         
-        // Filter out jobs that are closed/cancelled/expired
-        if (job.status === 'closed' || job.status === 'cancelled' || job.status === 'expired' || job.status === 'paid') {
-          console.log(`Job ${job.id} filtered: Status is ${job.status}`);
+        // Filter out gigs that are closed/cancelled/expired
+        if (gig.status === 'closed' || gig.status === 'cancelled' || gig.status === 'expired' || gig.status === 'paid') {
+          console.log(`Gig ${gig.id} filtered: Status is ${gig.status}`);
           return false;
         }
         
-        // Hard No filter - creators should never see jobs that violate their hard no's
-        if (creatorHardNos.includes(job.primaryThing)) {
-          console.log(`Job ${job.id} filtered: Hard No match (${job.primaryThing})`);
+        // Hard No filter - creators should never see gigs that violate their hard no's
+        if (creatorHardNos.includes(gig.primaryThing)) {
+          console.log(`Gig ${gig.id} filtered: Hard No match (${gig.primaryThing})`);
           return false;
         }
-        if (job.secondaryTags?.some(tag => creatorHardNos.includes(tag))) {
-          console.log(`Job ${job.id} filtered: Hard No match in secondary tags`);
+        if (gig.secondaryTags?.some(tag => creatorHardNos.includes(tag))) {
+          console.log(`Gig ${gig.id} filtered: Hard No match in secondary tags`);
           return false;
         }
         
         // Trust Score gating
-        // Only filter if job has a trustScoreMin requirement AND creator's score is below it
-        // If creatorData is null or trustScore is undefined, use minimum score (20) to allow seeing open campaigns
-        if (job.trustScoreMin) {
+        // Only filter if gig has a trustScoreMin requirement AND creator's score is below it
+        // If creatorData is null or trustScore is undefined, use minimum score (20) to allow seeing open gigs
+        if (gig.trustScoreMin) {
           const creatorTrustScore = creatorData?.trustScore ?? 20; // Default to 20 for new users
-          if (creatorTrustScore < job.trustScoreMin) {
-            console.log(`Job ${job.id} filtered: Trust score ${creatorTrustScore} < ${job.trustScoreMin}`);
+          if (creatorTrustScore < gig.trustScoreMin) {
+            console.log(`Gig ${gig.id} filtered: Trust score ${creatorTrustScore} < ${gig.trustScoreMin}`);
             return false;
           }
         }
 
         // Experience Requirements filter
-        // If job has experience requirements, creator must have at least one matching experience
-        if (job.experienceRequirements && job.experienceRequirements.length > 0) {
+        // If gig has experience requirements, creator must have at least one matching experience
+        if (gig.experienceRequirements && gig.experienceRequirements.length > 0) {
           const creatorExperience = creatorData?.experience || [];
-          const hasMatchingExperience = job.experienceRequirements.some(req => 
+          const hasMatchingExperience = gig.experienceRequirements.some(req => 
             creatorExperience.includes(req)
           );
           if (!hasMatchingExperience) {
-            console.log(`Job ${job.id} filtered: Creator doesn't meet experience requirements (needs: ${job.experienceRequirements.join(', ')}, has: ${creatorExperience.join(', ')})`);
+            console.log(`Gig ${gig.id} filtered: Creator doesn't meet experience requirements (needs: ${gig.experienceRequirements.join(', ')}, has: ${creatorExperience.join(', ')})`);
             return false;
           }
         }
 
         // Visibility filter
         if (visibility === 'invite') {
-          if (!job.invitedCreatorIds?.includes(user?.uid || '')) {
-            console.log(`Job ${job.id} filtered: Not invited (invite-only campaign)`);
+          if (!gig.invitedCreatorIds?.includes(user?.uid || '')) {
+            console.log(`Gig ${gig.id} filtered: Not invited (invite-only gig)`);
             return false;
           }
         }
         
         // Squad visibility filter - use the pre-checked membership map
         if (visibility === 'squad') {
-          if (!job.squadIds || job.squadIds.length === 0) {
+          if (!gig.squadIds || gig.squadIds.length === 0) {
             // Squad visibility but no squads selected - exclude
-            console.log(`Job ${job.id} filtered: Squad visibility but no squads`);
+            console.log(`Gig ${gig.id} filtered: Squad visibility but no squads`);
             return false;
           }
-          const squadInfo = squadMembershipMap.get(job.id);
+          const squadInfo = squadMembershipMap.get(gig.id);
           if (!squadInfo || !squadInfo.isInSquad) {
-            console.log(`Job ${job.id} filtered: Not in required squad`);
+            console.log(`Gig ${gig.id} filtered: Not in required squad`);
             return false;
           }
         }
 
         // Open visibility (default) - show it (already passed other filters)
-        console.log(`Job ${job.id} passed all filters - will be shown`);
+        console.log(`Gig ${gig.id} passed all filters - will be shown`);
         return true;
       });
       
-      console.log(`Campaigns: ${fetchedJobs.length} fetched, ${filteredJobs.length} visible after filtering`);
+      console.log(`Gigs: ${fetchedGigs.length} fetched, ${filteredGigs.length} visible after filtering`);
       console.log('Creator data:', { 
         hasCreatorData: !!creatorData, 
         trustScore: creatorData?.trustScore ?? 20, 
@@ -340,12 +340,12 @@ export default function CreatorJobs() {
 
       // Calculate payouts for sorting (temporary, will be recalculated later)
       const creatorFollowingCount = getCreatorFollowingCount(creatorData);
-      filteredJobs.forEach(job => {
-        job.calculatedPayout = calculatePayout(job, creatorFollowingCount);
+      filteredGigs.forEach(gig => {
+        gig.calculatedPayout = calculatePayout(gig, creatorFollowingCount);
       });
 
       // Sort by recommended (interest overlap + payout)
-      filteredJobs.sort((a, b) => {
+      filteredGigs.sort((a, b) => {
         const creatorInterests = creatorData?.interests || [];
         const aOverlap = (a.primaryThing === creatorInterests.find(i => i === a.primaryThing) ? 2 : 0) +
                        (a.secondaryTags?.filter(tag => creatorInterests.includes(tag)).length || 0);
@@ -358,13 +358,13 @@ export default function CreatorJobs() {
       });
 
       // Add squad names (payouts already calculated during sort)
-      const jobsWithSquadNames = filteredJobs.map(job => ({
-        ...job,
-        squadNames: squadNamesMap.get(job.id) || []
+      const gigsWithSquadNames = filteredGigs.map(gig => ({
+        ...gig,
+        squadNames: squadNamesMap.get(gig.id) || []
       }));
 
-      // Fetch brand names for all jobs
-      const uniqueBrandIds = [...new Set(jobsWithSquadNames.map(job => job.brandId).filter(Boolean))];
+      // Fetch brand names for all gigs
+      const uniqueBrandIds = [...new Set(gigsWithSquadNames.map(gig => gig.brandId).filter(Boolean))];
       const brandNamesMap = new Map();
       
       await Promise.all(
@@ -391,25 +391,25 @@ export default function CreatorJobs() {
         })
       );
 
-      // Add brand names to jobs
-      const jobsWithBrandNames = jobsWithSquadNames.map(job => ({
-        ...job,
-        brandName: brandNamesMap.get(job.brandId) || ''
+      // Add brand names to gigs
+      const gigsWithBrandNames = gigsWithSquadNames.map(gig => ({
+        ...gig,
+        brandName: brandNamesMap.get(gig.brandId) || ''
       }));
 
-      setJobs(jobsWithBrandNames);
+      setGigs(gigsWithBrandNames);
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error('Error fetching gigs:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAcceptJob = async (jobId) => {
+  const handleAcceptGig = async (gigId) => {
     // In real implementation, this would call a Firebase Function
-    // to atomically accept the job (first-come-first-served)
-    console.log('Accepting job:', jobId);
-    alert('Job acceptance functionality coming soon!');
+    // to atomically accept the gig (first-come-first-served)
+    console.log('Accepting job:', gigId);
+    alert('Gig acceptance functionality coming soon!');
   };
 
   const formatTimeRemaining = (deadline) => {
@@ -433,7 +433,7 @@ export default function CreatorJobs() {
   };
 
   if (!user || !appUser) {
-    return <LoadingSpinner fullScreen text="Loading campaigns..." />;
+    return <LoadingSpinner fullScreen text="Loading gigs..." />;
   }
 
   return (
@@ -466,10 +466,10 @@ export default function CreatorJobs() {
           
           {/* Page Title */}
           {activeTab === 'browse' && (
-            <h1 className="text-2xl font-bold">Available Campaigns</h1>
+            <h1 className="text-2xl font-bold">Available Gigs</h1>
           )}
           {activeTab === 'history' && (
-            <h1 className="text-2xl font-bold">Campaign History</h1>
+            <h1 className="text-2xl font-bold">Gig History</h1>
           )}
         </div>
 
@@ -478,22 +478,22 @@ export default function CreatorJobs() {
           {/* Browse Tab Content */}
           {activeTab === 'browse' && (
             <div className="p-4">
-            {/* Jobs Grid */}
+            {/* Gigs Grid */}
         {loading ? (
-          <LoadingSpinner text="Loading campaigns..." />
+          <LoadingSpinner text="Loading gigs..." />
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {jobs.map(job => {
-              const hoursRemaining = (job.deadlineAt - new Date()) / (1000 * 60 * 60);
+            {gigs.map(gig => {
+              const hoursRemaining = (gig.deadlineAt - new Date()) / (1000 * 60 * 60);
               const isUrgent = hoursRemaining < 24;
               const isVeryUrgent = hoursRemaining < 6;
-              const urgencyTextClass = getUrgencyColor(job.deadlineAt);
-              const primaryThing = THINGS.find(t => t.id === job.primaryThing);
-              const deliverables = job.deliverables || { videos: 0, photos: 0 };
-              const displayTitle = job.title.endsWith('2') ? job.title.replace(' 2', ' Campaign') : job.title;
+              const urgencyTextClass = getUrgencyColor(gig.deadlineAt);
+              const primaryThing = THINGS.find(t => t.id === gig.primaryThing);
+              const deliverables = gig.deliverables || { videos: 0, photos: 0 };
+              const displayTitle = gig.title.endsWith('2') ? gig.title.replace(' 2', ' Gig') : gig.title;
               
               return (
-                <Link key={job.id} href={`/creator/jobs/${job.id}`} className="block group">
+                <Link key={gig.id} href={`/creator/gigs/${gig.id}`} className="block group">
                   <Card className="relative overflow-hidden bg-[#F9FAFB] border border-[rgba(0,0,0,0.04)] rounded-[20px] shadow-sm hover:shadow-xl hover:-translate-y-0.5 hover:border-[rgba(0,0,0,0.06)] hover:ring-1 hover:ring-black/5 transition-all duration-200 cursor-pointer">
                     <CardContent className="p-6">
                       {/* Header with Brand and Payout - Payout spans full height */}
@@ -502,21 +502,21 @@ export default function CreatorJobs() {
                           {/* Brand Mark */}
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                             <span className="text-white text-xs font-bold">
-                              {job.brandName ? job.brandName.charAt(0).toUpperCase() : 'C'}
+                              {gig.brandName ? gig.brandName.charAt(0).toUpperCase() : 'C'}
                             </span>
                           </div>
                           
                           <div className="flex-1 min-w-0 pr-2">
                             {/* Company Name */}
-                            {job.brandName && (
+                            {gig.brandName && (
                               <div className="mb-1">
                                 <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                                  {job.brandName}
+                                  {gig.brandName}
                                 </span>
                               </div>
                             )}
                             
-                            {/* Campaign Title */}
+                            {/* Gig Title */}
                             <h3 className="text-xl font-semibold text-gray-900 leading-tight line-clamp-2 group-hover:text-orange-600 transition-colors mb-3">
                               {displayTitle}
                             </h3>
@@ -532,8 +532,8 @@ export default function CreatorJobs() {
                               )}
                               
                               {/* Secondary Tags (Squads) */}
-                              {job.squadNames && job.squadNames.length > 0 && (
-                                job.squadNames.map((squadName, idx) => (
+                              {gig.squadNames && gig.squadNames.length > 0 && (
+                                gig.squadNames.map((squadName, idx) => (
                                   <span
                                     key={idx}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium border border-purple-200 hover:bg-purple-100 hover:-translate-y-0.5 transition-all duration-150 cursor-default"
@@ -556,10 +556,10 @@ export default function CreatorJobs() {
                                 <span className="text-[9px] text-green-50 font-bold uppercase tracking-wider leading-tight">Payout</span>
                               </div>
                               <div className="text-3xl font-extrabold text-white leading-none drop-shadow-sm">
-                                ${(job.calculatedPayout || job.basePayout || 0).toLocaleString()}
+                                ${(gig.calculatedPayout || gig.basePayout || 0).toLocaleString()}
                               </div>
                             </div>
-                            {job.payoutType === 'dynamic' && (
+                            {gig.payoutType === 'dynamic' && (
                               <p className="text-[8px] text-green-50 mt-auto pt-3 opacity-80 leading-tight">Based on followers</p>
                             )}
                           </div>
@@ -573,7 +573,7 @@ export default function CreatorJobs() {
                           <div className={`flex items-center gap-1.5 ${urgencyTextClass} ${isVeryUrgent ? 'animate-pulse' : ''}`}>
                             <Clock className="w-4 h-4" />
                             <span className="text-sm font-semibold">
-                              {formatTimeRemaining(job.deadlineAt)} left
+                              {formatTimeRemaining(gig.deadlineAt)} left
                             </span>
                           </div>
                           
@@ -611,10 +611,10 @@ export default function CreatorJobs() {
           </div>
         )}
 
-            {!loading && jobs.length === 0 && (
+            {!loading && gigs.length === 0 && (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-semibold mb-2">No campaigns found</h3>
+                <h3 className="text-xl font-semibold mb-2">No gigs found</h3>
                 <p className="text-sm text-gray-500">Check back later for new opportunities!</p>
               </div>
             )}

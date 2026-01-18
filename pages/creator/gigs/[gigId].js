@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import VisibilityBadge from '@/components/jobs/VisibilityBadge';
+import VisibilityBadge from '@/components/gigs/VisibilityBadge';
 import { THINGS } from '@/lib/things/constants';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
@@ -14,42 +14,42 @@ import LoadingSpinner from '@/components/ui/loading-spinner';
 import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
 import { Clock, Play, Users, DollarSign, Activity, CheckCircle, XCircle, Sparkles, ArrowLeft } from 'lucide-react';
 
-export default function JobDetail() {
+export default function GigDetail() {
   const router = useRouter();
-  const { jobId } = router.query;
+  const { gigId } = router.query;
   const { user, appUser } = useAuth();
-  const [job, setJob] = useState(null);
+  const [gig, setGig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
-    if (jobId) {
-      fetchJob();
+    if (gigId) {
+      fetchGig();
     }
-  }, [jobId]);
+  }, [gigId]);
 
-  const fetchJob = async () => {
-    if (!jobId || typeof jobId !== 'string') return;
+  const fetchGig = async () => {
+    if (!gigId || typeof gigId !== 'string') return;
     
     try {
       setLoading(true);
       
-      // Fetch job from Firestore
-      const jobDoc = await getDoc(doc(db, 'jobs', jobId));
+      // Fetch gig from Firestore
+      const gigDoc = await getDoc(doc(db, 'gigs', gigId));
       
-      if (!jobDoc.exists()) {
-        toast.error('Campaign not found');
-        router.push('/creator/jobs');
+      if (!gigDoc.exists()) {
+        toast.error('Gig not found');
+        router.push('/creator/gigs');
         return;
       }
 
-      const jobData = jobDoc.data();
+      const gigData = gigDoc.data();
       
       // Fetch brand name from users collection
       let brandName = 'Unknown Brand';
-      if (jobData.brandId) {
+      if (gigData.brandId) {
         try {
-          const brandDoc = await getDoc(doc(db, 'users', jobData.brandId));
+          const brandDoc = await getDoc(doc(db, 'users', gigData.brandId));
           if (brandDoc.exists()) {
             brandName = brandDoc.data().name || 'Unknown Brand';
           }
@@ -60,7 +60,7 @@ export default function JobDetail() {
 
       // Fetch creator data to calculate payout for dynamic ranges
       let creatorFollowingCount = 0;
-      if (user && jobData.payoutType === 'dynamic') {
+      if (user && gigData.payoutType === 'dynamic') {
         try {
           const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
           if (creatorDoc.exists()) {
@@ -73,112 +73,112 @@ export default function JobDetail() {
       }
 
       // Calculate payout based on payout type
-      const calculatedPayout = calculatePayout(jobData, creatorFollowingCount);
+      const calculatedPayout = calculatePayout(gigData, creatorFollowingCount);
 
-      // Check approved submissions count to determine if job is still open
+      // Check approved submissions count to determine if gig is still open
       const approvedSubmissionsQuery = query(
         collection(db, 'submissions'),
-        where('jobId', '==', jobId),
+        where('gigId', '==', gigId),
         where('status', '==', 'approved')
       );
       const approvedSubmissionsSnapshot = await getDocs(approvedSubmissionsQuery);
       const approvedSubmissionsCount = approvedSubmissionsSnapshot.size;
-      const acceptedSubmissionsLimit = jobData.acceptedSubmissionsLimit || 1;
+      const acceptedSubmissionsLimit = gigData.acceptedSubmissionsLimit || 1;
       
-      // Check if creator already submitted to this job (any status)
+      // Check if creator already submitted to this gig (any status)
       let hasCreatorSubmission = false;
       if (user) {
         const creatorSubmissionsQuery = query(
           collection(db, 'submissions'),
-          where('jobId', '==', jobId),
+          where('gigId', '==', gigId),
           where('creatorId', '==', user.uid)
         );
         const creatorSubmissionsSnapshot = await getDocs(creatorSubmissionsQuery);
         hasCreatorSubmission = creatorSubmissionsSnapshot.size > 0;
       }
       
-      // Job is considered "open" if it hasn't reached the submission limit
-      // For single-creator jobs (limit = 1), check if already accepted by someone else
-      // For multi-creator jobs, allow acceptance as long as approved submissions < limit
-      const isSingleCreatorJob = acceptedSubmissionsLimit === 1;
-      const isAlreadyAccepted = isSingleCreatorJob && 
-                                jobData.status === 'accepted' && 
-                                jobData.acceptedBy && 
-                                jobData.acceptedBy !== user?.uid;
+      // Gig is considered "open" if it hasn't reached the submission limit
+      // For single-creator gigs (limit = 1), check if already accepted by someone else
+      // For multi-creator gigs, allow acceptance as long as approved submissions < limit
+      const isSingleCreatorGig = acceptedSubmissionsLimit === 1;
+      const isAlreadyAccepted = isSingleCreatorGig && 
+                                gigData.status === 'accepted' && 
+                                gigData.acceptedBy && 
+                                gigData.acceptedBy !== user?.uid;
       
-      // Job is open if:
-      // 1. Original status is 'open' or undefined (new jobs)
+      // Gig is open if:
+      // 1. Original status is 'open' or undefined (new gigs)
       // 2. Hasn't reached submission limit
-      // 3. Not already accepted by someone else (only for single-creator jobs)
-      const isOpen = (jobData.status === 'open' || !jobData.status || jobData.status === 'accepted') && 
+      // 3. Not already accepted by someone else (only for single-creator gigs)
+      const isOpen = (gigData.status === 'open' || !gigData.status || gigData.status === 'accepted') && 
                      approvedSubmissionsCount < acceptedSubmissionsLimit && 
                      !isAlreadyAccepted;
 
-      console.log('Job status check:', {
-        jobId,
-        originalStatus: jobData.status,
+      console.log('Gig status check:', {
+        gigId,
+        originalStatus: gigData.status,
         approvedCount: approvedSubmissionsCount,
         limit: acceptedSubmissionsLimit,
-        isSingleCreatorJob,
+        isSingleCreatorGig,
         isAlreadyAccepted,
         isOpen,
         hasCreatorSubmission,
-        acceptedBy: jobData.acceptedBy,
+        acceptedBy: gigData.acceptedBy,
         currentUser: user?.uid,
       });
 
       // Convert Firestore Timestamps to Dates
-      const job = {
-        id: jobDoc.id,
-        ...jobData,
+      const gig = {
+        id: gigDoc.id,
+        ...gigData,
         status: isOpen ? 'open' : 'closed', // Set display status
-        deadlineAt: jobData.deadlineAt?.toDate ? jobData.deadlineAt.toDate() : new Date(jobData.deadlineAt),
-        createdAt: jobData.createdAt?.toDate ? jobData.createdAt.toDate() : new Date(jobData.createdAt),
+        deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
+        createdAt: gigData.createdAt?.toDate ? gigData.createdAt.toDate() : new Date(gigData.createdAt),
         brandName,
         // Map to display format
-        payout: calculatedPayout || jobData.basePayout || 0,
+        payout: calculatedPayout || gigData.basePayout || 0,
         calculatedPayout: calculatedPayout,
-        tagsWanted: [jobData.primaryThing, ...(jobData.secondaryTags || [])],
-        productType: THINGS.find(t => t.id === jobData.primaryThing)?.name || jobData.primaryThing,
+        tagsWanted: [gigData.primaryThing, ...(gigData.secondaryTags || [])],
+        productType: THINGS.find(t => t.id === gigData.primaryThing)?.name || gigData.primaryThing,
         hasCreatorSubmission, // Track if creator already submitted
         approvedSubmissionsCount, // Track approved count
         acceptedSubmissionsLimit, // Track limit
-        isOpen, // Track if job is actually available to accept
+        isOpen, // Track if gig is actually available to accept
         isAlreadyAccepted, // Track if already accepted by another creator
       };
 
-      setJob(job);
+      setGig(gig);
     } catch (error) {
       console.error('Error fetching job:', error);
-      toast.error('Failed to load campaign details');
-      router.push('/creator/jobs');
+      toast.error('Failed to load gig details');
+      router.push('/creator/gigs');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAcceptJob = async () => {
+  const handleAcceptGig = async () => {
     if (!job || accepting || !user) return;
 
     setAccepting(true);
     try {
-      // Update job status to accepted
-      await updateDoc(doc(db, 'jobs', job.id), {
+      // Update gig status to accepted
+      await updateDoc(doc(db, 'gigs', gig.id), {
         status: 'accepted',
         acceptedBy: user.uid,
         acceptedAt: new Date(),
         updatedAt: new Date(),
       });
 
-      toast.success('Campaign accepted! Redirecting to submission page...');
+      toast.success('Gig accepted! Redirecting to submission page...');
       // Redirect to submission page
       setTimeout(() => {
-        router.push(`/creator/jobs/${job.id}/submit`);
+        router.push(`/creator/gigs/${gig.id}/submit`);
       }, 1000);
 
     } catch (error) {
-      console.error('Error accepting campaign:', error);
-      toast.error('Failed to accept campaign. It may have been taken by another creator.');
+      console.error('Error accepting gig:', error);
+      toast.error('Failed to accept gig. It may have been taken by another creator.');
     } finally {
       setAccepting(false);
     }
@@ -207,38 +207,38 @@ export default function JobDetail() {
   if (loading) {
     return (
       <Layout>
-        <LoadingSpinner text="Loading campaign details..." />
+        <LoadingSpinner text="Loading gig details..." />
       </Layout>
     );
   }
 
-  if (!job) {
+  if (!gig) {
     return (
       <Layout>
         <div className="max-w-4xl mx-auto py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Campaign Not Found</h1>
-          <Link href="/creator/jobs">
-            <Button>Back to Campaigns</Button>
+          <h1 className="text-2xl font-bold mb-4">Gig Not Found</h1>
+          <Link href="/creator/gigs">
+            <Button>Back to Gigs</Button>
           </Link>
         </div>
       </Layout>
     );
   }
 
-  const primaryThing = THINGS.find(t => t.id === job.primaryThing);
-  const hoursRemaining = (job.deadlineAt - new Date()) / (1000 * 60 * 60);
+  const primaryThing = THINGS.find(t => t.id === gig.primaryThing);
+  const hoursRemaining = (gig.deadlineAt - new Date()) / (1000 * 60 * 60);
   const isUrgent = hoursRemaining < 24;
   const isVeryUrgent = hoursRemaining < 6;
-  const urgencyTextClass = getUrgencyColor(job.deadlineAt);
-  const deliverables = job.deliverables || { videos: 0, photos: 0 };
+  const urgencyTextClass = getUrgencyColor(gig.deadlineAt);
+  const deliverables = gig.deliverables || { videos: 0, photos: 0 };
 
   return (
     <Layout>
       <div className="max-w-4xl mx-auto py-6 pb-28 px-4">
         {/* Back Link */}
-        <Link href="/creator/jobs" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-orange-600 mb-6 transition-colors">
+        <Link href="/creator/gigs" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-orange-600 mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Campaigns</span>
+          <span>Back to Gigs</span>
         </Link>
 
         {/* Hero Section - Premium Card */}
@@ -251,23 +251,23 @@ export default function JobDetail() {
                 {/* Brand Mark */}
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                   <span className="text-white text-sm font-bold">
-                    {job.brandName ? job.brandName.charAt(0).toUpperCase() : 'B'}
+                    {gig.brandName ? gig.brandName.charAt(0).toUpperCase() : 'B'}
                   </span>
                 </div>
                 
                 <div className="flex-1 min-w-0 pr-32">
                   {/* Company Name */}
-                  {job.brandName && (
+                  {gig.brandName && (
                     <div className="mb-1.5">
                       <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        {job.brandName}
+                        {gig.brandName}
                       </span>
                     </div>
                   )}
                   
-                  {/* Campaign Title */}
+                  {/* Gig Title */}
                   <h1 className="text-3xl font-semibold text-gray-900 leading-tight mb-4">
-                    {job.title}
+                    {gig.title}
                   </h1>
                 </div>
               </div>
@@ -288,7 +288,7 @@ export default function JobDetail() {
                   <div className={`flex items-center gap-2 ${urgencyTextClass} ${isVeryUrgent ? 'animate-pulse' : ''}`}>
                     <Clock className="w-5 h-5" />
                     <span className="text-base font-semibold">
-                      {formatTimeRemaining(job.deadlineAt)} left
+                      {formatTimeRemaining(gig.deadlineAt)} left
                     </span>
                   </div>
                   
@@ -310,10 +310,10 @@ export default function JobDetail() {
                     </div>
                   )}
 
-                  {job.productInVideoRequired && job.reimbursementMode === 'reimbursement' && (
+                  {gig.productInVideoRequired && gig.reimbursementMode === 'reimbursement' && (
                     <div className="flex items-center gap-2 text-gray-600">
                       <DollarSign className="w-5 h-5" />
-                      <span className="text-sm font-medium">Up to ${job.reimbursementCap || 0}</span>
+                      <span className="text-sm font-medium">Up to ${gig.reimbursementCap || 0}</span>
                     </div>
                   )}
                 </div>
@@ -329,10 +329,10 @@ export default function JobDetail() {
                     <span className="text-[8px] text-green-50 font-bold uppercase tracking-wider leading-tight relative z-10">Payout</span>
                   </div>
                   <div className="text-xl font-extrabold text-white leading-none drop-shadow-sm relative z-10">
-                    ${(job.payout || job.basePayout || 0).toLocaleString()}
+                    ${(gig.payout || gig.basePayout || 0).toLocaleString()}
                   </div>
                 </div>
-                {job.payoutType === 'dynamic' && (
+                {gig.payoutType === 'dynamic' && (
                   <p className="text-[7px] text-green-50 mt-2 pt-1.5 opacity-85 leading-tight border-t border-green-400/30 relative z-10">Based on followers</p>
                 )}
               </div>
@@ -340,17 +340,17 @@ export default function JobDetail() {
           </CardContent>
         </Card>
 
-        {/* Campaign Details - Unified Section */}
+        {/* Gig Details - Unified Section */}
         <Card className="mb-6 bg-white border border-[rgba(0,0,0,0.06)] rounded-[20px] shadow-sm overflow-hidden">
           <CardContent className="p-6">
             {/* Unified Header */}
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Campaign Details</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Gig Details</h2>
               
               {/* Two Column Grid for Overview Content */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Left: Description */}
-                {job.description && (
+                {gig.description && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
@@ -359,13 +359,13 @@ export default function JobDetail() {
                       <h3 className="text-sm font-semibold text-gray-900">Overview</h3>
                     </div>
                     <div className="ml-9">
-                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{job.description}</p>
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{gig.description}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Product Description */}
-                {job.productDescription && (
+                {gig.productDescription && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
@@ -374,7 +374,7 @@ export default function JobDetail() {
                       <h3 className="text-sm font-semibold text-gray-900">Product Details</h3>
                     </div>
                     <div className="ml-9">
-                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{job.productDescription}</p>
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{gig.productDescription}</p>
                     </div>
                   </div>
                 )}
@@ -410,13 +410,13 @@ export default function JobDetail() {
                         </span>
                       </div>
                     )}
-                    {job.productInVideoRequired && job.reimbursementMode === 'reimbursement' && (
+                    {gig.productInVideoRequired && gig.reimbursementMode === 'reimbursement' && (
                       <div className="p-2.5 rounded-[10px] bg-emerald-50 border border-emerald-100 mt-2">
                         <div className="flex items-center gap-2 mb-1">
                           <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
                           <span className="text-xs font-semibold text-emerald-900">Reimbursement</span>
                         </div>
-                        <p className="text-[10px] text-emerald-700 ml-5.5">Up to ${job.reimbursementCap || 0}</p>
+                        <p className="text-[10px] text-emerald-700 ml-5.5">Up to ${gig.reimbursementCap || 0}</p>
                       </div>
                     )}
                     {!deliverables.videos && !deliverables.photos && (
@@ -428,13 +428,13 @@ export default function JobDetail() {
             </div>
 
             {/* Creative Brief - If Exists */}
-            {job.brief && (
+            {gig.brief && (
               <div className="pt-6 border-t border-gray-100 space-y-5">
                 {/* Hooks and Talking Points */}
-                {(job.brief.hooks?.filter(h => h).length > 0 || job.brief.talkingPoints?.filter(tp => tp).length > 0) && (
+                {(gig.brief.hooks?.filter(h => h).length > 0 || gig.brief.talkingPoints?.filter(tp => tp).length > 0) && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                     {/* Content Hooks */}
-                    {job.brief.hooks && job.brief.hooks.filter(h => h).length > 0 && (
+                    {gig.brief.hooks && gig.brief.hooks.filter(h => h).length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
@@ -443,7 +443,7 @@ export default function JobDetail() {
                           <h3 className="text-sm font-semibold text-gray-900">Content Hooks</h3>
                         </div>
                         <div className="ml-9 space-y-2">
-                          {job.brief.hooks.filter(h => h).map((hook, index) => (
+                          {gig.brief.hooks.filter(h => h).map((hook, index) => (
                             <div key={index} className="p-2.5 rounded-[10px] bg-orange-50/50 border border-orange-100 hover:bg-orange-50 transition-colors">
                               <p className="text-xs text-gray-700 leading-relaxed">{hook}</p>
                             </div>
@@ -453,7 +453,7 @@ export default function JobDetail() {
                     )}
 
                     {/* Talking Points */}
-                    {job.brief.talkingPoints && job.brief.talkingPoints.filter(tp => tp).length > 0 && (
+                    {gig.brief.talkingPoints && gig.brief.talkingPoints.filter(tp => tp).length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -462,7 +462,7 @@ export default function JobDetail() {
                           <h3 className="text-sm font-semibold text-gray-900">Talking Points</h3>
                         </div>
                         <div className="ml-9 space-y-2">
-                          {job.brief.talkingPoints.filter(tp => tp).map((point, index) => (
+                          {gig.brief.talkingPoints.filter(tp => tp).map((point, index) => (
                             <div key={index} className="p-2.5 rounded-[10px] bg-blue-50/50 border border-blue-100 hover:bg-blue-50 transition-colors">
                               <p className="text-xs text-gray-700 leading-relaxed">{point}</p>
                             </div>
@@ -474,9 +474,9 @@ export default function JobDetail() {
                 )}
 
                 {/* Do's and Don'ts */}
-                {(job.brief.do?.filter(d => d).length > 0 || job.brief.dont?.filter(d => d).length > 0) && (
+                {(gig.brief.do?.filter(d => d).length > 0 || gig.brief.dont?.filter(d => d).length > 0) && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    {job.brief.do && job.brief.do.filter(d => d).length > 0 && (
+                    {gig.brief.do && gig.brief.do.filter(d => d).length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <div className="w-7 h-7 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -485,7 +485,7 @@ export default function JobDetail() {
                           <h3 className="text-sm font-semibold text-green-900">Do's</h3>
                         </div>
                         <div className="ml-9 space-y-2">
-                          {job.brief.do.filter(d => d).map((item, index) => (
+                          {gig.brief.do.filter(d => d).map((item, index) => (
                             <div key={index} className="flex items-start gap-2 p-2.5 rounded-[10px] bg-green-50/60 border border-green-100 hover:bg-green-50 transition-colors">
                               <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
                               <p className="text-xs text-gray-700 leading-relaxed flex-1">{item}</p>
@@ -495,7 +495,7 @@ export default function JobDetail() {
                       </div>
                     )}
 
-                    {job.brief.dont && job.brief.dont.filter(d => d).length > 0 && (
+                    {gig.brief.dont && gig.brief.dont.filter(d => d).length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -504,7 +504,7 @@ export default function JobDetail() {
                           <h3 className="text-sm font-semibold text-red-900">Don'ts</h3>
                         </div>
                         <div className="ml-9 space-y-2">
-                          {job.brief.dont.filter(d => d).map((item, index) => (
+                          {gig.brief.dont.filter(d => d).map((item, index) => (
                             <div key={index} className="flex items-start gap-2 p-2.5 rounded-[10px] bg-red-50/60 border border-red-100 hover:bg-red-50 transition-colors">
                               <XCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
                               <p className="text-xs text-gray-700 leading-relaxed flex-1">{item}</p>
@@ -522,36 +522,36 @@ export default function JobDetail() {
 
         {/* CTA Button - Enhanced Fixed Bottom */}
         <div className="fixed bottom-[64px] left-0 right-0 max-w-[428px] mx-auto bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-xl p-4 z-40">
-          {job.hasCreatorSubmission ? (
-            <Link href={`/creator/jobs/${job.id}/submit`} className="block">
+          {gig.hasCreatorSubmission ? (
+            <Link href={`/creator/gigs/${gig.id}/submit`} className="block">
               <Button className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 h-14 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-[12px]">
                 Go to Submission
               </Button>
             </Link>
-          ) : job.status === 'accepted' && job.acceptedBy === user?.uid ? (
-            <Link href={`/creator/jobs/${job.id}/submit`} className="block">
+          ) : gig.status === 'accepted' && gig.acceptedBy === user?.uid ? (
+            <Link href={`/creator/gigs/${gig.id}/submit`} className="block">
               <Button className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 h-14 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-[12px]">
                 Go to Submission
               </Button>
             </Link>
-          ) : !job.isOpen ? (
+          ) : !gig.isOpen ? (
             <Button
               disabled
               className="w-full bg-gray-300 cursor-not-allowed h-14 text-base font-semibold rounded-[12px]"
             >
-              {job.approvedSubmissionsCount >= job.acceptedSubmissionsLimit 
-                ? 'Campaign Full' 
-                : job.isAlreadyAccepted
+              {gig.approvedSubmissionsCount >= gig.acceptedSubmissionsLimit 
+                ? 'Gig Full' 
+                : gig.isAlreadyAccepted
                   ? 'Already Accepted by Another Creator'
-                  : 'Campaign Not Available'}
+                  : 'Gig Not Available'}
             </Button>
           ) : (
             <Button
-              onClick={handleAcceptJob}
+              onClick={handleAcceptGig}
               disabled={accepting}
               className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 h-14 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-[12px]"
             >
-              {accepting ? 'Accepting Campaign...' : 'Accept Campaign'}
+              {accepting ? 'Accepting Gig...' : 'Accept Gig'}
             </Button>
           )}
         </div>

@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import { Job, Submission, Payment } from '@/lib/models/types';
+import { Gig, Submission, Payment } from '@/lib/models/types';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -19,22 +19,22 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [bankBalance, setBankBalance] = useState<number | null>(null);
   const [stats, setStats] = useState({
-    totalJobs: 0,
+    totalGigs: 0,
     totalSubmissions: 0,
     totalPayments: 0,
     totalPlatformFees: 0,
   });
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [gigs, setGigs] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
-  const [selectedJob, setSelectedJob] = useState<any | null>(null);
-  const [jobDetails, setJobDetails] = useState<{
+  const [selectedGig, setSelectedGig] = useState<any | null>(null);
+  const [jobDetails, setGigDetails] = useState<{
     job: any;
     brand: any;
     jobSubmissions: any[];
     jobPayments: any[];
   } | null>(null);
-  const [loadingJobDetails, setLoadingJobDetails] = useState(false);
+  const [loadingGigDetails, setLoadingGigDetails] = useState(false);
   const [evaluatingSubmissions, setEvaluatingSubmissions] = useState<Set<string>>(new Set());
   const [expandedSubmissions, setExpandedSubmissions] = useState<Set<string>>(new Set());
 
@@ -51,31 +51,31 @@ export default function AdminDashboard() {
     }
   }, [user, appUser]);
 
-  // Fetch detailed job information when a job is selected
+  // Fetch detailed gig information when a gig is selected
   useEffect(() => {
-    if (selectedJob) {
-      fetchJobDetails(selectedJob);
+    if (selectedGig) {
+      fetchGigDetails(selectedGig);
     }
-  }, [selectedJob]);
+  }, [selectedGig]);
 
-  const fetchJobDetails = async (job: any) => {
-    if (!job) return;
+  const fetchGigDetails = async (gig: any) => {
+    if (!gig) return;
     
     try {
-      setLoadingJobDetails(true);
+      setLoadingGigDetails(true);
       
       // Fetch brand information
-      const brandDoc = await getDoc(doc(db, 'brands', job.brandId));
+      const brandDoc = await getDoc(doc(db, 'brands', gig.brandId));
       const brand = brandDoc.exists() ? brandDoc.data() : null;
       
       // Fetch user information for brand
-      const brandUserDoc = await getDoc(doc(db, 'users', job.brandId));
+      const brandUserDoc = await getDoc(doc(db, 'users', gig.brandId));
       const brandUser = brandUserDoc.exists() ? brandUserDoc.data() : null;
       
       // Fetch all submissions for this job
       const submissionsQuery = query(
         collection(db, 'submissions'),
-        where('jobId', '==', job.id),
+        where('gigId', '==', gig.id),
         orderBy('createdAt', 'desc')
       );
       const submissionsSnapshot = await getDocs(submissionsQuery);
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
       // Fetch all payments for this job
       const paymentsQuery = query(
         collection(db, 'payments'),
-        where('jobId', '==', job.id),
+        where('gigId', '==', gig.id),
         orderBy('createdAt', 'desc')
       );
       const paymentsSnapshot = await getDocs(paymentsQuery);
@@ -128,16 +128,16 @@ export default function AdminDashboard() {
         };
       });
       
-      setJobDetails({
-        job,
+      setGigDetails({
+        gig,
         brand: { ...brand, ...brandUser },
         jobSubmissions: submissionsWithCreators,
         jobPayments,
       });
     } catch (error) {
-      console.error('Error fetching job details:', error);
+      console.error('Error fetching gig details:', error);
     } finally {
-      setLoadingJobDetails(false);
+      setLoadingGigDetails(false);
     }
   };
 
@@ -155,34 +155,34 @@ export default function AdminDashboard() {
         setBankBalance(0);
       }
 
-      // Fetch all jobs
-      const jobsQuery = query(collection(db, 'jobs'), orderBy('createdAt', 'desc'));
-      const jobsSnapshot = await getDocs(jobsQuery);
+      // Fetch all gigs
+      const gigsQuery = query(collection(db, 'gigs'), orderBy('createdAt', 'desc'));
+      const gigsSnapshot = await getDocs(gigsQuery);
       
-      // Calculate actual job status based on approved submissions
-      const jobsData = await Promise.all(
-        jobsSnapshot.docs.map(async (doc) => {
-          const jobData = doc.data();
-          const jobId = doc.id;
+      // Calculate actual gig status based on approved submissions
+      const gigsData = await Promise.all(
+        gigsSnapshot.docs.map(async (doc) => {
+          const gigData = doc.data();
+          const gigId = doc.id;
           
           // Count approved submissions for this job
           const approvedSubmissionsQuery = query(
             collection(db, 'submissions'),
-            where('jobId', '==', jobId),
+            where('gigId', '==', gigId),
             where('status', '==', 'approved')
           );
           const approvedSubmissionsSnapshot = await getDocs(approvedSubmissionsQuery);
           const approvedCount = approvedSubmissionsSnapshot.size;
-          const acceptedSubmissionsLimit = jobData.acceptedSubmissionsLimit || 1;
+          const acceptedSubmissionsLimit = gigData.acceptedSubmissionsLimit || 1;
           
           // Determine actual status: open or closed
-          // A job is closed if:
+          // A gig is closed if:
           // 1. It has reached the submission limit
           // 2. It's explicitly marked as cancelled/expired/paid
           // Otherwise it's open
           let actualStatus = 'open';
-          if (jobData.status === 'cancelled' || jobData.status === 'expired' || jobData.status === 'paid') {
-            actualStatus = jobData.status;
+          if (gigData.status === 'cancelled' || gigData.status === 'expired' || gigData.status === 'paid') {
+            actualStatus = gigData.status;
           } else if (approvedCount >= acceptedSubmissionsLimit) {
             actualStatus = 'closed';
           } else {
@@ -191,17 +191,17 @@ export default function AdminDashboard() {
           
           return {
             id: doc.id,
-            ...jobData,
+            ...gigData,
             status: actualStatus, // Override with calculated status
             approvedSubmissionsCount: approvedCount,
             acceptedSubmissionsLimit,
-            createdAt: jobData.createdAt?.toDate ? jobData.createdAt.toDate() : new Date(jobData.createdAt),
-            deadlineAt: jobData.deadlineAt?.toDate ? jobData.deadlineAt.toDate() : new Date(jobData.deadlineAt),
-            updatedAt: jobData.updatedAt?.toDate ? jobData.updatedAt.toDate() : new Date(jobData.updatedAt),
+            createdAt: gigData.createdAt?.toDate ? gigData.createdAt.toDate() : new Date(gigData.createdAt),
+            deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
+            updatedAt: gigData.updatedAt?.toDate ? gigData.updatedAt.toDate() : new Date(gigData.updatedAt),
           };
         })
       );
-      setJobs(jobsData);
+      setGigs(gigsData);
 
       // Fetch all submissions
       const submissionsQuery = query(collection(db, 'submissions'), orderBy('createdAt', 'desc'));
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
       // Calculate stats
       const totalPlatformFees = paymentsData.reduce((sum, p: any) => sum + (p.platformFee || 0), 0);
       setStats({
-        totalJobs: jobsData.length,
+        totalGigs: gigsData.length,
         totalSubmissions: submissionsData.length,
         totalPayments: paymentsData.length,
         totalPlatformFees,
@@ -246,8 +246,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleEvaluateSubmission = async (submissionId: string, jobId: string) => {
-    if (!submissionId || !jobId) return;
+  const handleEvaluateSubmission = async (submissionId: string, gigId: string) => {
+    if (!submissionId || !gigId) return;
     
     setEvaluatingSubmissions(prev => new Set(prev).add(submissionId));
     
@@ -259,7 +259,7 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           submissionId,
-          jobId,
+          gigId,
         }),
       });
 
@@ -333,10 +333,10 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Campaigns</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Total Gigs</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.totalJobs}</div>
+              <div className="text-3xl font-bold">{stats.totalGigs}</div>
             </CardContent>
           </Card>
           <Card>
@@ -361,20 +361,20 @@ export default function AdminDashboard() {
         <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Campaigns</CardTitle>
+                <CardTitle>Gigs</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {jobs.slice(0, 10).map((job) => (
+                  {gigs.slice(0, 10).map((gig) => (
                     <div 
-                      key={job.id} 
+                      key={gig.id} 
                       className="border-b pb-3 last:border-0 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
-                      onClick={() => setSelectedJob(job)}
+                      onClick={() => setSelectedGig(gig)}
                     >
                       <div className="flex justify-between items-start gap-3">
                         <div className="flex-1 min-w-0 pr-2">
-                          <h3 className="font-semibold text-sm mb-1">{job.title}</h3>
-                          {job.description && (
+                          <h3 className="font-semibold text-sm mb-1">{gig.title}</h3>
+                          {gig.description && (
                             <p className="text-xs text-gray-500 mb-2 overflow-hidden" style={{
                               display: '-webkit-box',
                               WebkitLineClamp: 2,
@@ -382,30 +382,30 @@ export default function AdminDashboard() {
                               lineHeight: '1.4',
                               maxHeight: '2.8em'
                             }}>
-                              {job.description}
+                              {gig.description}
                             </p>
                           )}
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
-                              job.status === 'open' ? 'bg-green-100 text-green-800' :
-                              job.status === 'closed' ? 'bg-gray-100 text-gray-800' :
-                              job.status === 'paid' ? 'bg-purple-100 text-purple-800' :
-                              job.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                              job.status === 'expired' ? 'bg-orange-100 text-orange-800' :
+                              gig.status === 'open' ? 'bg-green-100 text-green-800' :
+                              gig.status === 'closed' ? 'bg-gray-100 text-gray-800' :
+                              gig.status === 'paid' ? 'bg-purple-100 text-purple-800' :
+                              gig.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              gig.status === 'expired' ? 'bg-orange-100 text-orange-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {job.status?.toUpperCase()}
+                              {gig.status?.toUpperCase()}
                             </span>
-                            {job.approvedSubmissionsCount !== undefined && (
+                            {gig.approvedSubmissionsCount !== undefined && (
                               <span className="text-xs text-gray-500 whitespace-nowrap">
-                                {job.approvedSubmissionsCount}/{job.acceptedSubmissionsLimit || 1} approved
+                                {gig.approvedSubmissionsCount}/{gig.acceptedSubmissionsLimit || 1} approved
                               </span>
                             )}
-                            <span className="text-xs text-gray-500 whitespace-nowrap">{job.createdAt?.toLocaleDateString()}</span>
+                            <span className="text-xs text-gray-500 whitespace-nowrap">{gig.createdAt?.toLocaleDateString()}</span>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className="font-semibold text-sm">${job.basePayout?.toFixed(2) || '0.00'}</p>
+                          <p className="font-semibold text-sm">${gig.basePayout?.toFixed(2) || '0.00'}</p>
                           <p className="text-xs text-gray-500">Payout</p>
                         </div>
                       </div>
@@ -416,14 +416,14 @@ export default function AdminDashboard() {
             </Card>
         </div>
 
-        {/* Campaign Details Modal */}
-        {selectedJob && (
+        {/* Gig Details Modal */}
+        {selectedGig && (
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
-                setSelectedJob(null);
-                setJobDetails(null);
+                setSelectedGig(null);
+                setGigDetails(null);
               }
             }}
           >
@@ -433,15 +433,15 @@ export default function AdminDashboard() {
             >
               <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10 shadow-sm">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Campaign Details</h2>
+                  <h2 className="text-xl font-bold text-gray-900">Gig Details</h2>
                   {jobDetails && (
-                    <p className="text-xs text-gray-500 mt-0.5">{jobDetails.job.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{jobDetails.gig.title}</p>
                   )}
                 </div>
                 <button
                   onClick={() => {
-                    setSelectedJob(null);
-                    setJobDetails(null);
+                    setSelectedGig(null);
+                    setGigDetails(null);
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-100 rounded"
                 >
@@ -449,65 +449,65 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              {loadingJobDetails ? (
+              {loadingGigDetails ? (
                 <div className="p-6 text-center">
-                  <LoadingSpinner text="Loading campaign details..." />
+                  <LoadingSpinner text="Loading gig details..." />
                 </div>
               ) : jobDetails ? (
                 <div className="p-4 space-y-3">
-                  {/* Campaign Header - Compact */}
+                  {/* Gig Header - Compact */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {/* Campaign Info */}
+                    {/* Gig Info */}
                     <Card className="md:col-span-2">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-semibold">Campaign Info</CardTitle>
+                        <CardTitle className="text-sm font-semibold">Gig Info</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            jobDetails.job.status === 'open' ? 'bg-green-100 text-green-700 border border-green-200' :
-                            jobDetails.job.status === 'closed' ? 'bg-gray-100 text-gray-700 border border-gray-200' :
-                            jobDetails.job.status === 'paid' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
-                            jobDetails.job.status === 'cancelled' ? 'bg-red-100 text-red-700 border border-red-200' :
-                            jobDetails.job.status === 'expired' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                            jobDetails.gig.status === 'open' ? 'bg-green-100 text-green-700 border border-green-200' :
+                            jobDetails.gig.status === 'closed' ? 'bg-gray-100 text-gray-700 border border-gray-200' :
+                            jobDetails.gig.status === 'paid' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                            jobDetails.gig.status === 'cancelled' ? 'bg-red-100 text-red-700 border border-red-200' :
+                            jobDetails.gig.status === 'expired' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
                             'bg-gray-100 text-gray-700 border border-gray-200'
                           }`}>
-                            {jobDetails.job.status?.toUpperCase()}
+                            {jobDetails.gig.status?.toUpperCase()}
                           </span>
                           <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
-                            ${jobDetails.job.basePayout?.toFixed(2) || '0.00'}
+                            ${jobDetails.gig.basePayout?.toFixed(2) || '0.00'}
                           </span>
-                          {jobDetails.job.primaryThing && (
+                          {jobDetails.gig.primaryThing && (
                             <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">
-                              {jobDetails.job.primaryThing}
+                              {jobDetails.gig.primaryThing}
                             </span>
                           )}
                           <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">
-                            Limit: {jobDetails.job.acceptedSubmissionsLimit || 1}
+                            Limit: {jobDetails.gig.acceptedSubmissionsLimit || 1}
                           </span>
                         </div>
-                        {jobDetails.job.deliverables && (
+                        {jobDetails.gig.deliverables && (
                           <div className="flex items-center gap-2 flex-wrap text-xs">
-                            {jobDetails.job.deliverables.videos > 0 && (
-                              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">📹 {jobDetails.job.deliverables.videos} videos</span>
+                            {jobDetails.gig.deliverables.videos > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">📹 {jobDetails.gig.deliverables.videos} videos</span>
                             )}
-                            {jobDetails.job.deliverables.photos > 0 && (
-                              <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700">📸 {jobDetails.job.deliverables.photos} photos</span>
+                            {jobDetails.gig.deliverables.photos > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700">📸 {jobDetails.gig.deliverables.photos} photos</span>
                             )}
-                            {jobDetails.job.deliverables.raw && (
+                            {jobDetails.gig.deliverables.raw && (
                               <span className="px-2 py-0.5 rounded bg-yellow-50 text-yellow-700">🎬 Raw footage</span>
                             )}
-                            {jobDetails.job.aiComplianceRequired && (
+                            {jobDetails.gig.aiComplianceRequired && (
                               <span className="px-2 py-0.5 rounded bg-green-50 text-green-700">🤖 AI Compliance</span>
                             )}
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                           <div>
-                            <span className="font-medium">Created:</span> {jobDetails.job.createdAt?.toLocaleDateString()}
+                            <span className="font-medium">Created:</span> {jobDetails.gig.createdAt?.toLocaleDateString()}
                           </div>
                           <div>
-                            <span className="font-medium">Deadline:</span> {jobDetails.job.deadlineAt?.toLocaleDateString()}
+                            <span className="font-medium">Deadline:</span> {jobDetails.gig.deadlineAt?.toLocaleDateString()}
                           </div>
                         </div>
                       </CardContent>
@@ -531,7 +531,7 @@ export default function AdminDashboard() {
                           <div className="text-gray-500 truncate">{jobDetails.brand.email}</div>
                         )}
                         <div className="pt-1 border-t">
-                          <p className="text-[10px] font-mono text-gray-400">{jobDetails.job.brandId.substring(0, 12)}...</p>
+                          <p className="text-[10px] font-mono text-gray-400">{jobDetails.gig.brandId.substring(0, 12)}...</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -741,7 +741,7 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className="p-8 text-center">
-                  <p className="text-gray-500">Error loading job details</p>
+                  <p className="text-gray-500">Error loading gig details</p>
                 </div>
               )}
             </div>

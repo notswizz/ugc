@@ -79,7 +79,7 @@ export interface Creator {
   trustScore: number;
   
   rates: {
-    perJobSuggested?: number;
+    perGigSuggested?: number;
   };
   turnaroundDays: number;
   portfolioLinks: string[];
@@ -88,7 +88,7 @@ export interface Creator {
   metrics: {
     ratingAvg: number;
     ratingCount: number;
-    jobsCompleted: number;
+    gigsCompleted: number;
     onTimeRate: number;
     disputeRate: number;
     refundRate: number;
@@ -148,8 +148,8 @@ export interface UsageRightsTemplate {
   notes: string;
 }
 
-// Job types - Updated per plan.txt
-export type JobStatus =
+// Gig types - Updated per plan.txt
+export type GigStatus =
   | "open"
   | "accepted"
   | "submitted"
@@ -160,9 +160,9 @@ export type JobStatus =
   | "cancelled"
   | "disputed";
 
-export type JobVisibility = "open" | "squad" | "invite";
+export type GigVisibility = "open" | "squad" | "invite";
 
-export interface Job {
+export interface Gig {
   id: string;
   brandId: string;
   title: string;
@@ -192,7 +192,7 @@ export interface Job {
   usageRightsSnapshot: UsageRightsTemplate;
   
   // Visibility and gating
-  visibility: JobVisibility;
+  visibility: GigVisibility;
   targetTags?: string[]; // For squad visibility
   trustScoreMin?: number; // Minimum Trust Score required
   experienceRequirements?: string[]; // e.g. ["paid_ads", "on_camera"]
@@ -211,7 +211,7 @@ export interface Job {
   aiComplianceRequired: boolean;
   autoApproveWindowHours?: number; // Brand auto-approve if inactive
   
-  status: JobStatus;
+  status: GigStatus;
   acceptedBy?: string;
   acceptedAt?: Date;
   
@@ -219,8 +219,8 @@ export interface Job {
   updatedAt: Date;
 }
 
-// Job Brief (creative requirements)
-export interface JobBrief {
+// Gig Brief (creative requirements)
+export interface GigBrief {
   hooks: string[];
   angles: string[];
   talkingPoints: string[];
@@ -238,7 +238,7 @@ export interface JobBrief {
 export interface Thread {
   id: string;
   participants: string[]; // [brandId, creatorId] or [recruiterId, creatorId]
-  jobId?: string;
+  gigId?: string;
   lastMessageAt: Date;
 }
 
@@ -266,7 +266,7 @@ export interface Squad {
   stats: {
     completionRate: number;
     avgAIScore: number;
-    jobsCompleted: number;
+    gigsCompleted: number;
   };
   
   recruiterCut?: number; // Percentage from brand side
@@ -290,7 +290,7 @@ export interface Recruiter {
 // Submission types (replaces Deliverables)
 export interface Submission {
   id: string;
-  jobId: string;
+  gigId: string;
   creatorId: string;
   version: number;
   
@@ -334,7 +334,7 @@ export interface Submission {
 
 export interface Payment {
   id: string;
-  jobId: string;
+  gigId: string;
   brandId: string;
   creatorId: string;
   
@@ -362,7 +362,7 @@ export interface Rating {
   id: string;
   fromId: string;
   toId: string;
-  jobId: string;
+  gigId: string;
   
   // Creator ratings
   onTimeDelivery?: number; // 1-5
@@ -383,7 +383,7 @@ export type DisputeStatus = "open" | "reviewing" | "resolved";
 
 export interface Dispute {
   id: string;
-  jobId: string;
+  gigId: string;
   openedById: string;
   reason: string;
   evidenceUrls: string[];

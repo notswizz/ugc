@@ -1,6 +1,6 @@
 {
-  "name": "UGC Dash",
-  "short_name": "UGC Dash",
+  "name": "Giglet",
+  "short_name": "Giglet",
   "description": "DoorDash for UGC - Real-time creator offers and fast payments",
   "start_url": "/",
   "display": "standalone",
@@ -27,14 +27,14 @@
     {
       "name": "Go Online",
       "short_name": "Online",
-      "description": "Start receiving campaign offers",
+      "description": "Start receiving gig offers",
       "url": "/creator/dashboard?action=go-online",
       "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "My Offers",
       "short_name": "Offers",
-      "description": "View pending campaign offers",
+      "description": "View pending gig offers",
       "url": "/creator/dashboard?tab=offers",
       "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     }

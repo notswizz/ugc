@@ -17,7 +17,7 @@ export default function BrandDashboard() {
   const [showAddBalance, setShowAddBalance] = useState(false);
   const [addAmount, setAddAmount] = useState('');
   const [addingBalance, setAddingBalance] = useState(false);
-  const [recentJobs, setRecentJobs] = useState([]);
+  const [recentGigs, setRecentGigs] = useState([]);
   const [companyName, setCompanyName] = useState<string>('');
 
   // Fetch brand balance and company name
@@ -94,34 +94,34 @@ export default function BrandDashboard() {
 
   useEffect(() => {
     if (user && appUser) {
-      fetchBrandJobs();
+      fetchBrandGigs();
     }
   }, [user, appUser]);
 
-  const fetchBrandJobs = async () => {
+  const fetchBrandGigs = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
       
-      // Fetch all jobs posted by this brand
-      const jobsQuery = query(
-        collection(db, 'jobs'),
+      // Fetch all gigs posted by this brand
+      const gigsQuery = query(
+        collection(db, 'gigs'),
         where('brandId', '==', user.uid),
         orderBy('createdAt', 'desc'),
         limit(50)
       );
 
-      const jobsSnapshot = await getDocs(jobsQuery);
-      const jobsWithStats = await Promise.all(
-        jobsSnapshot.docs.map(async (doc) => {
+      const gigsSnapshot = await getDocs(gigsQuery);
+      const gigsWithStats = await Promise.all(
+        gigsSnapshot.docs.map(async (doc) => {
           const data = doc.data();
-          const jobId = doc.id;
+          const gigId = doc.id;
           
           // Fetch submissions for this job
           const submissionsQuery = query(
             collection(db, 'submissions'),
-            where('jobId', '==', jobId)
+            where('gigId', '==', gigId)
           );
           const submissionsSnapshot = await getDocs(submissionsQuery);
           const submissions = submissionsSnapshot.docs.map(subDoc => subDoc.data());
@@ -131,7 +131,7 @@ export default function BrandDashboard() {
           const pendingSubmissions = submissions.filter((s: any) => s.status === 'submitted').length;
           
           return {
-            id: jobId,
+            id: gigId,
             ...data,
             status: data.status || 'open',
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
@@ -143,10 +143,10 @@ export default function BrandDashboard() {
         })
       );
 
-      // Set recent jobs (last 5)
-      setRecentJobs(jobsWithStats.slice(0, 5));
+      // Set recent gigs (last 5)
+      setRecentGigs(gigsWithStats.slice(0, 5));
     } catch (error) {
-      console.error('Error fetching brand jobs:', error);
+      console.error('Error fetching brand gigs:', error);
     } finally {
       setLoading(false);
     }
@@ -230,11 +230,11 @@ export default function BrandDashboard() {
           </CardContent>
         </Card>
 
-        {/* Add Campaign Button */}
+        {/* Add Gig Button */}
         <div className="mb-8">
-          <Link href="/brand/jobs/new">
+          <Link href="/brand/gigs/new">
             <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white py-6 text-lg font-medium">
-              + Add Campaign
+              + Add Gig
             </Button>
           </Link>
         </div>

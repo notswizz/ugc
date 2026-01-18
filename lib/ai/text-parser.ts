@@ -5,7 +5,7 @@ import { AIEvaluation } from './evaluator';
  */
 export function parseNaturalLanguageResponse(outputText: string, job: any): AIEvaluation {
   const lowerOutput = outputText.toLowerCase();
-  const productName = (job.title || job.description || 'product').toLowerCase();
+  const productName = (gig.title || gig.description || 'product').toLowerCase();
   
   // Extract compliance from questions 2 and 3
   const isAboutProduct = !lowerOutput.includes('no') && 

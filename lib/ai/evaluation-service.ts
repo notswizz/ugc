@@ -13,10 +13,10 @@ export interface EvaluationOptions {
  * Main evaluation service that orchestrates video evaluation
  */
 export async function evaluateSubmission(options: EvaluationOptions): Promise<AIEvaluation> {
-  const { videoUrl, job } = options;
+  const { videoUrl, gig } = options;
   
   // Build evaluation prompt
-  const prompt = buildEvaluationPrompt(job);
+  const prompt = buildEvaluationPrompt(gig);
   
   // Call video model
   const outputText = await evaluateVideo({
@@ -28,10 +28,10 @@ export async function evaluateSubmission(options: EvaluationOptions): Promise<AI
   
   // Parse the response
   try {
-    return parseJSONResponse(outputText, job);
+    return parseJSONResponse(outputText, gig);
   } catch (parseError) {
     console.error('Error parsing JSON response, falling back to text parsing:', parseError);
     // Fallback to text parsing
-    return parseNaturalLanguageResponse(outputText, job);
+    return parseNaturalLanguageResponse(outputText, gig);
   }
 }

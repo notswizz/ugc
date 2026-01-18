@@ -1,6 +1,6 @@
 /**
- * Script to set all jobs status to 'open'
- * Run with: node scripts/set-jobs-open.js
+ * Script to set all gigs status to 'open'
+ * Run with: node scripts/set-gigs-open.js
  */
 
 // Load environment variables from .env.local manually
@@ -53,56 +53,56 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-async function setAllJobsToOpen() {
-  console.log('Setting all jobs status to "open"...\n');
+async function setAllGigsToOpen() {
+  console.log('Setting all gigs status to "open"...\n');
 
   try {
-    // Get all jobs
-    const jobsSnapshot = await db.collection('jobs').get();
+    // Get all gigs
+    const gigsSnapshot = await db.collection('gigs').get();
 
-    if (jobsSnapshot.empty) {
-      console.log('No jobs found in database.');
+    if (gigsSnapshot.empty) {
+      console.log('No gigs found in database.');
       return;
     }
 
-    console.log(`Found ${jobsSnapshot.size} jobs to update.\n`);
+    console.log(`Found ${gigsSnapshot.size} gigs to update.\n`);
 
-    // Update each job in batches
+    // Update each gig in batches
     const batchSize = 500;
-    const jobs = jobsSnapshot.docs;
+    const gigs = gigsSnapshot.docs;
     let updated = 0;
 
-    for (let i = 0; i < jobs.length; i += batchSize) {
+    for (let i = 0; i < gigs.length; i += batchSize) {
       const batch = db.batch();
-      const batchJobs = jobs.slice(i, i + batchSize);
+      const batchGigs = gigs.slice(i, i + batchSize);
       
-      batchJobs.forEach((jobDoc) => {
-        const currentStatus = jobDoc.data().status || 'unknown';
-        batch.update(jobDoc.ref, {
+      batchGigs.forEach((gigDoc) => {
+        const currentStatus = gigDoc.data().status || 'unknown';
+        batch.update(gigDoc.ref, {
           status: 'open',
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         updated++;
         
         if (currentStatus !== 'open') {
-          console.log(`  Updating job "${jobDoc.data().title || jobDoc.id}" from "${currentStatus}" to "open"`);
+          console.log(`  Updating gig "${gigDoc.data().title || gigDoc.id}" from "${currentStatus}" to "open"`);
         }
       });
       
       await batch.commit();
-      console.log(`  Committed batch (${Math.min(i + batchSize, jobs.length)}/${jobs.length} jobs)`);
+      console.log(`  Committed batch (${Math.min(i + batchSize, gigs.length)}/${gigs.length} gigs)`);
     }
 
-    console.log(`\n✅ Successfully updated ${updated} jobs to status "open"`);
+    console.log(`\n✅ Successfully updated ${updated} gigs to status "open"`);
   } catch (error) {
-    console.error('\n❌ Error updating jobs:', error.message);
+    console.error('\n❌ Error updating gigs:', error.message);
     console.error(error);
     process.exit(1);
   }
 }
 
 // Run the script
-setAllJobsToOpen()
+setAllGigsToOpen()
   .then(() => {
     console.log('\n✅ Script completed successfully');
     process.exit(0);

@@ -57,7 +57,7 @@ export default function CreatorProfile() {
   };
 
   const handleInvite = () => {
-    // For now, just show a toast. In the future, this would open a campaign selection modal
+    // For now, just show a toast. In the future, this would open a gig selection modal
     toast.success('Invite feature coming soon!');
   };
 
@@ -88,7 +88,7 @@ export default function CreatorProfile() {
               <p className="text-muted-foreground">{creator.location}</p>
             </div>
             <Button onClick={handleInvite} size="lg">
-              Invite to Campaign
+              Invite to Gig
             </Button>
           </div>
         </div>
@@ -213,8 +213,8 @@ export default function CreatorProfile() {
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {creator.trustScore >= 70 ? '✅ High trust - Can accept all jobs' :
-                     creator.trustScore >= 50 ? '⚠️ Medium trust - Limited to standard jobs' :
+                    {creator.trustScore >= 70 ? '✅ High trust - Can accept all gigs' :
+                     creator.trustScore >= 50 ? '⚠️ Medium trust - Limited to standard gigs' :
                      '❌ Low trust - Building reputation'}
                   </div>
                 </div>
@@ -250,14 +250,14 @@ export default function CreatorProfile() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {creator.rates.perJobSuggested ? (
+                  {creator.rates.perGigSuggested ? (
                     <div className="flex justify-between">
-                      <span>Suggested per Job</span>
-                      <span className="font-medium">${creator.rates.perJobSuggested}</span>
+                      <span>Suggested per Gig</span>
+                      <span className="font-medium">${creator.rates.perGigSuggested}</span>
                     </div>
                   ) : (
                     <div className="text-center text-muted-foreground py-4">
-                      Rate determined per job by admin
+                      Rate determined per gig by admin
                     </div>
                   )}
                   <div className="flex justify-between border-t pt-2">
@@ -299,8 +299,8 @@ export default function CreatorProfile() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Jobs Completed</span>
-                    <span className="font-medium">{creator.metrics.jobsCompleted}</span>
+                    <span>Gigs Completed</span>
+                    <span className="font-medium">{creator.metrics.gigsCompleted}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>On-Time Rate</span>

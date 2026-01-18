@@ -104,7 +104,7 @@ export default function BrandOnboarding() {
       }
     }
     
-    if (currentStep < 3) {
+    if (currentStep < 2) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -194,194 +194,58 @@ export default function BrandOnboarding() {
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Company Name</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-900">Company Name *</label>
               <Input
                 placeholder="Your Company Name"
                 value={formData.companyName}
                 onChange={(e) => updateFormData({ companyName: e.target.value })}
                 required
+                className="h-12 text-base"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium mb-2">Website</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-900">Website *</label>
               <Input
                 type="url"
                 placeholder="https://yourcompany.com"
                 value={formData.website}
                 onChange={(e) => updateFormData({ website: e.target.value })}
                 required
+                className="h-12 text-base"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium mb-2">Industry</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-900">Industry *</label>
               <select
-                className="w-full p-3 border rounded-md"
+                className="w-full h-12 px-4 border rounded-lg text-base bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                 value={formData.industry}
                 onChange={(e) => updateFormData({ industry: e.target.value })}
                 required
               >
-                <option value="">Select an industry</option>
+                <option value="">Select your industry</option>
                 {INDUSTRIES.map(industry => (
                   <option key={industry} value={industry}>{industry}</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Brand Voice</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                How polished vs casual is your brand voice? (1 = Very Casual, 10 = Very Polished)
-              </p>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={formData.brandVoice}
-                onChange={(e) => updateFormData({ brandVoice: Number(e.target.value) })}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>Casual</span>
-                <span>Balanced</span>
-                <span>Polished</span>
-              </div>
             </div>
           </div>
         );
 
       case 2:
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Usage Rights Term</label>
-              <select
-                className="w-full p-3 border rounded-md"
-                value={formData.defaultUsageRights.termMonths}
-                onChange={(e) => updateUsageRights({ termMonths: Number(e.target.value) })}
-              >
-                <option value={6}>6 months</option>
-                <option value={12}>12 months</option>
-                <option value={24}>24 months</option>
-                <option value={36}>36 months</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Allowed Channels</label>
-              <div className="space-y-2">
-                {Object.entries(formData.defaultUsageRights.channels).map(([channel, enabled]) => (
-                  <label key={channel} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={enabled}
-                      onChange={(e) => updateChannels({ [channel]: e.target.checked })}
-                    />
-                    <span className="text-sm capitalize">
-                      {channel.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.defaultUsageRights.rawFootageIncluded}
-                  onChange={(e) => updateUsageRights({ rawFootageIncluded: e.target.checked })}
-                />
-                <span className="text-sm">Include raw footage rights</span>
-              </label>
-            </div>
-
-            <div>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.defaultUsageRights.exclusivity.enabled}
-                  onChange={(e) => updateUsageRights({
-                    exclusivity: {
-                      ...formData.defaultUsageRights.exclusivity,
-                      enabled: e.target.checked
-                    }
-                  })}
-                />
-                <span className="text-sm">Require exclusivity</span>
-              </label>
-            </div>
-
-            {formData.defaultUsageRights.exclusivity.enabled && (
-              <div className="ml-6 space-y-2">
-                <Input
-                  placeholder="Category (optional)"
-                  value={formData.defaultUsageRights.exclusivity.category || ''}
-                  onChange={(e) => updateUsageRights({
-                    exclusivity: {
-                      ...formData.defaultUsageRights.exclusivity,
-                      category: e.target.value
-                    }
-                  })}
-                />
-                <select
-                  className="w-full p-3 border rounded-md"
-                  value={formData.defaultUsageRights.exclusivity.months || 12}
-                  onChange={(e) => updateUsageRights({
-                    exclusivity: {
-                      ...formData.defaultUsageRights.exclusivity,
-                      months: Number(e.target.value)
-                    }
-                  })}
-                >
-                  <option value={6}>6 months</option>
-                  <option value={12}>12 months</option>
-                  <option value={24}>24 months</option>
-                </select>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Geographic Rights</label>
-              <select
-                className="w-full p-3 border rounded-md"
-                value={formData.defaultUsageRights.geo}
-                onChange={(e) => updateUsageRights({ geo: e.target.value as string[] | "global" })}
-              >
-                <option value="global">Global</option>
-                <option value="us">United States</option>
-                <option value="eu">European Union</option>
-                <option value="na">North America</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Additional Notes</label>
-              <textarea
-                className="w-full p-3 border rounded-md min-h-[80px]"
-                placeholder="Any special terms or notes about usage rights..."
-                value={formData.defaultUsageRights.notes}
-                onChange={(e) => updateUsageRights({ notes: e.target.value })}
-              />
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-4">
+          <div className="space-y-6 py-12">
             <div className="text-center">
-              <h3 className="text-lg font-semibold mb-2">Payment Setup</h3>
-              <p className="text-muted-foreground mb-4">
-                You'll set up billing when you create your first campaign
-              </p>
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="text-sm">
-                  ✅ Company profile configured<br/>
-                  ✅ Usage rights template created<br/>
-                  💳 Billing setup will happen when you pay for your first campaign
-                </p>
+              <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-5xl">✨</span>
               </div>
+              <h3 className="text-3xl font-bold mb-3 text-gray-900">You're All Set!</h3>
+              <p className="text-lg text-gray-600">
+                {formData.companyName}
+              </p>
             </div>
           </div>
         );
@@ -396,49 +260,82 @@ export default function BrandOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="max-w-2xl mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
+      <div className="max-w-3xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome to Giglet</h1>
+          <p className="text-gray-600">Let's set up your company profile</p>
+        </div>
+        
+        {/* Progress */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">Brand Setup</h1>
-            <span className="text-sm text-muted-foreground">
-              Step {currentStep} of 3
-            </span>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            {[1, 2].map(step => (
+              <div key={step} className="flex items-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
+                  currentStep === step 
+                    ? 'bg-orange-500 text-white shadow-lg scale-110' 
+                    : currentStep > step
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {currentStep > step ? '✓' : step}
+                </div>
+                {step < 2 && (
+                  <div className={`w-16 h-1 mx-1 transition-all ${
+                    currentStep > step ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+                )}
+              </div>
+            ))}
           </div>
-          <div className="w-full bg-muted rounded-full h-2">
-            <div
-              className="bg-primary h-2 rounded-full transition-all"
-              style={{ width: `${(currentStep / 3) * 100}%` }}
-            />
+          <div className="text-center">
+            <span className="text-sm font-medium text-gray-600">
+              {currentStep === 1 && "Company Details"}
+              {currentStep === 2 && "Review & Complete"}
+            </span>
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {currentStep === 1 && "Company Information"}
-              {currentStep === 2 && "Default Usage Rights"}
-              {currentStep === 3 && "Ready to Launch"}
+        <Card className="shadow-xl border-0">
+          <CardHeader className="border-b bg-gradient-to-r from-orange-50 to-red-50">
+            <CardTitle className="text-2xl text-gray-900">
+              {currentStep === 1 && "Tell us about your company"}
+              {currentStep === 2 && "Ready to launch!"}
             </CardTitle>
+            <p className="text-sm text-gray-600 mt-1">
+              {currentStep === 1 && "Basic information about your brand"}
+              {currentStep === 2 && "Review your setup and get started"}
+            </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-8">
             {renderStep()}
           </CardContent>
         </Card>
 
-        <div className="flex justify-between mt-6">
+        <div className="flex justify-between mt-8">
           <Button
             variant="outline"
             onClick={handleBack}
             disabled={currentStep === 1}
+            className="px-8"
+            size="lg"
           >
-            Back
+            ← Back
           </Button>
-          {currentStep < 3 ? (
-            <Button onClick={handleNext}>Next</Button>
+          {currentStep < 2 ? (
+            <Button onClick={handleNext} className="px-8 bg-orange-500 hover:bg-orange-600" size="lg">
+              Continue →
+            </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={isLoading}>
-              {isLoading ? 'Creating Profile...' : 'Complete Setup'}
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isLoading}
+              className="px-8 bg-green-500 hover:bg-green-600" 
+              size="lg"
+            >
+              {isLoading ? 'Setting up...' : 'Complete Setup ✨'}
             </Button>
           )}
         </div>

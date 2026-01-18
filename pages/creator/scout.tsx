@@ -37,14 +37,14 @@ interface Creator {
     linkedin?: number;
   };
   metrics?: {
-    jobsCompleted?: number;
+    gigsCompleted?: number;
     ratingAvg?: number;
   };
 }
 
 interface Submission {
   id: string;
-  jobId: string;
+  gigId: string;
   jobTitle?: string;
   status: string;
   aiEvaluation?: {
@@ -107,12 +107,12 @@ export default function ScoutPage() {
         ...doc.data(),
       } as Creator));
 
-      // Fetch all jobs to get job titles
-      const jobsQuery = query(collection(db, 'jobs'));
-      const jobsSnapshot = await getDocs(jobsQuery);
-      const jobsMap = new Map();
-      jobsSnapshot.docs.forEach(doc => {
-        jobsMap.set(doc.id, doc.data().title);
+      // Fetch all gigs to get gig titles
+      const gigsQuery = query(collection(db, 'gigs'));
+      const gigsSnapshot = await getDocs(gigsQuery);
+      const gigsMap = new Map();
+      gigsSnapshot.docs.forEach(doc => {
+        gigsMap.set(doc.id, doc.data().title);
       });
 
       // Fetch all submissions
@@ -132,8 +132,8 @@ export default function ScoutPage() {
         if (creatorId) {
           const submission: Submission = {
             id: doc.id,
-            jobId: data.jobId,
-            jobTitle: jobsMap.get(data.jobId),
+            gigId: data.gigId,
+            jobTitle: gigsMap.get(data.gigId),
             status: data.status,
             aiEvaluation: data.aiEvaluation,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
@@ -663,10 +663,10 @@ export default function ScoutPage() {
                           {creator.metrics && (
                             <div className="pt-2 border-t">
                               <div className="grid grid-cols-2 gap-2 text-xs">
-                                {creator.metrics.jobsCompleted !== undefined && (
+                                {creator.metrics.gigsCompleted !== undefined && (
                                   <div>
                                     <span className="text-gray-500">Completed:</span>
-                                    <span className="font-medium ml-1">{creator.metrics.jobsCompleted}</span>
+                                    <span className="font-medium ml-1">{creator.metrics.gigsCompleted}</span>
                                   </div>
                                 )}
                                 {creator.metrics.ratingAvg !== undefined && (
@@ -691,7 +691,7 @@ export default function ScoutPage() {
                                   <div key={submission.id} className="p-2 bg-gray-50 rounded border border-gray-200">
                                     <div className="flex items-start justify-between gap-2 mb-1">
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-medium text-gray-800">{submission.jobTitle || 'Unknown Campaign'}</p>
+                                        <p className="text-xs font-medium text-gray-800">{submission.jobTitle || 'Unknown Gig'}</p>
                                         <p className="text-[10px] text-gray-500 mt-0.5">
                                           {submission.createdAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'N/A'}
                                         </p>

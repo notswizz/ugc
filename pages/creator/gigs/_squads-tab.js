@@ -1,4 +1,4 @@
-// This file exports the SquadsTab component for use in jobs/index.js
+// This file exports the SquadsTab component for use in gigs/index.js
 // It's extracted from pages/creator/squads.tsx to be used as a tab
 
 import { useState, useEffect } from 'react';

@@ -1,53 +1,54 @@
-# UGC Dock
+# Giglet
 
-A production-ready marketplace connecting brands with UGC creators. Built with Next.js, Firebase, and Stripe.
+A marketplace platform connecting brands with content creators for user-generated content (UGC) gigs.
+
+## Overview
+
+Giglet is a two-sided marketplace where:
+- **Brands** post gigs for content creation
+- **Creators** browse, accept, and complete gigs
+- **AI evaluation** ensures content quality
+- **Squads** allow recruiters to manage groups of creators
 
 ## Features
 
-- **Two-sided marketplace**: Brands post campaigns, creators apply and get hired
-- **Secure payments**: Stripe-powered escrow system with automatic payouts
-- **Smart matching**: AI-powered creator recommendations based on tags and performance
-- **Contract management**: End-to-end campaign lifecycle with deliverables tracking
-- **Ratings & reviews**: Performance metrics and feedback system
-- **Admin dashboard**: Dispute resolution and platform management
+- **Gig Management**: Create, browse, and accept gigs
+- **AI-Powered Evaluation**: Automated content quality assessment using VideoLLaMA
+- **Trust Score System**: Creator reputation based on performance
+- **Squad System**: Recruiter-managed creator groups
+- **Dynamic Payouts**: Follower-based compensation
+- **Social Verification**: TikTok, Instagram, YouTube integration
+- **Usage Rights**: Flexible content licensing
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Firebase (Auth, Firestore, Storage, Functions)
-- **Payments**: Stripe (Checkout, Connect, Webhooks)
-- **Deployment**: Vercel (recommended)
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend**: Firebase (Firestore, Storage, Auth, Functions)
+- **Payments**: Stripe Connect
+- **AI**: Replicate VideoLLaMA for content evaluation
+- **Deployment**: Vercel
 
 ## Quick Start
 
 ### 1. Prerequisites
 
 - Node.js 18+
-- npm or yarn
-- Firebase CLI (`npm install -g firebase-tools`)
-- Stripe CLI (optional, for webhook testing)
+- Firebase project
+- Stripe account
+- Replicate API key
 
-### 2. Firebase Setup
+### 2. Installation
 
-1. Create a new Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Enable Authentication with Google and Email providers
-3. Enable Firestore Database
-4. Enable Firebase Storage
-5. Enable Firebase Functions
-6. Create a service account and download the key file
+```bash
+npm install
+```
 
-### 3. Stripe Setup
+### 3. Environment Variables
 
-1. Create a Stripe account at [stripe.com](https://stripe.com)
-2. Enable Connect for creator payouts
-3. Set up webhook endpoints (see below)
-
-### 4. Environment Variables
-
-Create a `.env.local` file in the root directory:
+Create a `.env.local` file:
 
 ```env
-# Firebase Configuration
+# Firebase
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
@@ -55,220 +56,145 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
-# Firebase Admin (Server-side)
+# Firebase Admin
 FIREBASE_PROJECT_ID=your_project_id
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your_project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n"
-FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 
-# Stripe Configuration
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+# Stripe
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
 
-# Platform Configuration
-PLATFORM_FEE_PERCENTAGE=15
+# Replicate AI
+REPLICATE_API_TOKEN=r8_...
+
+# TikTok Verification
+TIKTOK_CLIENT_KEY=your_client_key
+TIKTOK_CLIENT_SECRET=your_client_secret
 ```
 
-### 5. Installation
+### 4. Run Development Server
 
 ```bash
-# Install dependencies
-npm install
-
-# Install Firebase Functions dependencies
-cd functions && npm install && cd ..
-
-# Start Firebase emulators (in one terminal)
-firebase emulators:start
-
-# Start the development server (in another terminal)
 npm run dev
 ```
 
-### 6. Firebase Configuration
+Open [http://localhost:3000](http://localhost:3000)
 
-1. Login to Firebase CLI:
-```bash
-firebase login
-```
-
-2. Initialize the project:
-```bash
-firebase init
-# Select: Functions, Firestore, Storage, Hosting
-```
-
-3. Deploy Firestore security rules:
-```bash
-firebase deploy --only firestore:rules
-```
-
-4. Deploy Storage security rules:
-```bash
-firebase deploy --only storage
-```
-
-### 7. Stripe Webhook Setup
-
-1. Install Stripe CLI and login:
-```bash
-stripe login
-```
-
-2. Forward webhooks to your local development:
-```bash
-stripe listen --forward-to localhost:5001/ugc-dock/us-central1/stripeWebhook
-```
-
-3. Copy the webhook signing secret to your `.env.local` file
-
-## Database Schema
-
-### Firestore Collections
-
-- `/users/{uid}` - User profiles
-- `/creators/{uid}` - Creator profiles and metrics
-- `/brands/{uid}` - Brand profiles
-- `/campaigns/{id}` - Campaign listings
-- `/contracts/{id}` - Active contracts
-- `/applications/{id}` - Campaign applications
-- `/threads/{id}` - Messaging threads
-- `/ratings/{id}` - User ratings
-- `/disputes/{id}` - Dispute cases
-- `/adminLogs/{id}` - Admin activity logs
-
-### Required Indexes
-
-Create these composite indexes in the Firebase console:
+## Project Structure
 
 ```
-campaigns: status ASC, createdAt DESC
-contracts: brandId ASC, createdAt DESC
-contracts: creatorId ASC, createdAt DESC
-threads: participants ARRAY, lastMessageAt DESC
+/pages
+  /creator          # Creator dashboard and gig browsing
+  /brand            # Brand dashboard and gig creation
+  /admin            # Admin dashboard
+  /api              # API routes
+/components         # Reusable React components
+  /gigs             # Gig-specific components
+  /layout           # Layout components
+  /ui               # UI components
+/lib
+  /ai               # AI evaluation services
+  /payments         # Stripe integration
+  /trustScore       # Trust score calculations
+  /firebase         # Firebase client/admin
+  /models           # TypeScript types
 ```
 
-## Development
+## Key Concepts
 
-### Seed Data
+### Gigs
 
-Run the seed script to populate development data:
+Gigs are content creation opportunities posted by brands:
+- **Deliverables**: Videos, photos, raw footage
+- **Payout**: Fixed or dynamic based on follower count
+- **Brief**: Hooks, angles, talking points, dos/don'ts
+- **Requirements**: Trust score, experience, tags
+- **Visibility**: Open, squad-only, or invite-only
 
-```bash
-npm run seed
-```
+### Trust Score
 
-### Testing
+Creators earn a trust score (0-100) based on:
+- ✅ Verified email and phone
+- ✅ Connected social accounts
+- ✅ Stripe Connect onboarded
+- ✅ Gigs completed
+- ✅ On-time delivery rate
+- ✅ Content quality scores
+- ❌ Dispute and refund rates
 
-```bash
-# Run all tests
-npm test
+### Squads
 
-# Run e2e tests
-npm run test:e2e
-```
+Groups of creators managed by recruiters:
+- Curated teams for specific niches
+- Squad-only gig access
+- Quality control and coordination
+- Recruiter commission structure
 
-### Linting
+### AI Evaluation
+
+Automated content quality assessment:
+- Compliance checking
+- Quality scoring (0-100)
+- Component breakdowns (hook, lighting, clarity, etc.)
+- Improvement suggestions
+- Product verification
+
+## Database Collections
+
+- `users` - User profiles
+- `creators` - Creator profiles and metrics
+- `brands` - Brand profiles
+- `gigs` - Gig listings
+- `submissions` - Content submissions
+- `payments` - Payment records
+- `squads` - Creator squads
+- `squadInvitations` - Squad invitations
+- `ratings` - Performance ratings
+
+## API Routes
+
+- `/api/evaluate-submission` - AI evaluation endpoint
+- `/api/verify-tiktok` - TikTok OAuth verification
+- `/api/add-balance` - Account balance management
+
+## Firebase Functions
+
+Deploy functions:
 
 ```bash
-npm run lint
-```
-
-## Deployment
-
-### Vercel Deployment
-
-1. Connect your GitHub repository to Vercel
-2. Add environment variables in Vercel dashboard
-3. Deploy Functions to Firebase:
-```bash
+cd functions
+npm install
 firebase deploy --only functions
-```
-
-### Firebase Hosting (Alternative)
-
-```bash
-# Build for production
-npm run build
-
-# Deploy to Firebase Hosting
-firebase deploy --only hosting
 ```
 
 ## Security Rules
 
-### Firestore Rules
+Update Firestore and Storage rules:
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users can read their own data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Creators can be read by anyone, edited by owner
-    match /creators/{creatorId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == creatorId;
-    }
-
-    // Similar rules for other collections...
-  }
-}
+```bash
+firebase deploy --only firestore:rules
+firebase deploy --only storage
 ```
 
-### Storage Rules
+## Deployment
 
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    // Users can upload to their own directories
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
+### Vercel
 
-    // Contract deliverables
-    match /contracts/{contractId}/{allPaths=**} {
-      allow read, write: if canAccessContract(contractId);
-    }
-  }
-
-  function canAccessContract(contractId) {
-    return request.auth != null &&
-           (get(/databases/$(database)/documents/contracts/$(contractId)).data.brandId == request.auth.uid ||
-            get(/databases/$(database)/documents/contracts/$(contractId)).data.creatorId == request.auth.uid);
-  }
-}
-```
-
-## API Reference
+1. Connect GitHub repository to Vercel
+2. Add environment variables
+3. Deploy
 
 ### Firebase Functions
 
-- `stripeWebhook` - Handles Stripe webhook events
-- `transitionContract` - Secure contract state transitions
-
-### Client SDK
-
-See `/lib/firebase/client.ts` and `/lib/db/queries.ts` for available methods.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+```bash
+firebase deploy --only functions
+```
 
 ## License
 
-MIT License - see LICENSE file for details.
+Private - All rights reserved
 
 ## Support
 
-For support, email support@ugc-dock.com or join our Discord community.
+For questions or issues, contact the development team.

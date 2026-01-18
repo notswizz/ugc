@@ -6,17 +6,17 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import VisibilityBadge from '@/components/jobs/VisibilityBadge';
+import VisibilityBadge from '@/components/gigs/VisibilityBadge';
 import { THINGS } from '@/lib/things/constants';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
-export default function BrandJobDetail() {
+export default function BrandGigDetail() {
   const router = useRouter();
-  const { jobId } = router.query;
+  const { gigId } = router.query;
   const { user, appUser } = useAuth();
-  const [job, setJob] = useState(null);
+  const [gig, setGig] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -29,30 +29,30 @@ export default function BrandJobDetail() {
   const [evaluatingSubmissions, setEvaluatingSubmissions] = useState(new Set());
 
   useEffect(() => {
-    if (jobId && typeof jobId === 'string') {
-      fetchJobAndSubmissions();
+    if (gigId && typeof gigId === 'string') {
+      fetchGigAndSubmissions();
     }
-  }, [jobId, user]);
+  }, [gigId, user]);
 
-  const fetchJobAndSubmissions = async () => {
-    if (!jobId || typeof jobId !== 'string' || !user) return;
+  const fetchGigAndSubmissions = async () => {
+    if (!gigId || typeof gigId !== 'string' || !user) return;
     
     try {
       setLoading(true);
       
       // Fetch job
-      const jobDoc = await getDoc(doc(db, 'jobs', jobId));
+      const gigDoc = await getDoc(doc(db, 'gigs', gigId));
       
-      if (!jobDoc.exists()) {
-        toast.error('Job not found');
+      if (!gigDoc.exists()) {
+        toast.error('Gig not found');
         router.push('/brand/dashboard');
         return;
       }
 
-      const jobData = jobDoc.data();
+      const gigData = gigDoc.data();
       
       // Check if user owns this job
-      if (jobData.brandId !== user.uid) {
+      if (gigData.brandId !== user.uid) {
         toast.error('You do not have permission to view this job');
         router.push('/brand/dashboard');
         return;
@@ -61,7 +61,7 @@ export default function BrandJobDetail() {
       // Fetch submissions
       const submissionsQuery = query(
         collection(db, 'submissions'),
-        where('jobId', '==', jobId),
+        where('gigId', '==', gigId),
         orderBy('createdAt', 'desc')
       );
       const submissionsSnapshot = await getDocs(submissionsQuery);
@@ -110,15 +110,15 @@ export default function BrandJobDetail() {
       });
 
       // Determine display status: "closed" if reached limit, otherwise "open"
-      const acceptedSubmissionsLimit = jobData.acceptedSubmissionsLimit || 1;
+      const acceptedSubmissionsLimit = gigData.acceptedSubmissionsLimit || 1;
       const displayStatus = approvedSubmissions >= acceptedSubmissionsLimit ? 'closed' : 'open';
 
-      setJob({
-        id: jobDoc.id,
-        ...jobData,
+      setGig({
+        id: gigDoc.id,
+        ...gigData,
         status: displayStatus,
-        deadlineAt: jobData.deadlineAt?.toDate ? jobData.deadlineAt.toDate() : new Date(jobData.deadlineAt),
-        createdAt: jobData.createdAt?.toDate ? jobData.createdAt.toDate() : new Date(jobData.createdAt),
+        deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
+        createdAt: gigData.createdAt?.toDate ? gigData.createdAt.toDate() : new Date(gigData.createdAt),
       });
     } catch (error) {
       console.error('Error fetching job:', error);
@@ -131,7 +131,7 @@ export default function BrandJobDetail() {
 
 
   const handleEvaluateSubmission = async (submissionId) => {
-    if (!submissionId || !jobId) return;
+    if (!submissionId || !gigId) return;
     
     setEvaluatingSubmissions(prev => new Set(prev).add(submissionId));
     
@@ -143,7 +143,7 @@ export default function BrandJobDetail() {
         },
         body: JSON.stringify({
           submissionId,
-          jobId: jobId,
+          gigId: gigId,
         }),
       });
 
@@ -157,8 +157,8 @@ export default function BrandJobDetail() {
       
       toast.success('AI evaluation completed! Submission has been scored.');
       
-      // Refresh the job and submissions data
-      fetchJobAndSubmissions();
+      // Refresh the gig and submissions data
+      fetchGigAndSubmissions();
     } catch (error) {
       console.error('Error evaluating submission:', error);
       toast.error(`Failed to evaluate submission: ${error.message}`);
@@ -171,12 +171,12 @@ export default function BrandJobDetail() {
     }
   };
 
-  const handleDeleteJob = async () => {
-    if (!jobId || typeof jobId !== 'string' || !user) return;
+  const handleDeleteGig = async () => {
+    if (!gigId || typeof gigId !== 'string' || !user) return;
     
     // Confirm deletion
     const confirmed = window.confirm(
-      'Are you sure you want to delete this job? This action cannot be undone. All submissions associated with this job will remain, but the job will no longer be visible.'
+      'Are you sure you want to delete this job? This action cannot be undone. All submissions associated with this gig will remain, but the gig will no longer be visible.'
     );
     
     if (!confirmed) return;
@@ -184,14 +184,14 @@ export default function BrandJobDetail() {
     setIsDeleting(true);
     
     try {
-      // Delete the job document
-      await deleteDoc(doc(db, 'jobs', jobId));
+      // Delete the gig document
+      await deleteDoc(doc(db, 'gigs', gigId));
       
-      toast.success('Job deleted successfully');
+      toast.success('Gig deleted successfully');
       router.push('/brand/dashboard');
     } catch (error) {
       console.error('Error deleting job:', error);
-      toast.error('Failed to delete job. Please try again.');
+      toast.error('Failed to delete gig. Please try again.');
     } finally {
       setIsDeleting(false);
     }
@@ -200,16 +200,16 @@ export default function BrandJobDetail() {
   if (loading) {
     return (
       <Layout>
-        <LoadingSpinner text="Loading campaign details..." />
+        <LoadingSpinner text="Loading gig details..." />
       </Layout>
     );
   }
 
-  if (!job) {
+  if (!gig) {
     return (
       <Layout>
         <div className="max-w-6xl mx-auto py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Job Not Found</h1>
+          <h1 className="text-2xl font-bold mb-4">Gig Not Found</h1>
           <Link href="/brand/dashboard">
             <Button>Back to Dashboard</Button>
           </Link>
@@ -229,21 +229,21 @@ export default function BrandJobDetail() {
           </Link>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold mb-2">{job.title}</h1>
+              <h1 className="text-2xl font-bold mb-2">{gig.title}</h1>
               <div className="flex items-center gap-2 flex-wrap">
-                {job.visibility && <VisibilityBadge visibility={job.visibility} />}
+                {gig.visibility && <VisibilityBadge visibility={gig.visibility} />}
                 <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
-                  job.status === 'open' ? 'bg-green-100 text-green-700' :
+                  gig.status === 'open' ? 'bg-green-100 text-green-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>
-                  {job.status === 'open' ? 'open' : 'closed'}
+                  {gig.status === 'open' ? 'open' : 'closed'}
                 </span>
               </div>
             </div>
             <div className="text-right flex-shrink-0 flex flex-col items-end gap-2">
-              <div className="text-2xl font-bold text-orange-600">${job.basePayout || 0}</div>
-              <Link href={`/brand/jobs/new?reuse=${jobId}`}>
-                <Button size="sm" variant="outline">Reuse Campaign</Button>
+              <div className="text-2xl font-bold text-orange-600">${gig.basePayout || 0}</div>
+              <Link href={`/brand/gigs/new?reuse=${gigId}`}>
+                <Button size="sm" variant="outline">Reuse Gig</Button>
               </Link>
             </div>
           </div>
@@ -268,54 +268,54 @@ export default function BrandJobDetail() {
           </Card>
         </div>
 
-        {/* Job Info - Compact */}
+        {/* Gig Info - Compact */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          {/* Job Details */}
+          {/* Gig Details */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Job Details</CardTitle>
+              <CardTitle className="text-base font-semibold">Gig Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
                 <div className="text-xs text-gray-600 mb-1">Description</div>
-                <p className="text-sm text-gray-700">{job.description || 'No description provided'}</p>
+                <p className="text-sm text-gray-700">{gig.description || 'No description provided'}</p>
               </div>
               <div>
                 <div className="text-xs text-gray-600 mb-1">Primary Category</div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-base">{THINGS.find(t => t.id === job.primaryThing)?.icon || '📦'}</span>
-                  <span className="text-sm font-medium">{THINGS.find(t => t.id === job.primaryThing)?.name || job.primaryThing}</span>
+                  <span className="text-base">{THINGS.find(t => t.id === gig.primaryThing)?.icon || '📦'}</span>
+                  <span className="text-sm font-medium">{THINGS.find(t => t.id === gig.primaryThing)?.name || gig.primaryThing}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Job Settings */}
+          {/* Gig Settings */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Job Settings</CardTitle>
+              <CardTitle className="text-base font-semibold">Gig Settings</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Accepted Submissions Limit:</span>
-                <span className="font-medium">{job.acceptedSubmissionsLimit || 1}</span>
+                <span className="font-medium">{gig.acceptedSubmissionsLimit || 1}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Deadline:</span>
-                <span className="font-medium">{job.deadlineAt?.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) || 'N/A'}</span>
+                <span className="font-medium">{gig.deadlineAt?.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) || 'N/A'}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Created:</span>
-                <span className="font-medium">{job.createdAt?.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) || 'N/A'}</span>
+                <span className="font-medium">{gig.createdAt?.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) || 'N/A'}</span>
               </div>
               <div className="pt-3 border-t mt-3">
                 <Button
-                  onClick={handleDeleteJob}
+                  onClick={handleDeleteGig}
                   disabled={isDeleting}
                   variant="outline"
                   className="w-full text-red-600 border-red-300 hover:bg-red-50 text-sm h-9"
                 >
-                  {isDeleting ? 'Deleting...' : 'Delete Job'}
+                  {isDeleting ? 'Deleting...' : 'Delete Gig'}
                 </Button>
               </div>
             </CardContent>
@@ -405,7 +405,7 @@ export default function BrandJobDetail() {
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <p>No submissions yet. Creators who accept this job will appear here.</p>
+                <p>No submissions yet. Creators who accept this gig will appear here.</p>
               </div>
             )}
           </CardContent>

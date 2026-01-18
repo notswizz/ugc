@@ -12,10 +12,10 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { submissionId, jobId } = req.body;
+  const { submissionId, gigId } = req.body;
 
-  if (!submissionId || !jobId) {
-    return res.status(400).json({ error: 'Missing submissionId or jobId' });
+  if (!submissionId || !gigId) {
+    return res.status(400).json({ error: 'Missing submissionId or gigId' });
   }
 
   try {
@@ -39,11 +39,11 @@ export default async function handler(
       console.error('Failed to get access token:', tokenError.message);
     }
 
-    // Fetch submission and job data
-    let submissionDoc, jobDoc;
+    // Fetch submission and gig data
+    let submissionDoc, gigDoc;
     try {
       submissionDoc = await adminDb.collection('submissions').doc(submissionId).get();
-      jobDoc = await adminDb.collection('jobs').doc(jobId).get();
+      gigDoc = await adminDb.collection('gigs').doc(gigId).get();
     } catch (authError: any) {
       console.error('Firebase Admin authentication error:', authError);
       return res.status(500).json({ 
@@ -53,12 +53,12 @@ export default async function handler(
       });
     }
 
-    if (!submissionDoc.exists || !jobDoc.exists) {
-      return res.status(404).json({ error: 'Submission or job not found' });
+    if (!submissionDoc.exists || !gigDoc.exists) {
+      return res.status(404).json({ error: 'Submission or gig not found' });
     }
 
     const submission = submissionDoc.data();
-    const job = jobDoc.data();
+    const gig = gigDoc.data();
     
     // Store previous state for comparison
     const previousStatus = submission.status;
@@ -117,17 +117,17 @@ export default async function handler(
     // Evaluate the video using the evaluation service
     console.log('Starting AI evaluation...', {
       videoUrl,
-      jobId,
+      gigId,
       submissionId,
-      hasProductDescription: !!job.productDescription,
-      aiComplianceRequired: job.aiComplianceRequired,
+      hasProductDescription: !!gig.productDescription,
+      aiComplianceRequired: gig.aiComplianceRequired,
     });
     
     let evaluation;
     try {
       evaluation = await evaluateSubmission({
         videoUrl,
-        job,
+        gig,
       });
       console.log('AI evaluation completed successfully:', {
         compliancePassed: evaluation.compliance.passed,
@@ -201,7 +201,7 @@ export default async function handler(
     
     // Handle notifications for both success and failure
     if (submission.creatorId) {
-      const jobTitle = job.title || 'Your submission';
+      const jobTitle = gig.title || 'Your submission';
       
       if (isNewApproval) {
         console.log('Processing payment for newly approved submission:', submissionId);
@@ -214,7 +214,7 @@ export default async function handler(
             title: 'Submission Approved! 🎉',
             message: `Your submission for "${jobTitle}" has been approved by AI evaluation. Quality score: ${aiEvaluationData.qualityScore}/100`,
             submissionId: submissionId,
-            jobId: jobId,
+            gigId: gigId,
           });
           console.log('Approval notification created successfully');
         } catch (notifError) {
@@ -237,7 +237,7 @@ export default async function handler(
             title: 'Submission Needs Changes ⚠️',
             message: `Your submission for "${jobTitle}" did not pass AI evaluation.${issuesText}`,
             submissionId: submissionId,
-            jobId: jobId,
+            gigId: gigId,
           });
           console.log('Failure notification created successfully');
         } catch (notifError) {
@@ -253,18 +253,18 @@ export default async function handler(
       try {
         console.log('Attempting to process payment:', {
           submissionId,
-          jobId,
+          gigId,
           creatorId: submission.creatorId,
-          brandId: job.brandId,
-          basePayout: job.basePayout,
+          brandId: gig.brandId,
+          basePayout: gig.basePayout,
         });
         
         await processPayment({
           submissionId,
-          jobId,
+          gigId,
           creatorId: submission.creatorId,
-          brandId: job.brandId,
-          job,
+          brandId: gig.brandId,
+          gig,
           submission,
         });
         console.log('✅ Payment processed successfully for submission:', submissionId);

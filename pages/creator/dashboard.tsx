@@ -24,9 +24,9 @@ export default function CreatorDashboard() {
   const [verifyingTikTok, setVerifyingTikTok] = useState(false);
   const [stats, setStats] = useState({
     totalEarnings: 0,
-    acceptedJobs: 0,
+    acceptedGigs: 0,
     pendingSubmissions: 0,
-    activeJobs: 0,
+    activeGigs: 0,
   });
 
   // Fetch creator data
@@ -80,29 +80,29 @@ export default function CreatorDashboard() {
 
       // Calculate stats
       const totalEarnings = payments.reduce((sum: number, payment: any) => sum + (payment.creatorNet || 0), 0);
-      const acceptedJobs = submissions.filter(
+      const acceptedGigs = submissions.filter(
         (sub: any) => sub.status === 'approved'
       ).length; // Submissions that have been accepted/approved
       const pendingSubmissions = submissions.filter(
         (sub: any) => sub.status === 'submitted' || sub.status === 'needs_changes'
       ).length;
-      const activeJobs = submissions.filter(
+      const activeGigs = submissions.filter(
         (sub: any) => sub.status === 'approved'
       ).length;
 
       setStats({
         totalEarnings,
-        acceptedJobs,
+        acceptedGigs,
         pendingSubmissions,
-        activeJobs,
+        activeGigs,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
       setStats({
         totalEarnings: 0,
-        acceptedJobs: 0,
+        acceptedGigs: 0,
         pendingSubmissions: 0,
-        activeJobs: 0,
+        activeGigs: 0,
       });
     } finally {
       setLoadingStats(false);
@@ -230,7 +230,7 @@ export default function CreatorDashboard() {
                     <p className="text-[10px] text-gray-600 mt-0.5">Earned</p>
                   </div>
                   <div className="bg-blue-50 rounded-lg p-2 text-center">
-                    <div className="text-lg font-bold text-blue-600">{stats.acceptedJobs}</div>
+                    <div className="text-lg font-bold text-blue-600">{stats.acceptedGigs}</div>
                     <p className="text-[10px] text-gray-600 mt-0.5">Accepted</p>
                   </div>
                 </div>

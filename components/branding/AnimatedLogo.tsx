@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const LOGOS = ['/logo1.PNG', '/logo2.PNG', '/logo3.PNG', '/logo4.PNG'];
+const LOGOS = ['/logo1.png', '/logo2.png', '/logo3.png'];
 
 interface AnimatedLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -45,7 +45,7 @@ export default function AnimatedLogo({ size = 'md', className = '', showText = f
         <img
           key={fadeKey}
           src={LOGOS[currentLogoIndex]}
-          alt="UGC Dash Logo"
+          alt="Giglet Logo"
           className={`${sizeClasses[size]} w-auto transition-opacity duration-1000 ${
             isVisible ? 'opacity-100' : 'opacity-0'
           }`}
@@ -53,8 +53,8 @@ export default function AnimatedLogo({ size = 'md', className = '', showText = f
       </div>
       {showText && (
         <img
-          src="/logotext.PNG"
-          alt="UGC Dash"
+          src="/logotext.png"
+          alt="Giglet"
           className={`${size === 'sm' ? 'h-6' : size === 'md' ? 'h-10' : size === 'lg' ? 'h-12 md:h-14' : 'h-16 md:h-20'} w-auto hidden sm:block`}
         />
       )}

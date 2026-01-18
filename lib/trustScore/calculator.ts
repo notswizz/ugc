@@ -7,7 +7,7 @@ import { Creator } from '../models/types';
  * - Email + phone verified
  * - Stripe Connect onboarded
  * - Connected socials (TikTok, IG, YouTube, LinkedIn optional)
- * - Platform history: jobs completed, on-time rate, dispute rate, refund rate
+ * - Platform history: gigs completed, on-time rate, dispute rate, refund rate
  * - Account age
  */
 export function calculateTrustScore(creator: Creator | Partial<Creator>): number {
@@ -59,24 +59,24 @@ export function calculateTrustScore(creator: Creator | Partial<Creator>): number
 
 function calculateHistoryScore(creator: Creator | Partial<Creator>): number {
   const metrics = creator.metrics || {
-    jobsCompleted: 0,
+    gigsCompleted: 0,
     onTimeRate: 100,
     disputeRate: 0,
     refundRate: 0,
   };
   let score = 0;
   
-  // Jobs completed (max 10 points)
-  const jobsCompleted = (metrics as any).jobsCompleted || 0;
-  if (jobsCompleted >= 50) {
+  // Gigs completed (max 10 points)
+  const gigsCompleted = (metrics as any).gigsCompleted || 0;
+  if (gigsCompleted >= 50) {
     score += 10;
-  } else if (jobsCompleted >= 25) {
+  } else if (gigsCompleted >= 25) {
     score += 8;
-  } else if (jobsCompleted >= 10) {
+  } else if (gigsCompleted >= 10) {
     score += 6;
-  } else if (jobsCompleted >= 5) {
+  } else if (gigsCompleted >= 5) {
     score += 4;
-  } else if (jobsCompleted >= 1) {
+  } else if (gigsCompleted >= 1) {
     score += 2;
   }
   
@@ -96,13 +96,13 @@ function calculateHistoryScore(creator: Creator | Partial<Creator>): number {
 }
 
 /**
- * Check if creator can accept a job based on Trust Score requirements
+ * Check if creator can accept a gig based on Trust Score requirements
  */
-export function canAcceptJob(creator: Creator | Partial<Creator> | null | undefined, jobTrustScoreMin?: number): boolean {
+export function canAcceptGig(creator: Creator | Partial<Creator> | null | undefined, jobTrustScoreMin?: number): boolean {
   if (!creator) return false;
   const trustScore = calculateTrustScore(creator);
   
-  // If job has no Trust Score requirement, anyone can accept
+  // If gig has no Trust Score requirement, anyone can accept
   if (!jobTrustScoreMin) {
     return true;
   }
@@ -111,19 +111,19 @@ export function canAcceptJob(creator: Creator | Partial<Creator> | null | undefi
 }
 
 /**
- * Check if creator can accept reimbursement jobs
+ * Check if creator can accept reimbursement gigs
  */
-export function canAcceptReimbursementJobs(creator: Creator): boolean {
+export function canAcceptReimbursementGigs(creator: Creator): boolean {
   const trustScore = calculateTrustScore(creator);
-  // Low-trust creators cannot accept reimbursement jobs
+  // Low-trust creators cannot accept reimbursement gigs
   // Threshold set at 50 (can be adjusted)
   return trustScore >= 50;
 }
 
 /**
- * Check if creator can accept high-payout jobs
+ * Check if creator can accept high-payout gigs
  */
-export function canAcceptHighPayoutJobs(creator: Creator, payout: number): boolean {
+export function canAcceptHighPayoutGigs(creator: Creator, payout: number): boolean {
   const trustScore = calculateTrustScore(creator);
   
   // High payout threshold: $500+

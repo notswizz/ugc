@@ -7,13 +7,13 @@ import { db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import VisibilityBadge from '@/components/jobs/VisibilityBadge';
+import VisibilityBadge from '@/components/gigs/VisibilityBadge';
 import { THINGS, EXPERIENCE_TYPES } from '@/lib/things/constants';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
-export default function NewJob() {
+export default function NewGig() {
   const router = useRouter();
   const { user, appUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
@@ -26,66 +26,66 @@ export default function NewJob() {
     }
   }, [appUser, router]);
 
-  // Load existing job data if reuse parameter is present
+  // Load existing gig data if reuse parameter is present
   useEffect(() => {
-    const loadReuseJob = async () => {
-      const reuseJobId = router.query.reuse;
-      if (!reuseJobId || typeof reuseJobId !== 'string' || !user) return;
+    const loadReuseGig = async () => {
+      const reuseGigId = router.query.reuse;
+      if (!reuseGigId || typeof reuseGigId !== 'string' || !user) return;
 
       setIsLoadingReuse(true);
       try {
-        const jobDoc = await getDoc(doc(db, 'jobs', reuseJobId));
-        if (!jobDoc.exists()) {
-          toast.error('Campaign not found');
-          router.replace('/brand/jobs/new');
+        const gigDoc = await getDoc(doc(db, 'gigs', reuseGigId));
+        if (!gigDoc.exists()) {
+          toast.error('Gig not found');
+          router.replace('/brand/gigs/new');
           return;
         }
 
-        const existingJob = jobDoc.data();
+        const existingGig = gigDoc.data();
         
         // Check if user owns this job
-        if (existingJob.brandId !== user.uid) {
-          toast.error('You do not have permission to reuse this campaign');
-          router.replace('/brand/jobs/new');
+        if (existingGig.brandId !== user.uid) {
+          toast.error('You do not have permission to reuse this gig');
+          router.replace('/brand/gigs/new');
           return;
         }
 
         // Calculate deadline hours from deadlineAt
-        const deadlineAt = existingJob.deadlineAt?.toDate ? existingJob.deadlineAt.toDate() : new Date(existingJob.deadlineAt);
+        const deadlineAt = existingGig.deadlineAt?.toDate ? existingGig.deadlineAt.toDate() : new Date(existingGig.deadlineAt);
         const now = new Date();
         const hoursDiff = Math.max(24, Math.round((deadlineAt.getTime() - now.getTime()) / (1000 * 60 * 60)));
 
-        // Pre-fill form with existing job data (but clear title)
-        setJobData({
+        // Pre-fill form with existing gig data (but clear title)
+        setGigData({
           title: '', // Clear title so they can enter a new one
-          description: existingJob.description || '',
-          productDescription: existingJob.productDescription || '',
-          primaryThing: existingJob.primaryThing || '',
-          secondaryTags: existingJob.secondaryTags || [],
-          payoutType: existingJob.payoutType || 'fixed',
-          basePayout: existingJob.basePayout?.toString() || '',
-          followerRanges: existingJob.followerRanges && existingJob.followerRanges.length > 0 
-            ? existingJob.followerRanges 
+          description: existingGig.description || '',
+          productDescription: existingGig.productDescription || '',
+          primaryThing: existingGig.primaryThing || '',
+          secondaryTags: existingGig.secondaryTags || [],
+          payoutType: existingGig.payoutType || 'fixed',
+          basePayout: existingGig.basePayout?.toString() || '',
+          followerRanges: existingGig.followerRanges && existingGig.followerRanges.length > 0 
+            ? existingGig.followerRanges 
             : [{ min: 0, max: null, payout: 0 }],
-          bonusPool: existingJob.bonusPool?.toString() || '',
+          bonusPool: existingGig.bonusPool?.toString() || '',
           deadlineHours: hoursDiff,
-          visibility: existingJob.visibility || 'open',
-          targetTags: existingJob.targetTags || [],
-          squadIds: existingJob.squadIds || [],
-          trustScoreMin: existingJob.trustScoreMin?.toString() || '',
-          experienceRequirements: existingJob.experienceRequirements || [],
-          acceptedSubmissionsLimit: existingJob.acceptedSubmissionsLimit || 1,
-          productInVideoRequired: existingJob.productInVideoRequired || false,
-          reimbursementMode: existingJob.reimbursementMode || 'reimbursement',
-          reimbursementCap: existingJob.reimbursementCap?.toString() || '',
-          purchaseWindowHours: existingJob.purchaseWindowHours || 24,
+          visibility: existingGig.visibility || 'open',
+          targetTags: existingGig.targetTags || [],
+          squadIds: existingGig.squadIds || [],
+          trustScoreMin: existingGig.trustScoreMin?.toString() || '',
+          experienceRequirements: existingGig.experienceRequirements || [],
+          acceptedSubmissionsLimit: existingGig.acceptedSubmissionsLimit || 1,
+          productInVideoRequired: existingGig.productInVideoRequired || false,
+          reimbursementMode: existingGig.reimbursementMode || 'reimbursement',
+          reimbursementCap: existingGig.reimbursementCap?.toString() || '',
+          purchaseWindowHours: existingGig.purchaseWindowHours || 24,
           deliverables: {
-            videos: existingJob.deliverables?.videos || 0,
-            photos: existingJob.deliverables?.photos || 0,
-            raw: existingJob.deliverables?.raw || false,
-            notes: existingJob.deliverables?.notes || '',
+            videos: existingGig.deliverables?.videos || 0,
+            photos: existingGig.deliverables?.photos || 0,
+            raw: existingGig.deliverables?.raw || false,
+            notes: existingGig.deliverables?.notes || '',
           },
-          brief: existingJob.brief || {
+          brief: existingGig.brief || {
             hooks: [''],
             angles: [''],
             talkingPoints: [''],
@@ -93,29 +93,30 @@ export default function NewJob() {
             dont: [''],
             references: [''],
           },
-          usageRightsTemplateId: existingJob.usageRightsTemplateId || '',
-          aiComplianceRequired: existingJob.aiComplianceRequired || false,
-          autoApproveWindowHours: existingJob.autoApproveWindowHours || 0,
+          usageRightsTemplateId: existingGig.usageRightsTemplateId || '',
+          aiComplianceRequired: existingGig.aiComplianceRequired || false,
+          autoApproveWindowHours: existingGig.autoApproveWindowHours || 0,
         });
 
-        toast.success('Campaign data loaded! Please enter a new title.');
+        toast.success('Gig data loaded! Please enter a new title.');
       } catch (error) {
-        console.error('Error loading campaign to reuse:', error);
-        toast.error('Failed to load campaign data');
+        console.error('Error loading gig to reuse:', error);
+        toast.error('Failed to load gig data');
       } finally {
         setIsLoadingReuse(false);
       }
     };
 
     if (router.isReady && router.query.reuse) {
-      loadReuseJob();
+      loadReuseGig();
     }
   }, [router.isReady, router.query.reuse, user]);
 
-  const [jobData, setJobData] = useState({
+  const [gigData, setGigData] = useState({
     title: '',
-    platform: '', // TikTok, Instagram, YouTube, etc.
+    platform: '', // TikTok, Instagram, X, etc.
     contentType: '', // 'video' or 'photo'
+    instagramFormat: '', // 'post' or 'story' (only for Instagram)
     description: '',
     productDescription: '', // Specific product description for AI evaluation
     primaryThing: '',
@@ -176,26 +177,26 @@ export default function NewJob() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const updateJobData = (updates) => {
-    setJobData(prev => ({ ...prev, ...updates }));
+  const updateGigData = (updates) => {
+    setGigData(prev => ({ ...prev, ...updates }));
   };
 
   const updateDeliverables = (updates) => {
-    setJobData(prev => ({
+    setGigData(prev => ({
       ...prev,
       deliverables: { ...prev.deliverables, ...updates }
     }));
   };
 
   const updateBrief = (updates) => {
-    setJobData(prev => ({
+    setGigData(prev => ({
       ...prev,
       brief: { ...prev.brief, ...updates }
     }));
   };
 
   const addFollowerRange = () => {
-    setJobData(prev => {
+    setGigData(prev => {
       const ranges = prev.followerRanges || [];
       const lastRange = ranges[ranges.length - 1];
       // New range's min should be the previous range's max (or 0 if no previous range)
@@ -208,7 +209,7 @@ export default function NewJob() {
   };
 
   const updateFollowerRange = (index, updates) => {
-    setJobData(prev => {
+    setGigData(prev => {
       const ranges = prev.followerRanges || [];
       const updatedRanges = ranges.map((range, i) => {
         if (i === index) {
@@ -229,7 +230,7 @@ export default function NewJob() {
   };
 
   const removeFollowerRange = (index) => {
-    setJobData(prev => {
+    setGigData(prev => {
       const ranges = prev.followerRanges.filter((_, i) => i !== index);
       // After removing, update min values to ensure they're linked properly
       const updatedRanges = ranges.map((range, i) => {
@@ -253,7 +254,7 @@ export default function NewJob() {
   };
 
   const toggleSecondaryTag = (tag) => {
-    setJobData(prev => ({
+    setGigData(prev => ({
       ...prev,
       secondaryTags: prev.secondaryTags.includes(tag)
         ? prev.secondaryTags.filter(t => t !== tag)
@@ -262,7 +263,7 @@ export default function NewJob() {
   };
 
   const toggleExperience = (exp) => {
-    setJobData(prev => ({
+    setGigData(prev => ({
       ...prev,
       experienceRequirements: prev.experienceRequirements.includes(exp)
         ? prev.experienceRequirements.filter(e => e !== exp)
@@ -289,101 +290,104 @@ export default function NewJob() {
     try {
       // Calculate deadline date
       const deadlineAt = new Date();
-      deadlineAt.setHours(deadlineAt.getHours() + (parseInt(jobData.deadlineHours) || 24));
+      deadlineAt.setHours(deadlineAt.getHours() + (parseInt(gigData.deadlineHours) || 24));
       
-      // Prepare job document (only include fields that have values)
-      const jobDoc = {
+      // Prepare gig document (only include fields that have values)
+      const gigDoc = {
         brandId: user.uid,
-        title: jobData.title,
-        description: jobData.description || '',
-        productDescription: jobData.productDescription || '', // Product description for AI evaluation
-        primaryThing: jobData.primaryThing,
-        secondaryTags: jobData.secondaryTags || [],
-        payoutType: jobData.payoutType || 'fixed',
-        basePayout: jobData.payoutType === 'fixed' ? (parseFloat(jobData.basePayout) || 0) : 0,
+        title: gigData.title,
+        platform: gigData.platform, // TikTok, Instagram, X
+        contentType: gigData.contentType, // video or photo
+        instagramFormat: gigData.instagramFormat || null, // post or story (only for Instagram)
+        description: gigData.description || '',
+        productDescription: gigData.productDescription || '', // Product description for AI evaluation
+        primaryThing: gigData.primaryThing,
+        secondaryTags: gigData.secondaryTags || [],
+        payoutType: gigData.payoutType || 'fixed',
+        basePayout: gigData.payoutType === 'fixed' ? (parseFloat(gigData.basePayout) || 0) : 0,
         deadlineAt: deadlineAt,
-        visibility: jobData.visibility || 'open',
-        targetTags: jobData.targetTags || [],
-        experienceRequirements: jobData.experienceRequirements || [],
-        acceptedSubmissionsLimit: parseInt(jobData.acceptedSubmissionsLimit) || 1,
-        productInVideoRequired: jobData.productInVideoRequired || false,
+        visibility: gigData.visibility || 'open',
+        targetTags: gigData.targetTags || [],
+        experienceRequirements: gigData.experienceRequirements || [],
+        acceptedSubmissionsLimit: parseInt(gigData.acceptedSubmissionsLimit) || 1,
+        productInVideoRequired: gigData.productInVideoRequired || false,
         deliverables: {
-          videos: jobData.deliverables?.videos || 0,
-          photos: jobData.deliverables?.photos || 0,
-          raw: jobData.deliverables?.raw || false,
-          notes: jobData.deliverables?.notes || '',
+          videos: gigData.contentType === 'video' ? 1 : 0, // Automatically set based on content type
+          photos: gigData.contentType === 'photo' ? 1 : 0, // Automatically set based on content type
+          raw: false,
+          notes: '',
         },
-        usageRightsTemplateId: jobData.usageRightsTemplateId || '',
+        usageRightsTemplateId: gigData.usageRightsTemplateId || '',
         usageRightsSnapshot: {}, // Placeholder - should fetch from template
-        aiComplianceRequired: jobData.aiComplianceRequired || false,
-        autoApproveWindowHours: jobData.autoApproveWindowHours || 0,
+        aiComplianceRequired: gigData.aiComplianceRequired || false,
+        autoApproveWindowHours: gigData.autoApproveWindowHours || 0,
         status: 'open',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
       // Only add followerRanges if payoutType is dynamic (Firestore doesn't allow undefined)
-      if (jobData.payoutType === 'dynamic' && jobData.followerRanges && jobData.followerRanges.length > 0) {
-        jobDoc.followerRanges = jobData.followerRanges;
+      if (gigData.payoutType === 'dynamic' && gigData.followerRanges && gigData.followerRanges.length > 0) {
+        gigDoc.followerRanges = gigData.followerRanges;
       }
 
       // Add squad IDs if visibility is squad
-      if (jobData.visibility === 'squad' && jobData.squadIds && jobData.squadIds.length > 0) {
-        jobDoc.squadIds = jobData.squadIds;
+      if (gigData.visibility === 'squad' && gigData.squadIds && gigData.squadIds.length > 0) {
+        gigDoc.squadIds = gigData.squadIds;
       }
 
       // Only add optional fields if they have values (Firestore doesn't allow undefined)
-      if (jobData.bonusPool && parseFloat(jobData.bonusPool) > 0) {
-        jobDoc.bonusPool = parseFloat(jobData.bonusPool);
+      if (gigData.bonusPool && parseFloat(gigData.bonusPool) > 0) {
+        gigDoc.bonusPool = parseFloat(gigData.bonusPool);
       }
 
-      if (jobData.trustScoreMin) {
-        jobDoc.trustScoreMin = parseInt(jobData.trustScoreMin);
+      if (gigData.trustScoreMin) {
+        gigDoc.trustScoreMin = parseInt(gigData.trustScoreMin);
       }
 
       // Only add reimbursement fields if product in video is required
-      if (jobData.productInVideoRequired) {
-        jobDoc.reimbursementMode = jobData.reimbursementMode || 'reimbursement';
+      if (gigData.productInVideoRequired) {
+        gigDoc.reimbursementMode = gigData.reimbursementMode || 'reimbursement';
         
-        if (jobData.reimbursementMode === 'reimbursement') {
-          if (jobData.reimbursementCap && parseFloat(jobData.reimbursementCap) > 0) {
-            jobDoc.reimbursementCap = parseFloat(jobData.reimbursementCap);
+        if (gigData.reimbursementMode === 'reimbursement') {
+          if (gigData.reimbursementCap && parseFloat(gigData.reimbursementCap) > 0) {
+            gigDoc.reimbursementCap = parseFloat(gigData.reimbursementCap);
           }
-          if (jobData.purchaseWindowHours) {
-            jobDoc.purchaseWindowHours = parseInt(jobData.purchaseWindowHours) || 24;
+          if (gigData.purchaseWindowHours) {
+            gigDoc.purchaseWindowHours = parseInt(gigData.purchaseWindowHours) || 24;
           }
         }
       }
 
       // Add brief if provided
-      if (jobData.brief) {
+      if (gigData.brief) {
         const briefData = {
-          hooks: jobData.brief.hooks?.filter((h) => h.trim()) || [],
-          angles: jobData.brief.angles?.filter((a) => a.trim()) || [],
-          talkingPoints: jobData.brief.talkingPoints?.filter((tp) => tp.trim()) || [],
-          do: jobData.brief.do?.filter((d) => d.trim()) || [],
-          dont: jobData.brief.dont?.filter((d) => d.trim()) || [],
-          references: jobData.brief.references?.filter((r) => r.trim()) || [],
+          hooks: gigData.brief.hooks?.filter((h) => h.trim()) || [],
+          angles: gigData.brief.angles?.filter((a) => a.trim()) || [],
+          talkingPoints: gigData.brief.talkingPoints?.filter((tp) => tp.trim()) || [],
+          do: gigData.brief.do?.filter((d) => d.trim()) || [],
+          dont: gigData.brief.dont?.filter((d) => d.trim()) || [],
+          references: gigData.brief.references?.filter((r) => r.trim()) || [],
         };
         
         // Only add brief if at least one field has content
         if (briefData.hooks.length > 0 || briefData.angles.length > 0 || 
             briefData.talkingPoints.length > 0 || briefData.do.length > 0 || 
             briefData.dont.length > 0 || briefData.references.length > 0) {
-          jobDoc.brief = briefData;
+          gigDoc.brief = briefData;
         }
       }
 
       // Save to Firestore
-      const docRef = await addDoc(collection(db, 'jobs'), jobDoc);
+      const docRef = await addDoc(collection(db, 'gigs'), gigDoc);
       
-      console.log('Job created with ID:', docRef.id);
-      toast.success('Campaign created successfully!');
+      console.log('Gig created with ID:', docRef.id);
+      toast.success('Gig created successfully!');
       router.push('/brand/dashboard');
 
     } catch (error) {
       console.error('Error creating job:', error);
-      toast.error('Failed to create campaign: ' + (error.message || 'Unknown error'));
+      toast.error('Failed to create gig: ' + (error.message || 'Unknown error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -395,84 +399,139 @@ export default function NewJob() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Campaign Title *</label>
+              <label className="block text-sm font-medium mb-2">Gig Title *</label>
               <Input
                 placeholder="e.g., Authentic Coffee Shop Review"
-                value={jobData.title}
-                onChange={(e) => updateJobData({ title: e.target.value })}
+                value={gigData.title}
+                onChange={(e) => updateGigData({ title: e.target.value })}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Platform *</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Where will this content be posted?
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  { id: 'tiktok', name: 'TikTok', icon: '🎵' },
-                  { id: 'instagram', name: 'Instagram', icon: '📸' },
-                  { id: 'youtube', name: 'YouTube', icon: '▶️' },
-                  { id: 'other', name: 'Other', icon: '🌐' },
-                ].map(platform => (
-                  <button
-                    key={platform.id}
-                    type="button"
-                    onClick={() => updateJobData({ platform: platform.id })}
-                    className={`p-4 rounded-lg border-2 text-center transition-all ${
-                      jobData.platform === platform.id
-                        ? 'bg-orange-50 border-orange-500 shadow-sm'
-                        : 'bg-white border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-3xl mb-2">{platform.icon}</div>
-                    <div className="text-sm font-semibold">{platform.name}</div>
-                  </button>
-                ))}
+              <div className="grid grid-cols-3 gap-3">
+                {/* TikTok */}
+                <button
+                  type="button"
+                  onClick={() => updateGigData({ platform: 'tiktok', contentType: 'video' })}
+                  className={`p-4 rounded-lg border-2 text-center transition-all ${
+                    gigData.platform === 'tiktok'
+                      ? 'bg-orange-50 border-orange-500 shadow-sm'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <svg className="w-8 h-8 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                  </svg>
+                  <div className="text-sm font-semibold">TikTok</div>
+                </button>
+
+                {/* Instagram */}
+                <button
+                  type="button"
+                  onClick={() => updateGigData({ platform: 'instagram' })}
+                  className={`p-4 rounded-lg border-2 text-center transition-all ${
+                    gigData.platform === 'instagram'
+                      ? 'bg-orange-50 border-orange-500 shadow-sm'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <svg className="w-8 h-8 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/>
+                  </svg>
+                  <div className="text-sm font-semibold">Instagram</div>
+                </button>
+
+                {/* X (Twitter) */}
+                <button
+                  type="button"
+                  onClick={() => updateGigData({ platform: 'x' })}
+                  className={`p-4 rounded-lg border-2 text-center transition-all ${
+                    gigData.platform === 'x'
+                      ? 'bg-orange-50 border-orange-500 shadow-sm'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <svg className="w-8 h-8 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  <div className="text-sm font-semibold">X</div>
+                </button>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Content Type *</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                What type of content do you need?
-              </p>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => updateJobData({ contentType: 'video' })}
+                  onClick={() => updateGigData({ contentType: 'video' })}
                   className={`p-6 rounded-lg border-2 text-center transition-all ${
-                    jobData.contentType === 'video'
+                    gigData.contentType === 'video'
                       ? 'bg-blue-50 border-blue-500 shadow-sm'
                       : 'bg-white border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="text-4xl mb-2">🎥</div>
-                  <div className="text-base font-semibold mb-1">Video</div>
-                  <div className="text-xs text-gray-500">Short-form or long-form video content</div>
+                  <div className="text-base font-semibold">Video</div>
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateJobData({ contentType: 'photo' })}
+                  onClick={() => updateGigData({ contentType: 'photo' })}
+                  disabled={gigData.platform === 'tiktok'}
                   className={`p-6 rounded-lg border-2 text-center transition-all ${
-                    jobData.contentType === 'photo'
+                    gigData.platform === 'tiktok'
+                      ? 'bg-gray-100 border-gray-300 opacity-50 cursor-not-allowed'
+                      : gigData.contentType === 'photo'
                       ? 'bg-purple-50 border-purple-500 shadow-sm'
                       : 'bg-white border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="text-4xl mb-2">📷</div>
-                  <div className="text-base font-semibold mb-1">Photo</div>
-                  <div className="text-xs text-gray-500">Still images and photography</div>
+                  <div className="text-base font-semibold">Photo</div>
+                  {gigData.platform === 'tiktok' && (
+                    <div className="text-xs text-gray-500 mt-1">TikTok is video only</div>
+                  )}
                 </button>
               </div>
             </div>
 
+            {/* Instagram Format Selection */}
+            {gigData.platform === 'instagram' && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Instagram Format *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => updateGigData({ instagramFormat: 'post' })}
+                    className={`p-4 rounded-lg border-2 text-center transition-all ${
+                      gigData.instagramFormat === 'post'
+                        ? 'bg-pink-50 border-pink-500 shadow-sm'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">📱</div>
+                    <div className="text-sm font-semibold">Post</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateGigData({ instagramFormat: 'story' })}
+                    className={`p-4 rounded-lg border-2 text-center transition-all ${
+                      gigData.instagramFormat === 'story'
+                        ? 'bg-pink-50 border-pink-500 shadow-sm'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">⭕</div>
+                    <div className="text-sm font-semibold">Story</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium mb-2">Primary Thing/Category *</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Search and select the main category for this campaign
-              </p>
               <div className="relative" ref={categoryDropdownRef}>
                 <Input
                   placeholder="Search categories (e.g., Food, Beauty, Tech)..."
@@ -484,13 +543,13 @@ export default function NewJob() {
                   onFocus={() => setShowCategoryDropdown(true)}
                   className="pr-10"
                 />
-                {jobData.primaryThing && (
+                {gigData.primaryThing && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                    <span>{THINGS.find(t => t.id === jobData.primaryThing)?.icon}</span>
+                    <span>{THINGS.find(t => t.id === gigData.primaryThing)?.icon}</span>
                     <button
                       type="button"
                       onClick={() => {
-                        updateJobData({ primaryThing: '' });
+                        updateGigData({ primaryThing: '' });
                         setCategorySearch('');
                       }}
                       className="text-gray-400 hover:text-gray-600"
@@ -509,12 +568,12 @@ export default function NewJob() {
                           key={thing.id}
                           type="button"
                           onClick={() => {
-                            updateJobData({ primaryThing: thing.id });
+                            updateGigData({ primaryThing: thing.id });
                             setCategorySearch(thing.name);
                             setShowCategoryDropdown(false);
                           }}
                           className={`w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0 ${
-                            jobData.primaryThing === thing.id ? 'bg-green-50' : ''
+                            gigData.primaryThing === thing.id ? 'bg-green-50' : ''
                           }`}
                         >
                           <span className="text-xl">{thing.icon}</span>
@@ -531,21 +590,21 @@ export default function NewJob() {
               </div>
               
               {/* Selected category display */}
-              {jobData.primaryThing && (
+              {gigData.primaryThing && (
                 <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                  <span>{THINGS.find(t => t.id === jobData.primaryThing)?.icon}</span>
-                  <span>{THINGS.find(t => t.id === jobData.primaryThing)?.name}</span>
+                  <span>{THINGS.find(t => t.id === gigData.primaryThing)?.icon}</span>
+                  <span>{THINGS.find(t => t.id === gigData.primaryThing)?.name}</span>
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Campaign Description</label>
+              <label className="block text-sm font-medium mb-2">Gig Description</label>
               <textarea
                 className="w-full p-3 border rounded-md min-h-[100px]"
                 placeholder="Describe what you want the creator to do..."
-                value={jobData.description}
-                onChange={(e) => updateJobData({ description: e.target.value })}
+                value={gigData.description}
+                onChange={(e) => updateGigData({ description: e.target.value })}
                 required
               />
             </div>
@@ -555,23 +614,20 @@ export default function NewJob() {
               <textarea
                 className="w-full p-3 border rounded-md min-h-[80px]"
                 placeholder="Describe exactly what the product is (e.g., 'Nike Air Max running shoes in blue and white', 'iPhone 15 Pro Max 256GB'). This helps AI accurately evaluate if the product is shown in the video."
-                value={jobData.productDescription}
-                onChange={(e) => updateJobData({ productDescription: e.target.value })}
+                value={gigData.productDescription}
+                onChange={(e) => updateGigData({ productDescription: e.target.value })}
               />
               <p className="text-xs text-gray-500 mt-1">Be specific - include product name, model, colors, size, or other distinguishing features.</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Visibility</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Who can see and accept this campaign?
-              </p>
               <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => updateJobData({ visibility: 'open' })}
+                  onClick={() => updateGigData({ visibility: 'open' })}
                   className={`w-full p-3 rounded-lg border text-left ${
-                    jobData.visibility === 'open'
+                    gigData.visibility === 'open'
                       ? 'bg-green-50 border-green-300'
                       : 'bg-gray-50 border-gray-200'
                   }`}
@@ -583,9 +639,9 @@ export default function NewJob() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateJobData({ visibility: 'squad' })}
+                  onClick={() => updateGigData({ visibility: 'squad' })}
                   className={`w-full p-3 rounded-lg border text-left ${
-                    jobData.visibility === 'squad'
+                    gigData.visibility === 'squad'
                       ? 'bg-purple-50 border-purple-300'
                       : 'bg-gray-50 border-gray-200'
                   }`}
@@ -597,9 +653,9 @@ export default function NewJob() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateJobData({ visibility: 'invite' })}
+                  onClick={() => updateGigData({ visibility: 'invite' })}
                   className={`w-full p-3 rounded-lg border text-left ${
-                    jobData.visibility === 'invite'
+                    gigData.visibility === 'invite'
                       ? 'bg-orange-50 border-orange-300'
                       : 'bg-gray-50 border-gray-200'
                   }`}
@@ -612,10 +668,10 @@ export default function NewJob() {
               </div>
               
               {/* Squad Selection (when visibility is 'squad') */}
-              {jobData.visibility === 'squad' && (
+              {gigData.visibility === 'squad' && (
                 <SquadSelector
-                  selectedSquadIds={jobData.squadIds || []}
-                  onSelectionChange={(squadIds) => updateJobData({ squadIds })}
+                  selectedSquadIds={gigData.squadIds || []}
+                  onSelectionChange={(squadIds) => updateGigData({ squadIds })}
                 />
               )}
             </div>
@@ -626,64 +682,59 @@ export default function NewJob() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Payout Type *</label>
-              <div className="flex gap-2 mb-3">
+              <label className="block text-sm font-semibold mb-3 text-gray-900">Payout Type *</label>
+              <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => updateJobData({ payoutType: 'fixed' })}
-                  className={`flex-1 px-4 py-2 rounded-lg border text-sm ${
-                    jobData.payoutType === 'fixed'
-                      ? 'bg-blue-50 border-blue-300 text-blue-800'
-                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                  onClick={() => updateGigData({ payoutType: 'fixed' })}
+                  className={`flex-1 px-6 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                    gigData.payoutType === 'fixed'
+                      ? 'bg-orange-50 border-orange-500 text-orange-900 shadow-sm'
+                      : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  Fixed Payout
+                  💵 Fixed Payout
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateJobData({ payoutType: 'dynamic' })}
-                  className={`flex-1 px-4 py-2 rounded-lg border text-sm ${
-                    jobData.payoutType === 'dynamic'
-                      ? 'bg-blue-50 border-blue-300 text-blue-800'
-                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                  onClick={() => updateGigData({ payoutType: 'dynamic' })}
+                  className={`flex-1 px-6 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                    gigData.payoutType === 'dynamic'
+                      ? 'bg-orange-50 border-orange-500 text-orange-900 shadow-sm'
+                      : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  Dynamic by Followers
+                  📊 Dynamic by Followers
                 </button>
               </div>
 
-              {jobData.payoutType === 'fixed' ? (
-                <div>
+              {gigData.payoutType === 'fixed' ? (
+                <div className="mt-4">
                   <label className="block text-sm font-medium mb-2">Base Payout ($) *</label>
                   <Input
                     type="number"
                     placeholder="150"
-                    value={jobData.basePayout}
-                    onChange={(e) => updateJobData({ basePayout: e.target.value })}
+                    value={gigData.basePayout}
+                    onChange={(e) => updateGigData({ basePayout: e.target.value })}
                     required
                     min="1"
+                    className="h-12 text-lg"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Fixed amount the creator will earn upon completion
-                  </p>
                 </div>
               ) : (
-                <div>
-                  <label className="block text-sm font-medium mb-2">Follower Count Ranges & Payouts *</label>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Set different payouts based on creator follower counts. Ranges should not overlap.
-                  </p>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-3">Follower Count Ranges & Payouts *</label>
                   
                   <div className="space-y-3">
-                    {jobData.followerRanges.map((range, index) => {
-                      const isLastRange = index === jobData.followerRanges.length - 1;
-                      const prevRange = index > 0 ? jobData.followerRanges[index - 1] : null;
+                    {gigData.followerRanges.map((range, index) => {
+                      const isLastRange = index === gigData.followerRanges.length - 1;
+                      const prevRange = index > 0 ? gigData.followerRanges[index - 1] : null;
                       
                       return (
-                        <div key={index} className="p-3 border rounded-lg bg-gray-50">
+                        <div key={index} className="p-3 border-2 rounded-lg bg-white hover:border-gray-300 transition-all">
                           <div className="flex items-end gap-2 mb-2">
                             <div className="flex-1">
-                              <label className="text-xs text-gray-600 mb-1 block">Min Followers</label>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">Min</label>
                               <Input
                                 type="number"
                                 placeholder={prevRange?.max || "0"}
@@ -696,15 +747,12 @@ export default function NewJob() {
                                 className="text-sm"
                                 disabled={prevRange !== null}
                               />
-                              {prevRange && (
-                                <p className="text-[10px] text-gray-500 mt-0.5">Auto-set from previous range</p>
-                              )}
                             </div>
                             <div className="flex-1">
-                              <label className="text-xs text-gray-600 mb-1 block">Max Followers</label>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">Max</label>
                               <Input
                                 type="number"
-                                placeholder={isLastRange ? "Leave empty for ∞" : "1000"}
+                                placeholder={isLastRange ? "∞" : "1000"}
                                 value={range.max || ''}
                                 onChange={(e) => {
                                   const newMax = e.target.value ? parseInt(e.target.value) : null;
@@ -713,12 +761,9 @@ export default function NewJob() {
                                 min={range.min || 0}
                                 className="text-sm"
                               />
-                              <p className="text-[10px] text-gray-500 mt-0.5">
-                                {isLastRange ? 'Leave empty for "and above"' : 'Sets min of next range'}
-                              </p>
                             </div>
                             <div className="flex-1">
-                              <label className="text-xs text-gray-600 mb-1 block">Payout ($)</label>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">Payout ($)</label>
                               <Input
                                 type="number"
                                 placeholder="25"
@@ -732,14 +777,14 @@ export default function NewJob() {
                             <button
                               type="button"
                               onClick={() => removeFollowerRange(index)}
-                              className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-sm"
-                              disabled={jobData.followerRanges.length === 1}
+                              className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium"
+                              disabled={gigData.followerRanges.length === 1}
                             >
                               ✕
                             </button>
                           </div>
-                          <div className="text-xs text-gray-600">
-                            {range.min} - {range.max === null ? '∞' : range.max} followers: ${range.payout || 0}
+                          <div className="text-xs font-medium text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                            {range.min} - {range.max === null ? '∞' : range.max} followers = ${range.payout || 0}
                           </div>
                         </div>
                       );
@@ -748,17 +793,11 @@ export default function NewJob() {
                     <button
                       type="button"
                       onClick={addFollowerRange}
-                      className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
+                      className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-orange-400 hover:text-orange-600 hover:bg-orange-50 transition-all"
                     >
                       + Add Range
                     </button>
                   </div>
-                  
-                  {jobData.followerRanges.length === 0 && (
-                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                      Please add at least one follower range with payout.
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -768,13 +807,11 @@ export default function NewJob() {
               <Input
                 type="number"
                 placeholder="100"
-                value={jobData.bonusPool}
-                onChange={(e) => updateJobData({ bonusPool: e.target.value })}
+                value={gigData.bonusPool}
+                onChange={(e) => updateGigData({ bonusPool: e.target.value })}
                 min="0"
+                className="h-12 text-lg"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Optional bonus pool for high-quality submissions
-              </p>
             </div>
 
             <div>
@@ -782,20 +819,13 @@ export default function NewJob() {
               <Input
                 type="number"
                 placeholder="1"
-                value={jobData.acceptedSubmissionsLimit || 1}
-                onChange={(e) => updateJobData({ acceptedSubmissionsLimit: parseInt(e.target.value) || 1 })}
+                value={gigData.acceptedSubmissionsLimit || 1}
+                onChange={(e) => updateGigData({ acceptedSubmissionsLimit: parseInt(e.target.value) || 1 })}
                 required
                 min="1"
                 max="100"
+                className="h-12 text-lg"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                How many accepted submissions do you need? (Each creator gets paid individually when their submission is approved)
-              </p>
-              <div className="mt-2 space-y-1 text-xs text-gray-600">
-                <div>• 1 = Standard campaign (single creator)</div>
-                <div>• 2-10 = Multiple creators, all get paid when approved</div>
-                <div>• More = Scale for volume needs</div>
-              </div>
             </div>
 
             <div>
@@ -803,82 +833,48 @@ export default function NewJob() {
               <Input
                 type="number"
                 placeholder="30"
-                value={jobData.trustScoreMin}
-                onChange={(e) => updateJobData({ trustScoreMin: e.target.value })}
+                value={gigData.trustScoreMin}
+                onChange={(e) => updateGigData({ trustScoreMin: e.target.value })}
                 min="0"
                 max="100"
+                className="h-12 text-lg"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Minimum Trust Score required to accept (0-100)
-              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Experience Requirements</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Select required experience types
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {EXPERIENCE_TYPES.map(exp => (
-                  <button
-                    key={exp}
-                    type="button"
-                    onClick={() => toggleExperience(exp)}
-                    className={`px-3 py-1 rounded-full text-sm border ${
-                      jobData.experienceRequirements.includes(exp)
-                        ? 'bg-blue-100 text-blue-800 border-blue-300'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
-                    }`}
-                  >
-                    {exp.replace('_', ' ')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all">
                 <input
                   type="checkbox"
-                  checked={jobData.productInVideoRequired}
-                  onChange={(e) => updateJobData({ productInVideoRequired: e.target.checked })}
+                  checked={gigData.productInVideoRequired}
+                  onChange={(e) => updateGigData({ productInVideoRequired: e.target.checked })}
+                  className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
                 />
-                <span className="text-sm font-medium">Product must appear in video</span>
+                <span className="text-sm font-medium">📦 Product must appear in content</span>
               </label>
-              {jobData.productInVideoRequired && (
-                <div className="mt-3 space-y-3 pl-6 border-l-2 border-blue-200">
+              {gigData.productInVideoRequired && (
+                <div className="mt-3 space-y-3 p-4 border-2 border-orange-200 bg-orange-50 rounded-lg">
                   <div>
                     <label className="block text-sm font-medium mb-2">Reimbursement Mode</label>
                     <select
-                      className="w-full p-2 border rounded-md"
-                      value={jobData.reimbursementMode}
-                      onChange={(e) => updateJobData({ reimbursementMode: e.target.value })}
+                      className="w-full p-3 border-2 rounded-lg bg-white text-base focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      value={gigData.reimbursementMode}
+                      onChange={(e) => updateGigData({ reimbursementMode: e.target.value })}
                     >
-                      <option value="reimbursement">Reimbursement (creator buys)</option>
-                      <option value="shipping">Shipping (we ship to creator)</option>
+                      <option value="reimbursement">💳 Reimbursement (creator buys)</option>
+                      <option value="shipping">📦 Shipping (we ship to creator)</option>
                     </select>
                   </div>
-                  {jobData.reimbursementMode === 'reimbursement' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Reimbursement Cap ($)</label>
-                        <Input
-                          type="number"
-                          placeholder="50"
-                          value={jobData.reimbursementCap}
-                          onChange={(e) => updateJobData({ reimbursementCap: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Purchase Window (hours)</label>
-                        <Input
-                          type="number"
-                          placeholder="24"
-                          value={jobData.purchaseWindowHours}
-                          onChange={(e) => updateJobData({ purchaseWindowHours: e.target.value })}
-                        />
-                      </div>
-                    </>
+                  {gigData.reimbursementMode === 'reimbursement' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Reimbursement Cap ($)</label>
+                      <Input
+                        type="number"
+                        placeholder="50"
+                        value={gigData.reimbursementCap}
+                        onChange={(e) => updateGigData({ reimbursementCap: e.target.value })}
+                        className="h-12 text-lg"
+                      />
+                    </div>
                   )}
                 </div>
               )}
@@ -887,58 +883,15 @@ export default function NewJob() {
             <div>
               <label className="block text-sm font-medium mb-2">Deadline</label>
               <select
-                className="w-full p-3 border rounded-md"
-                value={jobData.deadlineHours}
-                onChange={(e) => updateJobData({ deadlineHours: Number(e.target.value) })}
+                className="w-full p-3 border-2 rounded-lg bg-white text-base focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                value={gigData.deadlineHours}
+                onChange={(e) => updateGigData({ deadlineHours: Number(e.target.value) })}
               >
-                <option value={24}>24 hours</option>
-                <option value={48}>48 hours</option>
-                <option value={72}>3 days</option>
-                <option value={168}>1 week</option>
+                <option value={24}>⏰ 24 hours</option>
+                <option value={48}>⏰ 48 hours</option>
+                <option value={72}>⏰ 3 days</option>
+                <option value={168}>⏰ 1 week</option>
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-4">Deliverables Required</label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm mb-2">Videos</label>
-                  <select
-                    className="w-full p-2 border rounded"
-                    value={jobData.deliverables.videos}
-                    onChange={(e) => updateDeliverables({ videos: Number(e.target.value) })}
-                  >
-                    <option value={0}>None</option>
-                    <option value={1}>1 video</option>
-                    <option value={2}>2 videos</option>
-                    <option value={3}>3 videos</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm mb-2">Photos</label>
-                  <select
-                    className="w-full p-2 border rounded"
-                    value={jobData.deliverables.photos}
-                    onChange={(e) => updateDeliverables({ photos: Number(e.target.value) })}
-                  >
-                    <option value={0}>None</option>
-                    <option value={1}>1-2 photos</option>
-                    <option value={3}>3-5 photos</option>
-                    <option value={6}>6+ photos</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm mb-2">Raw Footage</label>
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={jobData.deliverables.raw}
-                      onChange={(e) => updateDeliverables({ raw: e.target.checked })}
-                    />
-                    <span className="text-sm">Include raw/unedited footage</span>
-                  </label>
-                </div>
-              </div>
             </div>
           </div>
         );
@@ -959,7 +912,7 @@ export default function NewJob() {
                 <textarea
                   className="w-full p-3 border rounded-md min-h-[80px]"
                   placeholder="Suggest ways creators can start their content..."
-                  value={jobData.brief.hooks.join('\n')}
+                  value={gigData.brief.hooks.join('\n')}
                   onChange={(e) => updateBrief({
                     hooks: e.target.value.split('\n').filter(line => line.trim())
                   })}
@@ -971,7 +924,7 @@ export default function NewJob() {
                 <textarea
                   className="w-full p-3 border rounded-md min-h-[80px]"
                   placeholder="Different ways to approach the content..."
-                  value={jobData.brief.angles.join('\n')}
+                  value={gigData.brief.angles.join('\n')}
                   onChange={(e) => updateBrief({
                     angles: e.target.value.split('\n').filter(line => line.trim())
                   })}
@@ -983,7 +936,7 @@ export default function NewJob() {
                 <textarea
                   className="w-full p-3 border rounded-md min-h-[80px]"
                   placeholder="What should creators mention or highlight..."
-                  value={jobData.brief.talkingPoints.join('\n')}
+                  value={gigData.brief.talkingPoints.join('\n')}
                   onChange={(e) => updateBrief({
                     talkingPoints: e.target.value.split('\n').filter(line => line.trim())
                   })}
@@ -996,7 +949,7 @@ export default function NewJob() {
                   <textarea
                     className="w-full p-3 border rounded-md min-h-[80px]"
                     placeholder="What creators should do..."
-                    value={jobData.brief.do.join('\n')}
+                    value={gigData.brief.do.join('\n')}
                     onChange={(e) => updateBrief({
                       do: e.target.value.split('\n').filter(line => line.trim())
                     })}
@@ -1007,7 +960,7 @@ export default function NewJob() {
                   <textarea
                     className="w-full p-3 border rounded-md min-h-[80px]"
                     placeholder="What creators should avoid..."
-                    value={jobData.brief.dont.join('\n')}
+                    value={gigData.brief.dont.join('\n')}
                     onChange={(e) => updateBrief({
                       dont: e.target.value.split('\n').filter(line => line.trim())
                     })}
@@ -1031,7 +984,7 @@ export default function NewJob() {
     return (
       <Layout>
         <div className="max-w-4xl mx-auto py-8">
-          <LoadingSpinner text="Loading campaign data..." />
+          <LoadingSpinner text="Loading gig data..." />
         </div>
       </Layout>
     );
@@ -1043,9 +996,9 @@ export default function NewJob() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold">Create a New Campaign</h1>
+              <h1 className="text-3xl font-bold">Create a New Gig</h1>
               <p className="text-muted-foreground">
-                {router.query.reuse ? 'Reusing an existing campaign - please enter a new title' : 'Find creators for your UGC needs'}
+                {router.query.reuse ? 'Reusing an existing gig - please enter a new title' : 'Find creators for your UGC needs'}
               </p>
             </div>
             <Link href="/brand/dashboard">
@@ -1061,7 +1014,7 @@ export default function NewJob() {
             />
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span className={currentStep >= 1 ? 'text-orange-600 font-medium' : ''}>Campaign Details</span>
+            <span className={currentStep >= 1 ? 'text-orange-600 font-medium' : ''}>Gig Details</span>
             <span className={currentStep >= 2 ? 'text-orange-600 font-medium' : ''}>Requirements</span>
             <span className={currentStep >= 3 ? 'text-orange-600 font-medium' : ''}>Brief</span>
           </div>
@@ -1070,7 +1023,7 @@ export default function NewJob() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {currentStep === 1 && "Campaign Details"}
+              {currentStep === 1 && "Gig Details"}
               {currentStep === 2 && "Requirements & Budget"}
               {currentStep === 3 && "Creative Brief"}
             </CardTitle>
@@ -1097,7 +1050,7 @@ export default function NewJob() {
               disabled={isSubmitting}
               className="bg-orange-600 hover:bg-orange-700"
             >
-              {isSubmitting ? 'Creating Campaign...' : 'Create Campaign'}
+              {isSubmitting ? 'Creating Gig...' : 'Create Gig'}
             </Button>
           )}
         </div>
@@ -1158,7 +1111,7 @@ function SquadSelector({ selectedSquadIds, onSelectionChange }) {
   return (
     <div className="mt-3">
       <label className="block text-sm font-medium mb-2">Select Squads</label>
-      <p className="text-xs text-gray-500 mb-3">Choose which squads can see this campaign</p>
+      <p className="text-xs text-gray-500 mb-3">Choose which squads can see this gig</p>
       <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-2">
         {squads.map((squad) => (
           <label

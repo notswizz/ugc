@@ -34,12 +34,12 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex h-14 items-center justify-between">
               <Link href={getDashboardPath()} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <img 
-                  src="/logo1.PNG" 
-                  alt="UGC Dash Logo" 
+                  src="/logo1.png" 
+                  alt="Giglet Logo" 
                   className="h-10 w-auto"
                 />
                 <span className="text-lg font-semibold tracking-tight bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">
-                  UGC Dash
+                  Giglet
                 </span>
               </Link>
 
@@ -93,15 +93,15 @@ export default function Layout({ children }: LayoutProps) {
               <span className="text-xs font-medium">Home</span>
             </Link>
             <Link 
-              href="/creator/jobs" 
+              href="/creator/gigs" 
               className={`flex flex-col items-center justify-center py-3 px-2 transition-colors ${
-                router.pathname === '/creator/jobs' || router.pathname.startsWith('/creator/jobs/')
+                router.pathname === '/creator/gigs' || router.pathname.startsWith('/creator/gigs/')
                   ? 'text-orange-600 bg-orange-50' 
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
               <Briefcase className="w-6 h-6 mb-1" />
-              <span className="text-xs font-medium">Campaigns</span>
+              <span className="text-xs font-medium">Gigs</span>
             </Link>
             <Link 
               href="/creator/squads" 
@@ -134,15 +134,15 @@ export default function Layout({ children }: LayoutProps) {
               <span className="text-xs font-medium">Home</span>
             </Link>
             <Link 
-              href="/brand/jobs" 
+              href="/brand/gigs" 
               className={`flex flex-col items-center justify-center py-3 px-2 transition-colors ${
-                router.pathname === '/brand/jobs' || (router.pathname.startsWith('/brand/jobs/') && router.pathname !== '/brand/jobs/new')
+                router.pathname === '/brand/gigs' || (router.pathname.startsWith('/brand/gigs/') && router.pathname !== '/brand/gigs/new')
                   ? 'text-orange-600 bg-orange-50' 
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
               <Briefcase className="w-6 h-6 mb-1" />
-              <span className="text-xs font-medium">Campaigns</span>
+              <span className="text-xs font-medium">Gigs</span>
             </Link>
             <Link 
               href="/brand/squads" 

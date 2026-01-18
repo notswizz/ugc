@@ -6,7 +6,7 @@ export interface NotificationData {
   title: string;
   message: string;
   submissionId: string;
-  jobId: string;
+  gigId: string;
 }
 
 /**
@@ -23,7 +23,7 @@ export async function createNotification(data: NotificationData): Promise<void> 
     title: data.title,
     message: data.message,
     submissionId: data.submissionId,
-    jobId: data.jobId,
+    gigId: data.gigId,
     read: false,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });

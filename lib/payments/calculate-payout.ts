@@ -1,14 +1,14 @@
 /**
- * Calculate payout based on follower count and job payout structure
- * @param job - The job/campaign object
+ * Calculate payout based on follower count and gig payout structure
+ * @param gig - The job/gig object
  * @param creatorFollowingCount - Creator's total following count (sum of all platforms)
  * @returns The calculated payout amount
  */
-export function calculatePayout(job: any, creatorFollowingCount: number = 0): number {
-  // If job has dynamic follower ranges
-  if (job.payoutType === 'dynamic' && job.followerRanges && job.followerRanges.length > 0) {
+export function calculatePayout(gig: any, creatorFollowingCount: number = 0): number {
+  // If gig has dynamic follower ranges
+  if (gig.payoutType === 'dynamic' && gig.followerRanges && gig.followerRanges.length > 0) {
     // Sort ranges by min follower count (ascending)
-    const sortedRanges = [...job.followerRanges].sort((a, b) => (a.min || 0) - (b.min || 0));
+    const sortedRanges = [...gig.followerRanges].sort((a, b) => (a.min || 0) - (b.min || 0));
     
     // Find the matching range
     for (const range of sortedRanges) {
@@ -32,7 +32,7 @@ export function calculatePayout(job: any, creatorFollowingCount: number = 0): nu
   }
   
   // Default to basePayout for fixed payout type
-  return job.basePayout || 0;
+  return gig.basePayout || 0;
 }
 
 /**
