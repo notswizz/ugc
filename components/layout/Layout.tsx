@@ -27,7 +27,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-[428px] bg-white h-screen shadow-xl md:shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-full max-w-[428px] bg-white h-screen shadow-xl md:shadow-2xl flex flex-col overflow-hidden relative">
         {user && (
           <header className="flex-shrink-0 z-50 w-full border-b bg-white">
             <div className="px-4">
@@ -73,13 +73,13 @@ export default function Layout({ children }: LayoutProps) {
         </header>
       )}
       
-      <main className="flex-1 overflow-y-auto px-4 py-8">
+      <main className="flex-1 overflow-y-auto px-4 py-8" style={{ paddingBottom: user && (appUser?.role === 'creator' || appUser?.role === 'brand') ? '80px' : undefined }}>
         {children}
       </main>
 
       {/* Bottom Navigation (for creators) */}
       {user && appUser?.role === 'creator' && (
-        <div className="flex-shrink-0 w-full bg-white border-t border-gray-200 z-50 safe-area-bottom shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 max-w-[428px] mx-auto w-full bg-white border-t border-gray-200 z-50 shadow-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-md mx-auto grid grid-cols-3">
             <Link 
               href="/creator/dashboard" 
@@ -120,7 +120,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Bottom Navigation (for brands) */}
       {user && appUser?.role === 'brand' && (
-        <div className="flex-shrink-0 w-full bg-white border-t border-gray-200 z-50 safe-area-bottom shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 max-w-[428px] mx-auto w-full bg-white border-t border-gray-200 z-50 shadow-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-md mx-auto grid grid-cols-3">
             <Link 
               href="/brand/dashboard" 
