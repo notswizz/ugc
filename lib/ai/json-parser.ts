@@ -104,7 +104,7 @@ export function extractValuesFromJSON(jsonStr: string): {
  */
 export function parseJSONResponse(
   gradingText: string,
-  job: any
+  gig: any
 ): AIEvaluation {
   // Look for JSON in the response
   const jsonMatch = gradingText.match(/\{[\s\S]*\}/);

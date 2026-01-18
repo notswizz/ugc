@@ -43,7 +43,7 @@ export default function NewGig() {
 
         const existingGig = gigDoc.data();
         
-        // Check if user owns this job
+        // Check if user owns this gig
         if (existingGig.brandId !== user.uid) {
           toast.error('You do not have permission to reuse this gig');
           router.replace('/brand/gigs/new');
@@ -386,7 +386,7 @@ export default function NewGig() {
       router.push('/brand/dashboard');
 
     } catch (error) {
-      console.error('Error creating job:', error);
+      console.error('Error creating gig:', error);
       toast.error('Failed to create gig: ' + (error.message || 'Unknown error'));
     } finally {
       setIsSubmitting(false);

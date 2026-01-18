@@ -3,7 +3,7 @@ import { AIEvaluation } from './evaluator';
 /**
  * Parses natural language response as fallback when JSON parsing fails
  */
-export function parseNaturalLanguageResponse(outputText: string, job: any): AIEvaluation {
+export function parseNaturalLanguageResponse(outputText: string, gig: any): AIEvaluation {
   const lowerOutput = outputText.toLowerCase();
   const productName = (gig.title || gig.description || 'product').toLowerCase();
   

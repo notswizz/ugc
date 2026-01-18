@@ -29,7 +29,7 @@ export default function AdminDashboard() {
   const [payments, setPayments] = useState<any[]>([]);
   const [selectedGig, setSelectedGig] = useState<any | null>(null);
   const [jobDetails, setGigDetails] = useState<{
-    job: any;
+    gig: any;
     brand: any;
     jobSubmissions: any[];
     jobPayments: any[];

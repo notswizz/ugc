@@ -13,7 +13,7 @@ export interface PaymentData {
   gigId: string;
   creatorId: string;
   brandId: string;
-  job: any;
+  gig: any;
   submission: any;
 }
 

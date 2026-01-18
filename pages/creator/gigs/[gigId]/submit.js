@@ -61,9 +61,9 @@ export default function SubmitGig() {
 
       const gigData = gigDoc.data();
       
-      // Check if user has accepted this job
+      // Check if user has accepted this gig
       if (gigData.acceptedBy !== user?.uid) {
-        toast.error('You have not accepted this job');
+        toast.error('You have not accepted this gig');
         router.push(`/creator/gigs/${gigId}`);
         return;
       }
@@ -93,8 +93,8 @@ export default function SubmitGig() {
         calculatedPayout: payout,
       });
     } catch (error) {
-      console.error('Error fetching job:', error);
-      toast.error('Failed to load job');
+      console.error('Error fetching gig:', error);
+      toast.error('Failed to load gig');
       router.push('/creator/gigs');
     } finally {
       setLoading(false);
@@ -102,7 +102,7 @@ export default function SubmitGig() {
   };
 
   const handleFileUpload = async (file, type) => {
-    if (!file || !job || !user) return null;
+    if (!file || !gig || !user) return null;
     
     const fileId = `${type}_${Date.now()}_${file.name}`;
     setIsUploading(true);
@@ -280,7 +280,7 @@ export default function SubmitGig() {
   };
 
   const handleSubmit = async () => {
-    if (!job || !user) {
+    if (!gig || !user) {
       console.error('Cannot submit: missing gig or user', { hasGig: !!gig, hasUser: !!user });
       toast.error('Missing required information. Please refresh the page.');
       return;

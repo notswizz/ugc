@@ -6,7 +6,7 @@ import { parseNaturalLanguageResponse } from './text-parser';
 
 export interface EvaluationOptions {
   videoUrl: string;
-  job: any;
+  gig: any;
 }
 
 /**
