@@ -25,6 +25,9 @@ export default function AdminDashboard() {
     totalPlatformFees: 0,
   });
   const [gigs, setGigs] = useState<any[]>([]);
+  const [sortedGigs, setSortedGigs] = useState<any[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<string>('all');
+  const [brandsList, setBrandsList] = useState<Array<{ id: string; name: string }>>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [selectedGig, setSelectedGig] = useState<any | null>(null);
@@ -50,6 +53,35 @@ export default function AdminDashboard() {
       fetchAllData();
     }
   }, [user, appUser]);
+
+  // Sort gigs when sort option changes
+  useEffect(() => {
+    if (gigs.length > 0) {
+      // Extract unique brands
+      const uniqueBrands = new Map<string, string>();
+      gigs.forEach(gig => {
+        if (gig.brandId && gig.brandName) {
+          uniqueBrands.set(gig.brandId, gig.brandName);
+        }
+      });
+      
+      const brands = Array.from(uniqueBrands.entries())
+        .map(([id, name]) => ({ id, name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      
+      setBrandsList(brands);
+      
+      // Filter and sort gigs
+      let filtered = gigs;
+      if (selectedBrand !== 'all') {
+        filtered = gigs.filter(gig => gig.brandId === selectedBrand);
+      }
+      
+      // Sort by date (newest first)
+      const sorted = [...filtered].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      setSortedGigs(sorted);
+    }
+  }, [selectedBrand, gigs]);
 
   // Fetch detailed gig information when a gig is selected
   useEffect(() => {
@@ -161,9 +193,20 @@ export default function AdminDashboard() {
       
       // Calculate actual gig status based on approved submissions
       const gigsData = await Promise.all(
-        gigsSnapshot.docs.map(async (doc) => {
-          const gigData = doc.data();
-          const gigId = doc.id;
+        gigsSnapshot.docs.map(async (gigDoc) => {
+          const gigData = gigDoc.data();
+          const gigId = gigDoc.id;
+          
+          // Fetch brand info for sorting
+          let brandName = '';
+          try {
+            const brandDoc = await getDoc(doc(db, 'brands', gigData.brandId));
+            if (brandDoc.exists()) {
+              brandName = brandDoc.data().companyName || '';
+            }
+          } catch (err) {
+            console.error('Error fetching brand name:', err);
+          }
           
           // Count approved submissions for this job
           const approvedSubmissionsQuery = query(
@@ -190,8 +233,9 @@ export default function AdminDashboard() {
           }
           
           return {
-            id: doc.id,
+            id: gigDoc.id,
             ...gigData,
+            brandName,
             status: actualStatus, // Override with calculated status
             approvedSubmissionsCount: approvedCount,
             acceptedSubmissionsLimit,
@@ -202,6 +246,7 @@ export default function AdminDashboard() {
         })
       );
       setGigs(gigsData);
+      setSortedGigs(gigsData);
 
       // Fetch all submissions
       const submissionsQuery = query(collection(db, 'submissions'), orderBy('createdAt', 'desc'));
@@ -309,31 +354,17 @@ export default function AdminDashboard() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-gray-600">Complete platform overview and analytics</p>
+        
+        {/* Bank Balance - Small Text */}
+        <div className="mb-4 text-sm text-green-700">
+          <span className="font-medium">Platform Balance:</span> ${(bankBalance ?? 0).toFixed(2)}
         </div>
 
-        {/* Bank Balance Card */}
-        <Card className="mb-6 border-green-200 bg-green-50/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold text-green-800">Platform Bank Balance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-green-700 mb-2">
-                ${(bankBalance ?? 0).toFixed(2)}
-              </div>
-              <p className="text-sm text-green-600">Total platform fees collected</p>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Gigs</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Gigs</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{stats.totalGigs}</div>
@@ -341,7 +372,7 @@ export default function AdminDashboard() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Submissions</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Submissions</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{stats.totalSubmissions}</div>
@@ -349,7 +380,7 @@ export default function AdminDashboard() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Payments</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Payments</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{stats.totalPayments}</div>
@@ -361,11 +392,37 @@ export default function AdminDashboard() {
         <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Gigs</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Gigs</CardTitle>
+                  <select
+                    value={selectedBrand}
+                    onChange={(e) => setSelectedBrand(e.target.value)}
+                    className="text-sm border-2 border-gray-300 rounded px-3 py-1.5 bg-white min-w-[200px] font-medium"
+                  >
+                    <option value="all">🏢 All Brands</option>
+                    {brandsList.map((brand) => (
+                      <option key={brand.id} value={brand.id}>
+                        {brand.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {gigs.slice(0, 10).map((gig) => (
+              <CardContent className="max-h-[600px] overflow-y-auto">
+                {sortedGigs.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">No gigs found for this brand</p>
+                ) : (
+                  <>
+                    <div className="mb-3 text-sm text-gray-600">
+                      Showing {sortedGigs.length} gig{sortedGigs.length !== 1 ? 's' : ''}
+                      {selectedBrand !== 'all' && (
+                        <span className="ml-1">
+                          from <span className="font-semibold">{brandsList.find(b => b.id === selectedBrand)?.name}</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      {sortedGigs.map((gig) => (
                     <div 
                       key={gig.id} 
                       className="border-b pb-3 last:border-0 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
@@ -374,6 +431,11 @@ export default function AdminDashboard() {
                       <div className="flex justify-between items-start gap-3">
                         <div className="flex-1 min-w-0 pr-2">
                           <h3 className="font-semibold text-sm mb-1">{gig.title}</h3>
+                          {gig.brandName && (
+                            <p className="text-xs text-gray-600 mb-1">
+                              🏢 {gig.brandName}
+                            </p>
+                          )}
                           {gig.description && (
                             <p className="text-xs text-gray-500 mb-2 overflow-hidden" style={{
                               display: '-webkit-box',
@@ -408,10 +470,12 @@ export default function AdminDashboard() {
                           <p className="font-semibold text-sm">${gig.basePayout?.toFixed(2) || '0.00'}</p>
                           <p className="text-xs text-gray-500">Payout</p>
                         </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
+              )}
               </CardContent>
             </Card>
         </div>

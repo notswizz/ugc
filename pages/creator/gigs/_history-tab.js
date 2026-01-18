@@ -296,53 +296,82 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
             const statusConfig = getStatusConfig(badgeStatus);
             
             return (
-              <Card key={gig.gigId} className="hover:shadow-md transition-all border-l-4 border-l-orange-500">
+              <Card key={gig.gigId} className="group hover:shadow-lg transition-all duration-300 border-0 overflow-hidden bg-gradient-to-br from-white to-gray-50">
+                {/* Color accent bar based on status */}
+                <div className={`h-1.5 ${
+                  badgeStatus === 'paid' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                  badgeStatus === 'approved' ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
+                  badgeStatus === 'rejected' ? 'bg-gradient-to-r from-red-500 to-rose-500' :
+                  badgeStatus === 'needs_changes' ? 'bg-gradient-to-r from-orange-500 to-yellow-500' :
+                  'bg-gradient-to-r from-orange-500 to-red-500'
+                }`}></div>
+                
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2 mb-2">
-                        <h3 className="text-base font-bold line-clamp-2 flex-1">{gig.gigTitle}</h3>
-                        <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap flex-shrink-0 ${statusConfig.bg} ${statusConfig.text}`}>
-                          {statusConfig.icon} {statusConfig.label}
-                        </span>
+                      {/* Title and status badge */}
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${
+                          badgeStatus === 'paid' ? 'bg-green-500' :
+                          badgeStatus === 'approved' ? 'bg-yellow-500' :
+                          badgeStatus === 'rejected' ? 'bg-red-500' :
+                          badgeStatus === 'needs_changes' ? 'bg-orange-500' :
+                          'bg-blue-500'
+                        }`}></div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base font-bold line-clamp-2 text-gray-900 mb-1">{gig.gigTitle}</h3>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold rounded-full whitespace-nowrap ${statusConfig.bg} ${statusConfig.text} border-2 ${
+                            badgeStatus === 'paid' ? 'border-green-200' :
+                            badgeStatus === 'approved' ? 'border-yellow-200' :
+                            badgeStatus === 'rejected' ? 'border-red-200' :
+                            badgeStatus === 'needs_changes' ? 'border-orange-200' :
+                            'border-blue-200'
+                          }`}>
+                            {statusConfig.icon} {statusConfig.label}
+                          </span>
+                        </div>
                       </div>
                       
-                      <div className="flex items-center gap-4 text-xs mb-3">
-                        <div className="flex items-center gap-1">
-                          <span className="text-gray-400">📅</span>
-                          <span className="text-gray-600">{gig.submission?.createdAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || gig.deadlineAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'N/A'}</span>
+                      {/* Date */}
+                      <div className="flex items-center gap-2 text-xs mb-3 ml-5">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-md">
+                          <span className="text-gray-500">📅</span>
+                          <span className="text-gray-700 font-medium">{gig.submission?.createdAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || gig.deadlineAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'N/A'}</span>
                         </div>
                       </div>
 
+                      {/* Payment status */}
                       {paymentStatus.status !== 'unknown' && paymentStatus.status !== 'rejected' && (
-                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                          paymentStatus.status === 'paid' ? 'bg-green-50 text-green-700' :
-                          paymentStatus.status === 'approved' ? 'bg-yellow-50 text-yellow-700' :
-                          'bg-blue-50 text-blue-700'
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ml-5 ${
+                          paymentStatus.status === 'paid' ? 'bg-green-100 text-green-800 border-2 border-green-200' :
+                          paymentStatus.status === 'approved' ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-200' :
+                          'bg-blue-100 text-blue-800 border-2 border-blue-200'
                         }`}>
                           {paymentStatus.status === 'paid' ? '✓' : paymentStatus.status === 'approved' ? '⏳' : '•'}
                           {paymentStatus.status === 'paid' ? 'Paid' : paymentStatus.status === 'approved' ? 'Awaiting Payment' : 'Pending'}
                         </div>
                       )}
 
+                      {/* Submit button */}
                       {!gig.submission && (
-                        <div className="mt-2">
+                        <div className="mt-3 ml-5">
                           <Link href={`/creator/gigs/${gig.gigId}/submit`}>
-                            <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white text-xs h-7 px-3">
-                              Submit Content
+                            <Button size="sm" className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white text-xs h-8 px-4 font-semibold shadow-md">
+                              Submit Content →
                             </Button>
                           </Link>
                         </div>
                       )}
                     </div>
 
+                    {/* Amount paid */}
                     {amountPaid && (
                       <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-green-600">
+                        <div className="text-right bg-green-50 px-3 py-2 rounded-lg border-2 border-green-200">
+                          <div className="text-2xl font-bold text-green-700">
                             ${typeof amountPaid === 'number' ? amountPaid.toFixed(2) : amountPaid}
                           </div>
-                          <div className="text-[10px] text-gray-500">Paid</div>
+                          <div className="text-[10px] text-green-600 font-semibold">PAID</div>
                         </div>
                       </div>
                     )}
@@ -350,7 +379,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
 
                   {/* AI Feedback Section */}
                   {gig.submission?.aiEvaluation && (
-                    <div className="mt-4 pt-4 border-t">
+                    <div className="mt-4 pt-4 border-t-2 border-gray-200">
                       <button
                         onClick={() => {
                           setExpandedFeedback(prev => {
@@ -363,21 +392,23 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
                             return newSet;
                           });
                         }}
-                        className="w-full flex items-center justify-between text-left mb-2"
+                        className="w-full flex items-center justify-between text-left mb-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                       >
-                        <span className="text-sm font-semibold text-gray-700">AI Feedback</span>
-                        <span className="text-gray-500">
-                          {expandedFeedback.has(gig.gigId) ? '▼' : '▶'}
+                        <span className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                          <span className="text-purple-600">🤖</span> AI Feedback
+                        </span>
+                        <span className={`text-sm font-bold transition-transform ${expandedFeedback.has(gig.gigId) ? 'rotate-90' : ''}`}>
+                          ▶
                         </span>
                       </button>
                       
                       {expandedFeedback.has(gig.gigId) && (
-                        <div className={`mt-2 p-4 rounded-lg border-2 transition-all ${
+                        <div className={`mt-2 p-4 rounded-xl border-2 transition-all shadow-inner ${
                           gig.submission.status === 'rejected' 
-                            ? 'bg-red-50 border-red-200' 
+                            ? 'bg-gradient-to-br from-red-50 to-rose-50 border-red-300' 
                             : gig.submission.status === 'approved'
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-blue-50 border-blue-200'
+                            ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300'
+                            : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300'
                         }`}>
                           {qualityScore !== undefined && (
                             <div className="mb-3">

@@ -271,17 +271,19 @@ export default function CreatorGigs() {
           return false;
         }
         
-        // Rep-based early access filter
-        // Check if creator's rep level grants them access to this gig yet
-        const creatorRep = creatorData?.rep || 0;
-        const gigAccess = canAccessGig(creatorRep, gig.createdAt);
-        if (!gigAccess.canAccess) {
-          console.log(`Gig ${gig.id} filtered: Rep-based early access locked for ${gigAccess.minutesUntilUnlock} more minutes`);
-          // Still mark it on the gig object so we can show a locked state
-          gig.repLocked = true;
-          gig.unlockAt = gigAccess.unlockAt;
-          gig.minutesUntilUnlock = gigAccess.minutesUntilUnlock;
-          return false;
+        // Rep-based early access filter (only for open gigs, NOT squad gigs)
+        // Squad gigs bypass the rep system - all squad members see them immediately
+        if (visibility !== 'squad') {
+          const creatorRep = creatorData?.rep || 0;
+          const gigAccess = canAccessGig(creatorRep, gig.createdAt);
+          if (!gigAccess.canAccess) {
+            console.log(`Gig ${gig.id} filtered: Rep-based early access locked for ${gigAccess.minutesUntilUnlock} more minutes`);
+            // Still mark it on the gig object so we can show a locked state
+            gig.repLocked = true;
+            gig.unlockAt = gigAccess.unlockAt;
+            gig.minutesUntilUnlock = gigAccess.minutesUntilUnlock;
+            return false;
+          }
         }
         
         // Hard No filter - creators should never see gigs that violate their hard no's
