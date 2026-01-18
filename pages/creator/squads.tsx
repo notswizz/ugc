@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/ui/loading-spinner';
 import { Plus, Users, Mail, Check, X, UserPlus, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { awardSquadJoinRep } from '@/lib/rep/service';
 
 export default function CreatorSquads() {
   const { user, appUser } = useAuth();
@@ -195,6 +196,15 @@ export default function CreatorSquads() {
             updatedAt: new Date(),
           });
         }
+      }
+      
+      // Award rep for joining squad
+      try {
+        await awardSquadJoinRep(user.uid);
+        console.log('✅ Rep awarded for joining squad');
+      } catch (repError) {
+        console.error('❌ Error awarding squad join rep:', repError);
+        // Don't fail the whole operation if rep awarding fails
       }
       
       toast.success('Joined squad successfully!');

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { Plus, Users, Check, X, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { awardSquadJoinRep } from '@/lib/rep/service';
 
 export default function SquadsTab({ user, appUser }) {
   const [loading, setLoading] = useState(true);
@@ -172,6 +173,15 @@ export default function SquadsTab({ user, appUser }) {
             updatedAt: new Date(),
           });
         }
+      }
+      
+      // Award rep for joining squad
+      try {
+        await awardSquadJoinRep(user.uid);
+        console.log('✅ Rep awarded for joining squad');
+      } catch (repError) {
+        console.error('❌ Error awarding squad join rep:', repError);
+        // Don't fail the whole operation if rep awarding fails
       }
       
       toast.success('Joined squad successfully!');

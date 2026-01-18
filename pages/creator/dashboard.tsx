@@ -225,72 +225,99 @@ export default function CreatorDashboard() {
   return (
     <Layout>
       <div className="space-y-4">
-        {/* Balance Card */}
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
-          <CardHeader className="pb-1 pt-3">
+        {/* Balance Card - Glassmorphism */}
+        <Card className="relative overflow-hidden border-0 shadow-2xl">
+          {/* Gradient Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 opacity-90"></div>
+          
+          {/* Glassmorphism Overlay */}
+          <div className="absolute inset-0 backdrop-blur-xl bg-white/10"></div>
+          
+          {/* Decorative Elements */}
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-300/30 rounded-full blur-3xl"></div>
+          
+          {/* Content */}
+          <CardHeader className="pb-2 pt-4 relative z-10">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xs text-gray-600">Available Balance</CardTitle>
+              <CardTitle className="text-xs text-white/80 font-medium tracking-wide uppercase">Available Balance</CardTitle>
               <Button
                 size="sm"
-                variant="outline"
-                className="text-xs h-7 px-3 font-semibold border-2 border-green-600 text-green-700 hover:bg-green-600 hover:text-white transition-all shadow-sm"
+                className="text-xs h-7 px-3 font-semibold bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm transition-all shadow-lg hover:shadow-xl"
               >
                 <ArrowDownToLine className="w-3.5 h-3.5 mr-1" />
                 Withdraw
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="pb-3">
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-green-700">
+          <CardContent className="pb-4 relative z-10">
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-white drop-shadow-lg">
                 ${loadingBalance ? '...' : balance?.toFixed(2) || '0.00'}
               </span>
+              <span className="text-sm text-white/70 font-medium">USD</span>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
+                <div className="h-full bg-white/40 rounded-full w-3/4"></div>
+              </div>
+              <span className="text-xs text-white/70">Instant payout</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Reputation Card */}
+        {/* Reputation Card - Glassmorphism */}
         {creatorData && (() => {
           const rep = creatorData.rep || 0;
           const { level, title, nextLevelRep } = getRepLevel(rep);
           
           return (
-            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200">
-              <CardHeader className="pb-1 pt-3">
+            <Card className="relative overflow-hidden border-0 shadow-2xl">
+              {/* Gradient Background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 opacity-90"></div>
+              
+              {/* Glassmorphism Overlay */}
+              <div className="absolute inset-0 backdrop-blur-xl bg-white/10"></div>
+              
+              {/* Decorative Elements */}
+              <div className="absolute -top-10 -left-10 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-purple-400/30 rounded-full blur-3xl"></div>
+              
+              {/* Content */}
+              <CardHeader className="pb-2 pt-3 relative z-10">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs text-gray-600">Reputation</CardTitle>
+                  <CardTitle className="text-xs text-white/80 font-medium tracking-wide uppercase">Reputation</CardTitle>
                   <Button
                     size="sm"
-                    variant="outline"
                     onClick={handleAddTestRep}
-                    className="text-[10px] h-6 px-2"
+                    className="text-[10px] h-6 px-2 bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm transition-all"
                   >
                     +50
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="pb-3">
-                <div className="flex items-center justify-between mb-1">
+              <CardContent className="pb-3 relative z-10">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-purple-600" />
-                    <span className="text-xl font-bold text-purple-700">{rep}</span>
-                    <span className="text-xs text-purple-600">rep</span>
+                    <Award className="w-6 h-6 text-white drop-shadow-lg" />
+                    <span className="text-3xl font-bold text-white drop-shadow-lg">{rep}</span>
+                    <span className="text-sm text-white/80">rep</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold text-purple-800">Level {level}</div>
-                    <p className="text-[10px] text-purple-600">{title}</p>
+                    <div className="text-base font-bold text-white drop-shadow-lg">Level {level}</div>
+                    <p className="text-xs text-white/80">{title}</p>
                   </div>
                 </div>
                 
                 {level < 7 && (
                   <div className="mt-2">
-                    <div className="flex justify-between text-[10px] text-purple-600 mb-1">
-                      <span>Progress to Level {level + 1}</span>
+                    <div className="flex justify-between text-xs text-white/80 mb-1.5">
+                      <span>Next: Level {level + 1}</span>
                       <span>{rep} / {nextLevelRep}</span>
                     </div>
-                    <div className="w-full bg-purple-200 rounded-full h-1.5">
+                    <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
                       <div 
-                        className="bg-gradient-to-r from-purple-600 to-pink-600 h-1.5 rounded-full transition-all duration-300"
+                        className="bg-white/60 h-2 rounded-full transition-all duration-300 shadow-lg"
                         style={{ width: `${((rep / nextLevelRep) * 100)}%` }}
                       />
                     </div>
@@ -301,38 +328,59 @@ export default function CreatorDashboard() {
           );
         })()}
 
-        {/* Stats - Collapsible */}
-        <Card className="mb-3">
+        {/* Stats - Collapsible with Modern Design */}
+        <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-gray-50 to-gray-100">
           <button
             onClick={() => setStatsOpen(!statsOpen)}
-            className="w-full"
+            className="w-full transition-all hover:bg-white/50"
           >
-            <CardHeader className="py-2 px-3">
+            <CardHeader className="py-3 px-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold">Stats</CardTitle>
-                {statsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+                    <Briefcase className="w-4 h-4 text-white" />
+                  </div>
+                  <CardTitle className="text-sm font-bold text-gray-900">Performance Stats</CardTitle>
+                </div>
+                <div className={`transform transition-transform duration-200 ${statsOpen ? 'rotate-180' : ''}`}>
+                  <ChevronDown className="w-5 h-5 text-gray-600" />
+                </div>
               </div>
             </CardHeader>
           </button>
           {statsOpen && (
-            <CardContent className="pt-0 px-3 pb-3">
+            <CardContent className="pt-0 px-4 pb-4">
               {loadingStats ? (
-                <div className="text-center py-2">
-                  <div className="text-xs text-gray-500">Loading stats...</div>
+                <div className="text-center py-4">
+                  <div className="text-sm text-gray-500">Loading stats...</div>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-orange-50 rounded-lg p-2 text-center">
-                    <div className="text-lg font-bold text-orange-600">{stats.pendingSubmissions}</div>
-                    <p className="text-[10px] text-gray-600 mt-0.5">Pending</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Pending */}
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 p-3 shadow-md">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/20 rounded-full -mr-8 -mt-8"></div>
+                    <div className="relative z-10">
+                      <div className="text-2xl font-bold text-white drop-shadow">{stats.pendingSubmissions}</div>
+                      <p className="text-xs text-white/90 font-medium mt-1">Pending</p>
+                    </div>
                   </div>
-                  <div className="bg-green-50 rounded-lg p-2 text-center">
-                    <div className="text-lg font-bold text-green-600">${stats.totalEarnings.toFixed(2)}</div>
-                    <p className="text-[10px] text-gray-600 mt-0.5">Earned</p>
+                  
+                  {/* Earned */}
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 p-3 shadow-md">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/20 rounded-full -mr-8 -mt-8"></div>
+                    <div className="relative z-10">
+                      <div className="text-2xl font-bold text-white drop-shadow">${stats.totalEarnings.toFixed(2)}</div>
+                      <p className="text-xs text-white/90 font-medium mt-1">Earned</p>
+                    </div>
                   </div>
-                  <div className="bg-blue-50 rounded-lg p-2 text-center">
-                    <div className="text-lg font-bold text-blue-600">{stats.acceptedGigs}</div>
-                    <p className="text-[10px] text-gray-600 mt-0.5">Accepted</p>
+                  
+                  {/* Accepted */}
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-400 to-indigo-600 p-3 shadow-md">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/20 rounded-full -mr-8 -mt-8"></div>
+                    <div className="relative z-10">
+                      <div className="text-2xl font-bold text-white drop-shadow">{stats.acceptedGigs}</div>
+                      <p className="text-xs text-white/90 font-medium mt-1">Accepted</p>
+                    </div>
                   </div>
                 </div>
               )}

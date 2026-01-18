@@ -3,6 +3,7 @@ import admin, { adminDb } from '@/lib/firebase/admin';
 import { evaluateSubmission } from '@/lib/ai/evaluation-service';
 import { processPayment } from '@/lib/payments/processor';
 import { createNotification } from '@/lib/notifications/service';
+import { awardGigCompletionRep, awardAIScoreRep, deductFailedSubmissionRep } from '@/lib/rep/service';
 
 export default async function handler(
   req: NextApiRequest,
@@ -224,6 +225,16 @@ export default async function handler(
       } else if (isNewFailure) {
         console.log('Creating failure notification for submission:', submissionId);
         
+        // Deduct rep for failed submission
+        try {
+          console.log('Deducting rep for failed submission from creator:', submission.creatorId);
+          await deductFailedSubmissionRep(submission.creatorId);
+          console.log('✅ Rep deducted successfully');
+        } catch (repError) {
+          console.error('❌ Error deducting rep:', repError);
+          // Don't fail the whole request if rep deduction fails
+        }
+        
         // Create failure notification
         try {
           const complianceIssues = evaluation.compliance.issues || [];
@@ -248,6 +259,24 @@ export default async function handler(
     }
     
     if (isNewApproval && submission.creatorId) {
+
+      // Award rep for completing the gig
+      try {
+        console.log('Awarding gig completion rep to creator:', submission.creatorId);
+        await awardGigCompletionRep(submission.creatorId);
+        
+        // Award bonus rep based on AI score
+        const qualityScore = aiEvaluationData.qualityScore;
+        if (qualityScore >= 70) {
+          console.log(`Awarding AI score bonus rep (score: ${qualityScore})`);
+          await awardAIScoreRep(submission.creatorId, qualityScore);
+        }
+        
+        console.log('✅ Rep awarded successfully');
+      } catch (repError) {
+        console.error('❌ Error awarding rep:', repError);
+        // Don't fail the whole request if rep awarding fails
+      }
 
       // Process automatic payment
       try {
