@@ -149,7 +149,7 @@ export default function GigDetail() {
 
       setGig(gig);
     } catch (error) {
-      console.error('Error fetching job:', error);
+      console.error('Error fetching gig:', error);
       toast.error('Failed to load gig details');
       router.push('/creator/gigs');
     } finally {
@@ -158,7 +158,7 @@ export default function GigDetail() {
   };
 
   const handleAcceptGig = async () => {
-    if (!job || accepting || !user) return;
+    if (!gig || accepting || !user) return;
 
     setAccepting(true);
     try {

@@ -12,24 +12,20 @@ import toast from 'react-hot-toast';
 
 interface CreatorFormData {
   username: string; // Unique username
-  bio: string;
+  intro: string;
   interests: string[]; // What I like
-  experience: string[]; // What I'm good at
-  hardNos: string[]; // What I won't promote
   location: string;
   languages: string[];
   portfolioLinks: string[];
   socials: {
     tiktok?: string;
     instagram?: string;
-    youtube?: string;
-    linkedin?: string;
+    x?: string;
   };
   followingCount: {
     tiktok?: number;
     instagram?: number;
-    youtube?: number;
-    linkedin?: number;
+    x?: number;
   };
 }
 
@@ -64,10 +60,8 @@ export default function CreatorOnboarding() {
 
   const [formData, setFormData] = useState<CreatorFormData>({
     username: '',
-    bio: '',
+    intro: '',
     interests: [],
-    experience: [],
-    hardNos: [],
     location: '',
     languages: ['English'],
     portfolioLinks: [],
@@ -150,7 +144,7 @@ export default function CreatorOnboarding() {
       }
     }
     
-    if (currentStep < 5) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -194,10 +188,10 @@ export default function CreatorOnboarding() {
       const creatorData: Omit<Creator, 'id'> = {
         uid: user.uid,
         username: normalizedUsername,
-        bio: formData.bio,
+        bio: formData.intro,
         interests: formData.interests,
-        experience: formData.experience,
-        hardNos: formData.hardNos,
+        experience: [],
+        hardNos: [],
         location: formData.location,
         languages: formData.languages,
         socials: formData.socials,
@@ -257,24 +251,6 @@ export default function CreatorOnboarding() {
     }));
   };
 
-  const toggleExperience = (exp: string) => {
-    setFormData(prev => ({
-      ...prev,
-      experience: prev.experience.includes(exp)
-        ? prev.experience.filter(e => e !== exp)
-        : [...prev.experience, exp]
-    }));
-  };
-
-  const toggleHardNo = (no: string) => {
-    setFormData(prev => ({
-      ...prev,
-      hardNos: prev.hardNos.includes(no)
-        ? prev.hardNos.filter(n => n !== no)
-        : [...prev.hardNos, no]
-    }));
-  };
-
   const toggleLanguage = (language: string) => {
     setFormData(prev => ({
       ...prev,
@@ -288,46 +264,48 @@ export default function CreatorOnboarding() {
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Username *</label>
+              <label className="block text-sm font-semibold mb-3 text-gray-900">Username *</label>
               <Input
                 type="text"
                 value={formData.username}
                 onChange={(e) => handleUsernameChange(e.target.value)}
                 placeholder="johndoe"
                 required
-                className={usernameError ? 'border-red-500' : ''}
+                className={`h-12 text-lg ${usernameError ? 'border-red-500' : ''}`}
               />
               {checkingUsername && (
-                <p className="text-xs text-gray-500 mt-1">Checking availability...</p>
+                <p className="text-xs text-gray-500 mt-2">⏳ Checking availability...</p>
               )}
               {usernameError && (
-                <p className="text-xs text-red-600 mt-1">{usernameError}</p>
+                <p className="text-xs text-red-600 mt-2">❌ {usernameError}</p>
               )}
               {!usernameError && formData.username.trim() && !checkingUsername && (
-                <p className="text-xs text-green-600 mt-1">✓ Username available</p>
+                <p className="text-xs text-green-600 mt-2 font-medium">✓ Username available!</p>
               )}
-              <p className="text-xs text-gray-500 mt-1">
-                3-20 characters (letters, numbers, underscores only)
+              <p className="text-xs text-gray-500 mt-2">
+                3-20 characters (letters, numbers, underscores)
               </p>
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-2">Bio</label>
+              <label className="block text-sm font-semibold mb-3 text-gray-900">Intro</label>
               <textarea
-                className="w-full p-3 border rounded-md min-h-[100px]"
+                className="w-full p-4 border-2 rounded-lg min-h-[120px] text-base focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                 placeholder="Tell brands about yourself, your style, and what makes you unique..."
-                value={formData.bio}
-                onChange={(e) => updateFormData({ bio: e.target.value })}
+                value={formData.intro}
+                onChange={(e) => updateFormData({ intro: e.target.value })}
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium mb-2">Location</label>
+              <label className="block text-sm font-semibold mb-3 text-gray-900">Location</label>
               <Input
                 placeholder="City, Country"
                 value={formData.location}
                 onChange={(e) => updateFormData({ location: e.target.value })}
+                className="h-12 text-lg"
               />
             </div>
           </div>
@@ -335,13 +313,9 @@ export default function CreatorOnboarding() {
 
       case 2:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Interests (What I Like)</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Select things you're interested in. This boosts your feed ranking.
-              </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 max-h-[400px] overflow-y-auto p-2 border rounded-lg bg-gray-50">
                 {THINGS.map(thing => (
                   <button
                     key={thing.id}
@@ -350,57 +324,11 @@ export default function CreatorOnboarding() {
                     className={`px-3 py-2 rounded-full text-sm border flex items-center gap-1.5 ${
                       formData.interests.includes(thing.id)
                         ? 'bg-green-100 text-green-800 border-green-300'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                        : 'bg-white hover:bg-gray-100 border-gray-200'
                     }`}
                   >
                     <span>{thing.icon}</span>
                     <span>{thing.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Experience (What I'm Good At)</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Skills that qualify you for gigs
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {EXPERIENCE_TYPES.map(exp => (
-                  <button
-                    key={exp}
-                    type="button"
-                    onClick={() => toggleExperience(exp)}
-                    className={`px-3 py-1 rounded-full text-sm border ${
-                      formData.experience.includes(exp)
-                        ? 'bg-blue-100 text-blue-800 border-blue-300'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
-                    }`}
-                  >
-                    {exp.replace('_', ' ')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Hard No's (What I Won't Promote)</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Categories you'll never see gigs from
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {HARD_NO_CATEGORIES.map(no => (
-                  <button
-                    key={no}
-                    type="button"
-                    onClick={() => toggleHardNo(no)}
-                    className={`px-3 py-1 rounded-full text-sm border ${
-                      formData.hardNos.includes(no)
-                        ? 'bg-red-100 text-red-800 border-red-300'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
-                    }`}
-                  >
-                    {no}
                   </button>
                 ))}
               </div>
@@ -410,53 +338,29 @@ export default function CreatorOnboarding() {
 
       case 3:
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Social Media Links</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Connect your accounts to boost your Trust Score
-              </p>
-              <div className="space-y-3">
-                <Input
-                  placeholder="TikTok @username"
-                  value={formData.socials.tiktok || ''}
-                  onChange={(e) => updateFormData({
-                    socials: { ...formData.socials, tiktok: e.target.value }
-                  })}
-                />
-                <Input
-                  placeholder="Instagram @username"
-                  value={formData.socials.instagram || ''}
-                  onChange={(e) => updateFormData({
-                    socials: { ...formData.socials, instagram: e.target.value }
-                  })}
-                />
-                <Input
-                  placeholder="YouTube channel URL"
-                  value={formData.socials.youtube || ''}
-                  onChange={(e) => updateFormData({
-                    socials: { ...formData.socials, youtube: e.target.value }
-                  })}
-                />
-                <Input
-                  placeholder="LinkedIn profile URL (optional)"
-                  value={formData.socials.linkedin || ''}
-                  onChange={(e) => updateFormData({
-                    socials: { ...formData.socials, linkedin: e.target.value }
-                  })}
-                />
-              </div>
-              
-              <div className="mt-4 pt-4 border-t">
-                <label className="block text-sm font-medium mb-2">Following Count (Optional)</label>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Enter your follower/following counts to help brands discover you
-                </p>
-                <div className="space-y-3">
-                  {formData.socials.tiktok && (
+              <div className="space-y-4">
+                {/* TikTok */}
+                <div className="p-4 border-2 rounded-lg bg-white hover:border-orange-300 transition-all">
+                  <div className="flex items-center gap-3 mb-3">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                    </svg>
+                    <span className="font-semibold text-gray-900">TikTok</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      placeholder="@username"
+                      value={formData.socials.tiktok || ''}
+                      onChange={(e) => updateFormData({
+                        socials: { ...formData.socials, tiktok: e.target.value }
+                      })}
+                      className="h-11"
+                    />
                     <Input
                       type="number"
-                      placeholder="TikTok followers"
+                      placeholder="Followers"
                       value={formData.followingCount.tiktok || ''}
                       onChange={(e) => updateFormData({
                         followingCount: { 
@@ -464,12 +368,31 @@ export default function CreatorOnboarding() {
                           tiktok: e.target.value ? parseInt(e.target.value) : undefined 
                         }
                       })}
+                      className="h-11"
                     />
-                  )}
-                  {formData.socials.instagram && (
+                  </div>
+                </div>
+
+                {/* Instagram */}
+                <div className="p-4 border-2 rounded-lg bg-white hover:border-orange-300 transition-all">
+                  <div className="flex items-center gap-3 mb-3">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/>
+                    </svg>
+                    <span className="font-semibold text-gray-900">Instagram</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      placeholder="@username"
+                      value={formData.socials.instagram || ''}
+                      onChange={(e) => updateFormData({
+                        socials: { ...formData.socials, instagram: e.target.value }
+                      })}
+                      className="h-11"
+                    />
                     <Input
                       type="number"
-                      placeholder="Instagram followers"
+                      placeholder="Followers"
                       value={formData.followingCount.instagram || ''}
                       onChange={(e) => updateFormData({
                         followingCount: { 
@@ -477,55 +400,42 @@ export default function CreatorOnboarding() {
                           instagram: e.target.value ? parseInt(e.target.value) : undefined 
                         }
                       })}
+                      className="h-11"
                     />
-                  )}
-                  {formData.socials.youtube && (
-                    <Input
-                      type="number"
-                      placeholder="YouTube subscribers"
-                      value={formData.followingCount.youtube || ''}
-                      onChange={(e) => updateFormData({
-                        followingCount: { 
-                          ...formData.followingCount, 
-                          youtube: e.target.value ? parseInt(e.target.value) : undefined 
-                        }
-                      })}
-                    />
-                  )}
-                  {formData.socials.linkedin && (
-                    <Input
-                      type="number"
-                      placeholder="LinkedIn connections"
-                      value={formData.followingCount.linkedin || ''}
-                      onChange={(e) => updateFormData({
-                        followingCount: { 
-                          ...formData.followingCount, 
-                          linkedin: e.target.value ? parseInt(e.target.value) : undefined 
-                        }
-                      })}
-                    />
-                  )}
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Languages</label>
-              <div className="flex flex-wrap gap-2">
-                {COMMON_LANGUAGES.map(language => (
-                  <button
-                    key={language}
-                    type="button"
-                    onClick={() => toggleLanguage(language)}
-                    className={`px-3 py-1 rounded-full text-sm border ${
-                      formData.languages.includes(language)
-                        ? 'bg-orange-100 text-orange-800 border-orange-300'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
-                    }`}
-                  >
-                    {language}
-                  </button>
-                ))}
+                {/* X (Twitter) */}
+                <div className="p-4 border-2 rounded-lg bg-white hover:border-orange-300 transition-all">
+                  <div className="flex items-center gap-3 mb-3">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    <span className="font-semibold text-gray-900">X</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      placeholder="@username"
+                      value={formData.socials.x || ''}
+                      onChange={(e) => updateFormData({
+                        socials: { ...formData.socials, x: e.target.value }
+                      })}
+                      className="h-11"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Followers"
+                      value={formData.followingCount.x || ''}
+                      onChange={(e) => updateFormData({
+                        followingCount: { 
+                          ...formData.followingCount, 
+                          x: e.target.value ? parseInt(e.target.value) : undefined 
+                        }
+                      })}
+                      className="h-11"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -533,70 +443,15 @@ export default function CreatorOnboarding() {
 
       case 4:
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Portfolio Links (Optional)</label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Share links to your work (YouTube, Instagram, TikTok, etc.)
+          <div className="text-center py-8">
+            <div className="mb-6">
+              <div className="text-6xl mb-4">🎉</div>
+              <h3 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+                You're All Set!
+              </h3>
+              <p className="text-gray-600 text-lg">
+                Welcome to Giglet, {formData.username}
               </p>
-              {formData.portfolioLinks.map((link, index) => (
-                <div key={index} className="flex gap-2 mb-2">
-                  <Input
-                    placeholder="https://..."
-                    value={link}
-                    onChange={(e) => {
-                      const newLinks = [...formData.portfolioLinks];
-                      newLinks[index] = e.target.value;
-                      updateFormData({ portfolioLinks: newLinks });
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const newLinks = formData.portfolioLinks.filter((_, i) => i !== index);
-                      updateFormData({ portfolioLinks: newLinks });
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => updateFormData({
-                  portfolioLinks: [...formData.portfolioLinks, '']
-                })}
-              >
-                Add Link
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-4">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold mb-2">🚗 Ready to Dash!</h3>
-              <p className="text-muted-foreground mb-4">
-                Your profile is complete! Go online to start receiving real-time gig offers.
-              </p>
-              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                <p className="text-sm text-orange-800 mb-3">
-                  ✅ Profile created successfully<br/>
-                  ✅ Trust Score calculated<br/>
-                  ✅ Ready to go online as a Gigleter<br/>
-                  💰 Rates managed by admin for fair pay<br/>
-                  📱 Push notifications enabled
-                </p>
-                <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
-                  <p className="text-sm text-green-800 font-medium">
-                    💡 Pro tip: Add Giglet to your home screen for the best experience!
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         );
@@ -611,34 +466,27 @@ export default function CreatorOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
       <div className="max-w-2xl mx-auto px-4">
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">Creator Setup</h1>
-            <span className="text-sm text-muted-foreground">
-              Step {currentStep} of 5
+            <div className="inline-block px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
+              ✨ Creator Setup
+            </div>
+            <span className="text-sm font-medium text-gray-500">
+              {currentStep} of 4
             </span>
           </div>
-            <div className="w-full bg-muted rounded-full h-2">
+          <div className="w-full bg-gray-200 rounded-full h-3">
             <div
-              className="bg-primary h-2 rounded-full transition-all"
-              style={{ width: `${(currentStep / 5) * 100}%` }}
+              className="bg-gradient-to-r from-orange-600 to-red-600 h-3 rounded-full transition-all shadow-md"
+              style={{ width: `${(currentStep / 4) * 100}%` }}
             />
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {currentStep === 1 && "Tell us about yourself"}
-              {currentStep === 2 && "Interests & Experience"}
-              {currentStep === 3 && "Socials & Languages"}
-              {currentStep === 4 && "Portfolio"}
-              {currentStep === 5 && "Profile Complete"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="shadow-xl border-2">
+          <CardContent className="p-6 pt-6">
             {renderStep()}
           </CardContent>
         </Card>
@@ -648,14 +496,27 @@ export default function CreatorOnboarding() {
             variant="outline"
             onClick={handleBack}
             disabled={currentStep === 1}
+            size="lg"
+            className="px-8 h-12"
           >
-            Back
+            ← Back
           </Button>
-          {currentStep < 5 ? (
-            <Button onClick={handleNext}>Next</Button>
+          {currentStep < 4 ? (
+            <Button 
+              onClick={handleNext} 
+              size="lg"
+              className="px-8 h-12 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+            >
+              Next →
+            </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={isLoading}>
-              {isLoading ? 'Creating Profile...' : 'Complete Setup'}
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isLoading}
+              size="lg"
+              className="px-8 h-12 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+            >
+              {isLoading ? 'Creating Profile...' : '🚀 Complete Setup'}
             </Button>
           )}
         </div>

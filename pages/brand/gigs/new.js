@@ -992,67 +992,65 @@ export default function NewGig() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold">Create a New Gig</h1>
-              <p className="text-muted-foreground">
-                {router.query.reuse ? 'Reusing an existing gig - please enter a new title' : 'Find creators for your UGC needs'}
-              </p>
+      <div className="h-full flex flex-col -mx-4 -my-8">
+        {/* Sticky Header */}
+        <div className="flex-shrink-0 bg-white border-b px-4 pt-8 pb-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold">Create a New Gig</h1>
+              </div>
+              <Link href="/brand/dashboard">
+                <Button variant="outline">Cancel</Button>
+              </Link>
             </div>
-            <Link href="/brand/dashboard">
-              <Button variant="outline">Cancel</Button>
-            </Link>
-          </div>
 
-          {/* Progress */}
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-            <div
-              className="bg-orange-600 h-2 rounded-full transition-all"
-              style={{ width: `${(currentStep / 3) * 100}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span className={currentStep >= 1 ? 'text-orange-600 font-medium' : ''}>Gig Details</span>
-            <span className={currentStep >= 2 ? 'text-orange-600 font-medium' : ''}>Requirements</span>
-            <span className={currentStep >= 3 ? 'text-orange-600 font-medium' : ''}>Brief</span>
+            {/* Progress */}
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+              <div
+                className="bg-orange-600 h-2 rounded-full transition-all"
+                style={{ width: `${(currentStep / 3) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span className={currentStep >= 1 ? 'text-orange-600 font-medium' : ''}>Gig Details</span>
+              <span className={currentStep >= 2 ? 'text-orange-600 font-medium' : ''}>Requirements</span>
+              <span className={currentStep >= 3 ? 'text-orange-600 font-medium' : ''}>Brief</span>
+            </div>
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {currentStep === 1 && "Gig Details"}
-              {currentStep === 2 && "Requirements & Budget"}
-              {currentStep === 3 && "Creative Brief"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {renderStep()}
-          </CardContent>
-        </Card>
+        {/* Scrollable Form Content */}
+        <div className="flex-1 overflow-y-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <Card>
+              <CardContent className="pt-6">
+                {renderStep()}
+              </CardContent>
+            </Card>
 
-        <div className="flex justify-between mt-8">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 1}
-          >
-            Back
-          </Button>
+            <div className="flex justify-between mt-8">
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={currentStep === 1}
+              >
+                Back
+              </Button>
 
-          {currentStep < 3 ? (
-            <Button onClick={handleNext}>Next</Button>
-          ) : (
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
-              {isSubmitting ? 'Creating Gig...' : 'Create Gig'}
-            </Button>
-          )}
+              {currentStep < 3 ? (
+                <Button onClick={handleNext}>Next</Button>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  {isSubmitting ? 'Creating Gig...' : 'Create Gig'}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </Layout>

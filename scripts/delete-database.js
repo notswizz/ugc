@@ -99,10 +99,13 @@ async function deleteAllData() {
     'notifications',
     'balanceTransactions',
     'usageRightsTemplates',
-    'gigs',
     'contracts',
     'squads',
     'squadInvitations',
+    'threads',
+    'messages',
+    'ratings',
+    'disputes',
   ];
 
   console.log('Collections to delete:');

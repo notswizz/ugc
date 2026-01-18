@@ -91,7 +91,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
 
       const gigsWithDetails = await Promise.all(
         submissionDocs.map(async (submission) => {
-          const gigDoc = await getDoc(doc(db, 'gigs', submission.jobId)); // Database still uses jobId field
+          const gigDoc = await getDoc(doc(db, 'gigs', submission.gigId));
           if (!gigDoc.exists()) return null;
 
           const gigData = gigDoc.data();

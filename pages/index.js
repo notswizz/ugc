@@ -48,62 +48,69 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Giglet</title>
-        <meta name="description" content="Be a Gigleter - Get real-time gig offers and get paid fast" />
+        <title>Giglet - DoorDash for UGC</title>
+        <meta name="description" content="Get real-time UGC gigs. Create awesome content. Get paid fast. Join the gig economy for creators." />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
         <meta name="theme-color" content="#ea580c" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="min-h-screen bg-white flex justify-center">
-        <div className="w-full max-w-[428px] bg-white min-h-screen shadow-xl md:shadow-2xl">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 flex justify-center">
+        <div className="w-full max-w-[428px] bg-white min-h-screen shadow-2xl">
           {/* Header */}
-          <header className="border-b bg-white sticky top-0 z-50">
+          <header className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
             <div className="px-4">
               <div className="flex justify-between items-center h-16">
                 <div className="flex items-center gap-2">
                   <img 
                     src="/logo1.png" 
                     alt="Giglet Logo" 
-                    className="h-8 w-auto"
+                    className="h-9 w-auto"
                   />
-                  <span className="text-lg font-semibold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">
+                  <span className="text-xl font-bold bg-gradient-to-r from-red-600 via-orange-500 to-orange-600 bg-clip-text text-transparent">
                     Giglet
                   </span>
                 </div>
                 <div className="flex gap-2">
                   <Link href="/auth/login">
-                    <Button variant="ghost" size="sm" className="h-9 px-3 text-sm">Sign In</Button>
+                    <Button variant="ghost" size="sm" className="h-9 px-4 text-sm font-medium hover:bg-orange-50">Sign In</Button>
                   </Link>
                 </div>
               </div>
             </div>
           </header>
 
-          {/* Hero Section - Compact */}
-          <section className="px-4 pt-12 pb-8">
-            <div className="text-center">
-              <div className="mb-6 flex justify-center">
+          {/* Hero Section */}
+          <section className="px-6 pt-16 pb-12 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-orange-100/30 to-transparent pointer-events-none" />
+            <div className="text-center relative z-10">
+              <div className="mb-8 flex justify-center">
                 <img 
                   src="/logotext.png" 
                   alt="Giglet" 
-                  className="h-16 w-auto"
+                  className="h-20 w-auto drop-shadow-lg"
                 />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                DoorDash for UGC
+              <div className="inline-block px-4 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold mb-4">
+                🚀 The Future of UGC
+              </div>
+              <h1 className="text-4xl font-black text-gray-900 mb-4 leading-tight">
+                DoorDash for<br/>
+                <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                  Content Creators
+                </span>
               </h1>
-              <p className="text-sm text-gray-600 mb-8">
-                Get gigs. Create content. Get paid fast.
+              <p className="text-lg text-gray-600 mb-10 leading-relaxed">
+                Get gigs instantly. Create amazing content.<br/>Get paid instantly. 💰
               </p>
               <div className="flex flex-col gap-3">
                 <Link href="/auth/signup">
-                  <Button size="lg" className="w-full bg-orange-600 hover:bg-orange-700 h-12">
-                    Get Started
+                  <Button size="lg" className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 h-14 text-base font-semibold shadow-lg shadow-orange-500/30 transition-all hover:shadow-xl hover:shadow-orange-500/40">
+                    🎬 Start Creating
                   </Button>
                 </Link>
                 <Link href="/auth/login">
-                  <Button size="lg" variant="outline" className="w-full h-12">
+                  <Button size="lg" variant="outline" className="w-full h-14 text-base font-semibold border-2 hover:bg-orange-50 hover:border-orange-300">
                     Sign In
                   </Button>
                 </Link>
@@ -111,49 +118,119 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Features - Compact Grid */}
-          <section className="px-4 py-8">
-            <div className="grid grid-cols-2 gap-3">
-              <Card className="p-4 text-center">
-                <div className="text-3xl mb-2">📱</div>
-                <h3 className="text-sm font-semibold mb-1">Real-Time</h3>
-                <p className="text-xs text-gray-600">Instant notifications</p>
+          {/* Stats Bar */}
+          <section className="px-6 py-6 bg-gradient-to-r from-orange-600 to-red-600 text-white">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold mb-1">⚡</div>
+                <div className="text-xs opacity-90">Instant Match</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold mb-1">💰</div>
+                <div className="text-xs opacity-90">Instant Pay</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold mb-1">🔥</div>
+                <div className="text-xs opacity-90">Hot Gigs</div>
+              </div>
+            </div>
+          </section>
+
+          {/* Features Grid */}
+          <section className="px-6 py-12">
+            <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
+              Why Creators Love Giglet
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="p-5 text-center border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-default">
+                <div className="text-4xl mb-3">📱</div>
+                <h3 className="text-base font-bold mb-2">Real-Time Gigs</h3>
+                <p className="text-xs text-gray-600">Get notified instantly when brands post gigs you're perfect for</p>
               </Card>
-              <Card className="p-4 text-center">
-                <div className="text-3xl mb-2">⚡</div>
-                <h3 className="text-sm font-semibold mb-1">Fast Pay</h3>
-                <p className="text-xs text-gray-600">Paid in 24hrs</p>
+              <Card className="p-5 text-center border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-default">
+                <div className="text-4xl mb-3">💰</div>
+                <h3 className="text-base font-bold mb-2">Instant Payments</h3>
+                <p className="text-xs text-gray-600">Get paid instantly upon approval. No waiting!</p>
               </Card>
-              <Card className="p-4 text-center">
-                <div className="text-3xl mb-2">🎯</div>
-                <h3 className="text-sm font-semibold mb-1">Smart Match</h3>
-                <p className="text-xs text-gray-600">Relevant offers</p>
+              <Card className="p-5 text-center border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-default">
+                <div className="text-4xl mb-3">🎯</div>
+                <h3 className="text-base font-bold mb-2">Smart Matching</h3>
+                <p className="text-xs text-gray-600">Our AI matches you with gigs you'll actually love</p>
               </Card>
-              <Card className="p-4 text-center">
-                <div className="text-3xl mb-2">🚗</div>
-                <h3 className="text-sm font-semibold mb-1">Go Online</h3>
-                <p className="text-xs text-gray-600">Accept anytime</p>
+              <Card className="p-5 text-center border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-default">
+                <div className="text-4xl mb-3">🚀</div>
+                <h3 className="text-base font-bold mb-2">Go Online</h3>
+                <p className="text-xs text-gray-600">Accept gigs anytime, anywhere. Work on your schedule</p>
               </Card>
             </div>
           </section>
 
-          {/* CTA - Compact */}
-          <section className="px-4 py-8 bg-orange-600 text-white mx-4 rounded-lg mb-8">
+          {/* How It Works */}
+          <section className="px-6 py-12 bg-gradient-to-b from-orange-50 to-white">
+            <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
+              How It Works
+            </h2>
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+                  1
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-1">Browse Hot Gigs</h3>
+                  <p className="text-sm text-gray-600">See real-time gig offers from brands looking for creators like you</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+                  2
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-1">Accept & Create</h3>
+                  <p className="text-sm text-gray-600">Tap to accept gigs you love. Create amazing content on your terms</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+                  3
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-1">Get Paid Instantly</h3>
+                  <p className="text-sm text-gray-600">Submit your content and get paid instantly. Cha-ching! 💸</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* CTA Section */}
+          <section className="px-6 py-12 bg-gradient-to-br from-orange-600 via-red-600 to-orange-700 text-white mx-6 rounded-2xl mb-12 shadow-2xl">
             <div className="text-center">
-              <h2 className="text-xl font-bold mb-2">Ready to Dash?</h2>
-              <p className="text-sm text-orange-100 mb-4">Start earning from UGC gigs</p>
+              <div className="text-5xl mb-4">🎉</div>
+              <h2 className="text-3xl font-black mb-3">Ready to Start?</h2>
+              <p className="text-lg text-orange-100 mb-6 leading-relaxed">
+                Join thousands of creators earning from<br/>UGC gigs on their own schedule
+              </p>
               <Link href="/auth/signup">
-                <Button size="lg" className="w-full bg-white text-orange-600 hover:bg-orange-50 h-12">
-                  Get Started
+                <Button size="lg" className="w-full bg-white text-orange-600 hover:bg-orange-50 h-14 text-base font-bold shadow-xl transition-all hover:scale-105">
+                  🚀 Get Started for Free
                 </Button>
               </Link>
+              <p className="text-xs text-orange-200 mt-4">No credit card required • Free forever</p>
             </div>
           </section>
 
-          {/* Footer - Minimal */}
-          <footer className="px-4 py-6 border-t">
+          {/* Footer */}
+          <footer className="px-6 py-8 border-t bg-gray-50">
             <div className="text-center">
-              <p className="text-xs text-gray-500">© 2025 Giglet</p>
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <img 
+                  src="/logo1.png" 
+                  alt="Giglet Logo" 
+                  className="h-6 w-auto"
+                />
+                <span className="font-bold text-gray-900">Giglet</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">The DoorDash of UGC</p>
+              <p className="text-xs text-gray-400">© 2025 Giglet. All rights reserved.</p>
             </div>
           </footer>
         </div>

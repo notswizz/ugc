@@ -82,75 +82,76 @@ export default function RoleSelection() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-red-50 px-4">
       <div className="w-full max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Welcome to UGC Dock!</h1>
-          <p className="text-muted-foreground">
-            Tell us about yourself so we can personalize your experience
-          </p>
+        <div className="text-center mb-12">
+          <div className="inline-block px-4 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold mb-4">
+            ✨ Welcome to Giglet
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Creator Card */}
           <Card
-            className={`cursor-pointer transition-all ${
-              selectedRole === 'creator' ? 'ring-2 ring-primary' : ''
+            className={`cursor-pointer transition-all hover:shadow-2xl border-2 ${
+              selectedRole === 'creator' 
+                ? 'ring-4 ring-orange-500 border-orange-500 shadow-xl scale-105' 
+                : 'border-gray-200 hover:border-orange-300'
             }`}
             onClick={() => setSelectedRole('creator')}
           >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🎨 Creator
-              </CardTitle>
-              <CardDescription>
-                Create amazing content for brands and get paid
+            <CardHeader className="text-center py-8">
+              <div className="text-6xl mb-4">🎨</div>
+              <CardTitle className="text-2xl font-bold">Creator</CardTitle>
+              <CardDescription className="text-base mt-2">
+                Make content. Get paid instantly.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                <li>• Showcase your portfolio</li>
-                <li>• Get discovered by brands</li>
-                <li>• Set your own rates</li>
-                <li>• Receive payments securely</li>
-              </ul>
-            </CardContent>
           </Card>
+
+          {/* Continue Button - Mobile Only (between cards) */}
+          {selectedRole && (
+            <div className="md:hidden text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <Button
+                onClick={() => handleRoleSelection(selectedRole)}
+                disabled={isLoading}
+                size="lg"
+                className="w-full px-12 h-14 text-base font-semibold bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-lg hover:shadow-xl transition-all"
+              >
+                {isLoading ? 'Setting up...' : `Continue as ${selectedRole === 'creator' ? 'Creator' : 'Brand'} →`}
+              </Button>
+            </div>
+          )}
 
           {/* Brand Card */}
           <Card
-            className={`cursor-pointer transition-all ${
-              selectedRole === 'brand' ? 'ring-2 ring-primary' : ''
+            className={`cursor-pointer transition-all hover:shadow-2xl border-2 ${
+              selectedRole === 'brand' 
+                ? 'ring-4 ring-orange-500 border-orange-500 shadow-xl scale-105' 
+                : 'border-gray-200 hover:border-orange-300'
             }`}
             onClick={() => setSelectedRole('brand')}
           >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🏢 Brand
-              </CardTitle>
-              <CardDescription>
-                Find creators and run successful UGC gigs
+            <CardHeader className="text-center py-8">
+              <div className="text-6xl mb-4">🏢</div>
+              <CardTitle className="text-2xl font-bold">Brand</CardTitle>
+              <CardDescription className="text-base mt-2">
+                Find creators. Launch gigs. Scale fast.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                <li>• Post gigs and briefs</li>
-                <li>• Discover talented creators</li>
-                <li>• Manage contracts and payments</li>
-                <li>• Review and approve content</li>
-              </ul>
-            </CardContent>
           </Card>
         </div>
 
+        {/* Continue Button - Desktop Only (below cards) */}
         {selectedRole && (
-          <div className="text-center mt-8">
+          <div className="hidden md:block text-center mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Button
               onClick={() => handleRoleSelection(selectedRole)}
               disabled={isLoading}
               size="lg"
+              className="px-12 h-14 text-base font-semibold bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-lg hover:shadow-xl transition-all"
             >
-              {isLoading ? 'Setting up...' : `Continue as ${selectedRole === 'creator' ? 'Creator' : 'Brand'}`}
+              {isLoading ? 'Setting up...' : `Continue as ${selectedRole === 'creator' ? 'Creator' : 'Brand'} →`}
             </Button>
           </div>
         )}

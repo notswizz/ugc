@@ -220,17 +220,19 @@ export default function BrandOnboarding() {
             
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-900">Industry *</label>
-              <select
-                className="w-full h-12 px-4 border rounded-lg text-base bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+              <Input
+                list="industries"
+                placeholder="Search or type your industry"
                 value={formData.industry}
                 onChange={(e) => updateFormData({ industry: e.target.value })}
                 required
-              >
-                <option value="">Select your industry</option>
+                className="h-12 text-base"
+              />
+              <datalist id="industries">
                 {INDUSTRIES.map(industry => (
-                  <option key={industry} value={industry}>{industry}</option>
+                  <option key={industry} value={industry} />
                 ))}
-              </select>
+              </datalist>
             </div>
           </div>
         );
@@ -265,7 +267,6 @@ export default function BrandOnboarding() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome to Giglet</h1>
-          <p className="text-gray-600">Let's set up your company profile</p>
         </div>
         
         {/* Progress */}
@@ -290,25 +291,9 @@ export default function BrandOnboarding() {
               </div>
             ))}
           </div>
-          <div className="text-center">
-            <span className="text-sm font-medium text-gray-600">
-              {currentStep === 1 && "Company Details"}
-              {currentStep === 2 && "Review & Complete"}
-            </span>
-          </div>
         </div>
 
         <Card className="shadow-xl border-0">
-          <CardHeader className="border-b bg-gradient-to-r from-orange-50 to-red-50">
-            <CardTitle className="text-2xl text-gray-900">
-              {currentStep === 1 && "Tell us about your company"}
-              {currentStep === 2 && "Ready to launch!"}
-            </CardTitle>
-            <p className="text-sm text-gray-600 mt-1">
-              {currentStep === 1 && "Basic information about your brand"}
-              {currentStep === 2 && "Review your setup and get started"}
-            </p>
-          </CardHeader>
           <CardContent className="p-8">
             {renderStep()}
           </CardContent>
