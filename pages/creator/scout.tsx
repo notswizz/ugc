@@ -293,8 +293,6 @@ export default function ScoutPage() {
         return (a.username || '').localeCompare(b.username || '');
       case 'location':
         return (a.location || '').localeCompare(b.location || '');
-      case 'trustScore':
-        return (b.trustScore || 0) - (a.trustScore || 0);
       case 'followingCount':
         const aTotal = Object.values(a.followingCount || {}).reduce((sum, count) => sum + (count || 0), 0);
         const bTotal = Object.values(b.followingCount || {}).reduce((sum, count) => sum + (count || 0), 0);
@@ -463,7 +461,6 @@ export default function ScoutPage() {
               >
                 <option value="username">Username</option>
                 <option value="location">Location</option>
-                <option value="trustScore">Trust Score</option>
                 <option value="followingCount">Following Count</option>
                 <option value="submissions">Submissions</option>
               </select>
@@ -511,11 +508,6 @@ export default function ScoutPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className="text-base font-bold text-gray-900">@{creator.username}</h3>
-                            {creator.trustScore !== undefined && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                                Trust: {creator.trustScore}
-                              </span>
-                            )}
                           </div>
                           
                           {creator.bio && (

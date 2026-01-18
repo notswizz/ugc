@@ -193,34 +193,6 @@ export default function CreatorProfile() {
               </Card>
             )}
 
-            {/* Trust Score */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Trust Score</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span>Score</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500"
-                          style={{ width: `${creator.trustScore || 0}%` }}
-                        />
-                      </div>
-                      <span className="font-medium">{creator.trustScore || 0}/100</span>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {creator.trustScore >= 70 ? '✅ High trust - Can accept all gigs' :
-                     creator.trustScore >= 50 ? '⚠️ Medium trust - Limited to standard gigs' :
-                     '❌ Low trust - Building reputation'}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Languages */}
             <Card>
               <CardHeader>

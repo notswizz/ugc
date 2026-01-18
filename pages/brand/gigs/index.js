@@ -81,51 +81,79 @@ export default function BrandGigs() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto py-8">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Gigs</h1>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">My Gigs</h1>
+          <Link href="/brand/gigs/new">
+            <Button size="sm" className="shadow-brand">+ New</Button>
+          </Link>
         </div>
 
         {loading ? (
-          <LoadingSpinner text="Loading gigs..." />
+          <LoadingSpinner text="Loading..." />
         ) : gigs.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {gigs.map((gig) => (
-              <Card key={gig.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
+              <Card key={gig.id} className="group hover:shadow-lg transition-all duration-200 border-0 overflow-hidden">
+                {/* Status bar */}
+                <div className={`h-1 ${
+                  gig.status === 'open' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                  'bg-gradient-to-r from-gray-400 to-gray-500'
+                }`} />
+                
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Link href={`/brand/gigs/${gig.id}`} className="font-semibold text-lg hover:text-orange-600 transition-colors">
-                          {gig.title}
-                        </Link>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          gig.status === 'open' ? 'bg-green-100 text-green-800' :
-                          gig.status === 'closed' ? 'bg-gray-100 text-gray-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {gig.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        ${gig.basePayout || 0} • Posted {gig.createdAt?.toLocaleDateString() || 'Recently'}
-                      </p>
-                      {/* Submission Stats */}
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>📊 {gig.totalSubmissions || 0} submissions</span>
-                        <span className="text-green-600">✓ {gig.approvedSubmissions || 0} approved</span>
+                    {/* Left: Info */}
+                    <div className="flex-1 min-w-0">
+                      <Link href={`/brand/gigs/${gig.id}`} className="block group/link">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-bold text-lg text-gray-900 group-hover/link:text-brand-600 transition-colors line-clamp-1">
+                            {gig.title}
+                          </h3>
+                          <span className="text-xs text-gray-400 flex-shrink-0">
+                            {gig.createdAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      </Link>
+                      
+                      {/* Stats Row */}
+                      <div className="flex items-center gap-3 text-sm">
+                        {/* Payout */}
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 rounded-lg border border-green-200">
+                          <span className="text-green-700 font-bold">${gig.basePayout || 0}</span>
+                        </div>
+                        
+                        {/* Submissions */}
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 rounded-lg border border-blue-200">
+                          <span className="text-blue-600">📊</span>
+                          <span className="font-semibold text-blue-700">{gig.totalSubmissions || 0}</span>
+                        </div>
+                        
+                        {/* Approved */}
+                        {gig.approvedSubmissions > 0 && (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 rounded-lg border border-green-200">
+                            <span className="text-green-600">✓</span>
+                            <span className="font-semibold text-green-700">{gig.approvedSubmissions}</span>
+                          </div>
+                        )}
+                        
+                        {/* Pending */}
                         {gig.pendingSubmissions > 0 && (
-                          <span className="text-orange-600">⏳ {gig.pendingSubmissions} pending</span>
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 rounded-lg border border-orange-200">
+                            <span className="text-orange-600">⏳</span>
+                            <span className="font-semibold text-orange-700">{gig.pendingSubmissions}</span>
+                          </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex-shrink-0 flex gap-2">
+
+                    {/* Right: Actions */}
+                    <div className="flex-shrink-0 flex items-center gap-2">
                       <Link href={`/brand/gigs/new?reuse=${gig.id}`}>
-                        <Button variant="outline" size="sm">Reuse</Button>
-                      </Link>
-                      <Link href={`/brand/gigs/${gig.id}`}>
-                        <Button variant="outline" size="sm">View</Button>
+                        <Button variant="outline" size="sm" className="border-brand-300 text-brand-700 hover:bg-brand-50 font-semibold">
+                          ♻️
+                        </Button>
                       </Link>
                     </div>
                   </div>
@@ -134,11 +162,12 @@ export default function BrandGigs() {
             ))}
           </div>
         ) : (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground mb-4">No gigs posted yet.</p>
+          <Card className="border-2 border-dashed border-gray-300">
+            <CardContent className="py-16 text-center">
+              <div className="text-6xl mb-4">📝</div>
+              <p className="text-gray-600 mb-6 font-medium">No gigs yet</p>
               <Link href="/brand/gigs/new">
-                <Button className="bg-orange-600 hover:bg-orange-700">Create Your First Gig</Button>
+                <Button size="lg">Create First Gig</Button>
               </Link>
             </CardContent>
           </Card>

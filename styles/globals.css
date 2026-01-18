@@ -36,3 +36,43 @@ select {
 * {
   touch-action: manipulation;
 }
+
+/* Custom Range Slider Styling */
+input[type="range"].slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"].slider-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+  border: 3px solid white;
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider-thumb::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.6);
+}
+
+input[type="range"].slider-thumb::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+  border: 3px solid white;
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider-thumb::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.6);
+}

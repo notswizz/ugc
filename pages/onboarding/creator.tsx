@@ -27,6 +27,7 @@ interface CreatorFormData {
     instagram?: number;
     x?: number;
   };
+  communityCode: string; // Optional community code
 }
 
 const COMMON_LANGUAGES = [
@@ -67,9 +68,13 @@ export default function CreatorOnboarding() {
     portfolioLinks: [],
     socials: {},
     followingCount: {},
+    communityCode: '',
   });
   const [usernameError, setUsernameError] = useState<string>('');
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [communityError, setCommunityError] = useState<string>('');
+  const [checkingCommunity, setCheckingCommunity] = useState(false);
+  const [communityName, setCommunityName] = useState<string>('');
 
   const checkUsernameAvailability = async (username: string): Promise<boolean> => {
     if (!username.trim()) return false;
@@ -131,6 +136,53 @@ export default function CreatorOnboarding() {
     }
   };
 
+  const checkCommunityCode = async (code: string): Promise<{ valid: boolean; name?: string; communityId?: string }> => {
+    if (!code.trim()) return { valid: false };
+    
+    try {
+      const communityCodesQuery = query(
+        collection(db, 'communityCodes'),
+        where('code', '==', code.trim().toUpperCase())
+      );
+      const snapshot = await getDocs(communityCodesQuery);
+      
+      if (snapshot.empty) {
+        return { valid: false };
+      }
+      
+      const communityCodeData = snapshot.docs[0].data();
+      return { 
+        valid: true, 
+        name: communityCodeData.communityName,
+        communityId: communityCodeData.communityId
+      };
+    } catch (error) {
+      console.error('Error checking community code:', error);
+      return { valid: false };
+    }
+  };
+
+  const handleCommunityCodeChange = async (value: string) => {
+    setFormData(prev => ({ ...prev, communityCode: value }));
+    setCommunityError('');
+    setCommunityName('');
+    
+    const code = value.trim().toUpperCase();
+    if (!code || code.length < 3) {
+      return;
+    }
+    
+    setCheckingCommunity(true);
+    const result = await checkCommunityCode(code);
+    setCheckingCommunity(false);
+    
+    if (!result.valid) {
+      setCommunityError('Invalid community code');
+    } else {
+      setCommunityName(result.name || 'Community');
+    }
+  };
+
   const handleNext = () => {
     // Validate username on step 1
     if (currentStep === 1) {
@@ -144,7 +196,7 @@ export default function CreatorOnboarding() {
       }
     }
     
-    if (currentStep < 4) {
+    if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -179,6 +231,15 @@ export default function CreatorOnboarding() {
 
     setIsLoading(true);
     try {
+      // Validate and process community code if provided
+      let communityId: string | null = null;
+      if (formData.communityCode.trim()) {
+        const communityResult = await checkCommunityCode(formData.communityCode);
+        if (communityResult.valid && communityResult.communityId) {
+          communityId = communityResult.communityId;
+        }
+      }
+
       // Calculate initial Trust Score
       const accountAge = 0; // New account
       const trustScore = 20 + (formData.socials.tiktok ? 7 : 0) + 
@@ -198,6 +259,7 @@ export default function CreatorOnboarding() {
         followingCount: formData.followingCount,
         trustScore,
         rep: 0, // Initialize rep at 0
+        communityId: communityId || undefined, // Add community ID if provided
         rates: {}, // Rates managed by admin
         turnaroundDays: 7, // Default value
         portfolioLinks: formData.portfolioLinks,
@@ -444,6 +506,63 @@ export default function CreatorOnboarding() {
 
       case 4:
         return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <div className="text-5xl mb-3">🏫</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Join a Community</h3>
+              <p className="text-sm text-gray-600">
+                Enter a community code to join your school or group and compete for prizes!
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-3 text-gray-900">Community Code (Optional)</label>
+              <Input
+                type="text"
+                value={formData.communityCode}
+                onChange={(e) => handleCommunityCodeChange(e.target.value)}
+                placeholder="Enter code (e.g., HARVARD2024)"
+                className={`h-12 text-lg uppercase ${communityError ? 'border-red-500' : ''}`}
+              />
+              {checkingCommunity && (
+                <p className="text-xs text-gray-500 mt-2">⏳ Validating code...</p>
+              )}
+              {communityError && (
+                <p className="text-xs text-red-600 mt-2">❌ {communityError}</p>
+              )}
+              {communityName && !communityError && !checkingCommunity && (
+                <p className="text-xs text-green-600 mt-2 font-medium">✓ Joining {communityName}!</p>
+              )}
+            </div>
+
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex gap-3">
+                <span className="text-blue-600 text-xl">ℹ️</span>
+                <div className="flex-1">
+                  <p className="text-sm text-blue-900 font-semibold mb-1">Why join a community?</p>
+                  <ul className="text-xs text-blue-800 space-y-1">
+                    <li>• Compete with peers for prizes and recognition</li>
+                    <li>• Track your ranking on community leaderboards</li>
+                    <li>• Win cash rewards and bonus points</li>
+                    <li>• Can only join once - choose wisely!</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={handleNext}
+                className="text-sm text-gray-500 hover:text-gray-700 underline"
+              >
+                Skip for now →
+              </button>
+            </div>
+          </div>
+        );
+
+      case 5:
+        return (
           <div className="text-center py-8">
             <div className="mb-6">
               <div className="text-6xl mb-4">🎉</div>
@@ -453,6 +572,11 @@ export default function CreatorOnboarding() {
               <p className="text-gray-600 text-lg">
                 Welcome to Giglet, {formData.username}
               </p>
+              {communityName && (
+                <p className="text-sm text-green-600 font-semibold mt-2">
+                  🏆 Community: {communityName}
+                </p>
+              )}
             </div>
           </div>
         );
@@ -475,13 +599,13 @@ export default function CreatorOnboarding() {
               ✨ Creator Setup
             </div>
             <span className="text-sm font-medium text-gray-500">
-              {currentStep} of 4
+              {currentStep} of 5
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div
               className="bg-gradient-to-r from-orange-600 to-red-600 h-3 rounded-full transition-all shadow-md"
-              style={{ width: `${(currentStep / 4) * 100}%` }}
+              style={{ width: `${(currentStep / 5) * 100}%` }}
             />
           </div>
         </div>
@@ -502,7 +626,7 @@ export default function CreatorOnboarding() {
           >
             ← Back
           </Button>
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <Button 
               onClick={handleNext} 
               size="lg"

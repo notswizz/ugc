@@ -81,6 +81,9 @@ export interface Creator {
   // Rep (reputation points)
   rep: number;
   
+  // Community (school/group)
+  communityId?: string; // Assigned community ID (cannot be changed)
+  
   rates: {
     perGigSuggested?: number;
   };

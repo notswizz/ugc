@@ -19,12 +19,44 @@ export default function NewGig() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingReuse, setIsLoadingReuse] = useState(false);
+  const [availableCreatorsCount, setAvailableCreatorsCount] = useState(null);
+  const [loadingCreatorCount, setLoadingCreatorCount] = useState(false);
 
   useEffect(() => {
     if (appUser && appUser.role !== 'brand') {
       router.push('/brand/dashboard');
+    } else {
+      // Initial fetch with score 0 to show total creators
+      fetchAvailableCreators(0);
     }
   }, [appUser, router]);
+
+  // Fetch available creators count based on trust score
+  const fetchAvailableCreators = async (minTrustScore) => {
+    if (!minTrustScore && minTrustScore !== 0) {
+      setAvailableCreatorsCount(null);
+      return;
+    }
+
+    setLoadingCreatorCount(true);
+    try {
+      const creatorsQuery = query(collection(db, 'creators'));
+      const creatorsSnapshot = await getDocs(creatorsQuery);
+      
+      const count = creatorsSnapshot.docs.filter(doc => {
+        const creator = doc.data();
+        const trustScore = creator.trustScore || 0;
+        return trustScore >= minTrustScore;
+      }).length;
+
+      setAvailableCreatorsCount(count);
+    } catch (error) {
+      console.error('Error fetching creator count:', error);
+      setAvailableCreatorsCount(null);
+    } finally {
+      setLoadingCreatorCount(false);
+    }
+  };
 
   // Load existing gig data if reuse parameter is present
   useEffect(() => {
@@ -176,6 +208,16 @@ export default function NewGig() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Debounced trust score update - fetch available creators when trust score changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const score = gigData.trustScoreMin ? parseInt(gigData.trustScoreMin) : 0;
+      fetchAvailableCreators(score);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [gigData.trustScoreMin]);
 
   const updateGigData = (updates) => {
     setGigData(prev => ({ ...prev, ...updates }));
@@ -828,17 +870,53 @@ export default function NewGig() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Trust Score Minimum</label>
-              <Input
-                type="number"
-                placeholder="30"
-                value={gigData.trustScoreMin}
-                onChange={(e) => updateGigData({ trustScoreMin: e.target.value })}
-                min="0"
-                max="100"
-                className="h-12 text-lg"
-              />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium">Trust Score Minimum</label>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-brand-600">{gigData.trustScoreMin || 0}</span>
+                  <span className="text-sm text-gray-500 ml-1">/ 100</span>
+                </div>
+              </div>
+              
+              {/* Slider */}
+              <div className="relative pt-1">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={gigData.trustScoreMin || 0}
+                  onChange={(e) => updateGigData({ trustScoreMin: e.target.value })}
+                  className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb"
+                  style={{
+                    background: `linear-gradient(to right, #f97316 0%, #f97316 ${gigData.trustScoreMin || 0}%, #e5e7eb ${gigData.trustScoreMin || 0}%, #e5e7eb 100%)`
+                  }}
+                />
+              </div>
+
+              {/* Available Creators Count */}
+              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-brand-50 to-accent-50 rounded-lg border-2 border-brand-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">👥</span>
+                  <span className="text-sm font-medium text-gray-700">Available Creators</span>
+                </div>
+                <div className="text-right">
+                  {loadingCreatorCount ? (
+                    <div className="text-sm text-gray-500">Loading...</div>
+                  ) : availableCreatorsCount !== null ? (
+                    <div>
+                      <div className="text-2xl font-bold text-brand-600">{availableCreatorsCount}</div>
+                      <div className="text-xs text-gray-500">
+                        {availableCreatorsCount === 0 ? 'None available' : 
+                         availableCreatorsCount === 1 ? 'creator' : 'creators'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400">Set score</div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div>
