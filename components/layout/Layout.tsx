@@ -101,7 +101,7 @@ export default function Layout({ children }: LayoutProps) {
               }`}
             >
               <Briefcase className="w-6 h-6 mb-1" />
-              <span className="text-xs font-medium">Jobs</span>
+              <span className="text-xs font-medium">Campaigns</span>
             </Link>
             <Link 
               href="/creator/squads" 

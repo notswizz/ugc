@@ -142,6 +142,8 @@ export default function JobDetail() {
         hasCreatorSubmission, // Track if creator already submitted
         approvedSubmissionsCount, // Track approved count
         acceptedSubmissionsLimit, // Track limit
+        isOpen, // Track if job is actually available to accept
+        isAlreadyAccepted, // Track if already accepted by another creator
       };
 
       setJob(job);
@@ -360,7 +362,7 @@ export default function JobDetail() {
           {job.hasCreatorSubmission ? (
             <Link href={`/creator/jobs/${job.id}/submit`} className="block">
               <Button className="w-full bg-orange-600 hover:bg-orange-700 h-12 text-base font-medium">
-                View Submission
+                Go to Submission
               </Button>
             </Link>
           ) : job.status === 'accepted' && job.acceptedBy === user?.uid ? (
@@ -369,14 +371,14 @@ export default function JobDetail() {
                 Go to Submission
               </Button>
             </Link>
-          ) : job.status !== 'open' ? (
+          ) : !job.isOpen ? (
             <Button
               disabled
               className="w-full bg-gray-400 cursor-not-allowed h-12 text-base font-medium"
             >
               {job.approvedSubmissionsCount >= job.acceptedSubmissionsLimit 
                 ? 'Campaign Full' 
-                : job.status === 'accepted' && job.acceptedBy && job.acceptedBy !== user?.uid && job.acceptedSubmissionsLimit === 1
+                : job.isAlreadyAccepted
                   ? 'Already Accepted by Another Creator'
                   : 'Campaign Not Available'}
             </Button>

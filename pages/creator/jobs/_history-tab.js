@@ -211,7 +211,7 @@ export default function HistoryTab({ user }) {
       return { status: job.submission.status || 'unknown', text: job.submission.status || 'Unknown', color: 'text-gray-600' };
     }
 
-    if (job.payment.status === 'transferred') {
+    if (job.payment.status === 'transferred' || job.payment.status === 'balance_transferred') {
       return { status: 'paid', text: 'Paid', color: 'text-green-600' };
     } else if (job.payment.status === 'captured') {
       return { status: 'captured', text: 'Payment Captured - Transferring Soon', color: 'text-yellow-600' };
@@ -246,8 +246,9 @@ export default function HistoryTab({ user }) {
 
   return (
     <div>
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200">
+      {/* Filter Tabs - Sticky */}
+      <div className="sticky top-[57px] z-30 bg-white border-b border-gray-200 mb-6 pb-2">
+        <div className="flex gap-2">
         <button
           onClick={() => setFilter('all')}
           className={`px-4 py-2 font-medium border-b-2 transition-colors ${
@@ -278,6 +279,7 @@ export default function HistoryTab({ user }) {
         >
           Completed
         </button>
+        </div>
       </div>
 
       {/* Jobs List */}
@@ -323,19 +325,6 @@ export default function HistoryTab({ user }) {
                         </div>
                       )}
 
-                      {job.submission?.contentLink && (
-                        <div className="mt-2">
-                          <a
-                            href={job.submission.contentLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-orange-600 hover:text-orange-700 font-medium inline-flex items-center gap-1"
-                          >
-                            View Submission <span>→</span>
-                          </a>
-                        </div>
-                      )}
-                      
                       {!job.submission && (
                         <div className="mt-2">
                           <Link href={`/creator/jobs/${job.jobId}/submit`}>
@@ -347,22 +336,16 @@ export default function HistoryTab({ user }) {
                       )}
                     </div>
 
-                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      {amountPaid && (
+                    {amountPaid && (
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
                         <div className="text-right">
                           <div className="text-2xl font-bold text-green-600">
                             ${typeof amountPaid === 'number' ? amountPaid.toFixed(2) : amountPaid}
                           </div>
                           <div className="text-[10px] text-gray-500">Paid</div>
                         </div>
-                      )}
-                      
-                      <Link href={`/creator/jobs/${job.jobId}`}>
-                        <Button variant="outline" size="sm" className="text-xs h-8 px-3">
-                          View Campaign
-                        </Button>
-                      </Link>
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* AI Feedback Section */}

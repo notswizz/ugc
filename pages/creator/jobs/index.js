@@ -434,28 +434,30 @@ export default function CreatorJobs() {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        {/* Tab Navigation */}
-        <div className="flex gap-1 mb-6 border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('browse')}
-            className={`px-4 py-3 font-semibold text-sm border-b-2 transition-all ${
-              activeTab === 'browse'
-                ? 'border-orange-600 text-orange-600 bg-orange-50'
-                : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            Browse
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`px-4 py-3 font-semibold text-sm border-b-2 transition-all ${
-              activeTab === 'history'
-                ? 'border-orange-600 text-orange-600 bg-orange-50'
-                : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            History
-          </button>
+        {/* Tab Navigation - Sticky */}
+        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 mb-6">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab('browse')}
+              className={`px-4 py-3 font-semibold text-sm border-b-2 transition-all ${
+                activeTab === 'browse'
+                  ? 'border-orange-600 text-orange-600 bg-orange-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              Browse
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`px-4 py-3 font-semibold text-sm border-b-2 transition-all ${
+                activeTab === 'history'
+                  ? 'border-orange-600 text-orange-600 bg-orange-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              History
+            </button>
+          </div>
         </div>
 
         {/* Browse Tab Content */}

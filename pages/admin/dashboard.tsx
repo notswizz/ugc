@@ -27,7 +27,6 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'submissions' | 'payments'>('overview');
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
   const [jobDetails, setJobDetails] = useState<{
     job: any;
@@ -37,6 +36,7 @@ export default function AdminDashboard() {
   } | null>(null);
   const [loadingJobDetails, setLoadingJobDetails] = useState(false);
   const [evaluatingSubmissions, setEvaluatingSubmissions] = useState<Set<string>>(new Set());
+  const [expandedSubmissions, setExpandedSubmissions] = useState<Set<string>>(new Set());
 
   // Check admin access
   useEffect(() => {
@@ -294,10 +294,10 @@ export default function AdminDashboard() {
         </Card>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Jobs</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Total Campaigns</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{stats.totalJobs}</div>
@@ -319,65 +319,10 @@ export default function AdminDashboard() {
               <div className="text-3xl font-bold">{stats.totalPayments}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Platform Fees</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">${stats.totalPlatformFees.toFixed(2)}</div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Tabs */}
-        <div className="mb-4 border-b border-gray-200">
-          <div className="flex space-x-4">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`pb-2 px-4 font-medium ${
-                activeTab === 'overview'
-                  ? 'border-b-2 border-orange-600 text-orange-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('jobs')}
-              className={`pb-2 px-4 font-medium ${
-                activeTab === 'jobs'
-                  ? 'border-b-2 border-orange-600 text-orange-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              All Jobs ({jobs.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('submissions')}
-              className={`pb-2 px-4 font-medium ${
-                activeTab === 'submissions'
-                  ? 'border-b-2 border-orange-600 text-orange-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              All Submissions ({submissions.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('payments')}
-              className={`pb-2 px-4 font-medium ${
-                activeTab === 'payments'
-                  ? 'border-b-2 border-orange-600 text-orange-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              All Payments ({payments.length})
-            </button>
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'overview' && (
-          <div className="space-y-4">
+        {/* Overview Content */}
+        <div className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Campaigns</CardTitle>
@@ -426,184 +371,9 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+        </div>
 
-        {activeTab === 'jobs' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>All Jobs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Title</th>
-                      <th className="text-left p-2">Status</th>
-                      <th className="text-left p-2">Base Payout</th>
-                      <th className="text-left p-2">Created</th>
-                      <th className="text-left p-2">Deadline</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {jobs.map((job) => (
-                      <tr 
-                        key={job.id} 
-                        className="border-b hover:bg-gray-50 cursor-pointer"
-                        onClick={() => setSelectedJob(job)}
-                      >
-                        <td className="p-2 font-medium">{job.title}</td>
-                        <td className="p-2">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            job.status === 'open' ? 'bg-green-100 text-green-800' :
-                            job.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                            job.status === 'paid' ? 'bg-purple-100 text-purple-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {job.status}
-                          </span>
-                        </td>
-                        <td className="p-2">${job.basePayout?.toFixed(2) || '0.00'}</td>
-                        <td className="p-2 text-gray-600">
-                          {job.createdAt?.toLocaleDateString()}
-                        </td>
-                        <td className="p-2 text-gray-600">
-                          {job.deadlineAt?.toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === 'submissions' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>All Submissions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Job ID</th>
-                      <th className="text-left p-2">Creator ID</th>
-                      <th className="text-left p-2">Status</th>
-                      <th className="text-left p-2">AI Score</th>
-                      <th className="text-left p-2">Created</th>
-                      <th className="text-left p-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {submissions.map((sub) => (
-                      <tr key={sub.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2 font-mono text-xs">{sub.jobId}</td>
-                        <td className="p-2 font-mono text-xs">{sub.creatorId}</td>
-                        <td className="p-2">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            sub.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            sub.status === 'submitted' ? 'bg-yellow-100 text-yellow-800' :
-                            sub.status === 'needs_changes' ? 'bg-orange-100 text-orange-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {sub.status}
-                          </span>
-                        </td>
-                        <td className="p-2">
-                          {sub.aiEvaluation ? (
-                            <span className="font-medium">
-                              {sub.aiEvaluation.qualityScore}/100
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">N/A</span>
-                          )}
-                        </td>
-                        <td className="p-2 text-gray-600">
-                          {sub.createdAt?.toLocaleDateString()}
-                        </td>
-                        <td className="p-2">
-                          {!sub.aiEvaluation && (sub.status === 'submitted' || !sub.status) ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEvaluateSubmission(sub.id, sub.jobId)}
-                              disabled={evaluatingSubmissions.has(sub.id)}
-                              className="text-xs h-6 px-2"
-                            >
-                              {evaluatingSubmissions.has(sub.id) ? 'Evaluating...' : '🤖 Run AI'}
-                            </Button>
-                          ) : (
-                            <span className="text-gray-400 text-xs">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === 'payments' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>All Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Job ID</th>
-                      <th className="text-left p-2">Brand ID</th>
-                      <th className="text-left p-2">Creator ID</th>
-                      <th className="text-left p-2">Base Payout</th>
-                      <th className="text-left p-2">Platform Fee</th>
-                      <th className="text-left p-2">Creator Net</th>
-                      <th className="text-left p-2">Status</th>
-                      <th className="text-left p-2">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((payment) => (
-                      <tr key={payment.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2 font-mono text-xs">{payment.jobId}</td>
-                        <td className="p-2 font-mono text-xs">{payment.brandId}</td>
-                        <td className="p-2 font-mono text-xs">{payment.creatorId}</td>
-                        <td className="p-2">${(payment.basePayout || 0).toFixed(2)}</td>
-                        <td className="p-2 font-medium text-green-600">
-                          ${(payment.platformFee || 0).toFixed(2)}
-                        </td>
-                        <td className="p-2">${(payment.creatorNet || 0).toFixed(2)}</td>
-                        <td className="p-2">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            payment.status === 'transferred' || payment.status === 'balance_transferred' 
-                              ? 'bg-green-100 text-green-800' :
-                            payment.status === 'pending' 
-                              ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {payment.status}
-                          </span>
-                        </td>
-                        <td className="p-2 text-gray-600">
-                          {payment.createdAt?.toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Job Details Modal */}
+        {/* Campaign Details Modal */}
         {selectedJob && (
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -615,17 +385,22 @@ export default function AdminDashboard() {
             }}
           >
             <div 
-              className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
+              className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="sticky top-0 bg-white border-b p-3 flex items-center justify-between z-10">
-                <h2 className="text-xl font-bold">Campaign Details</h2>
+              <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10 shadow-sm">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Campaign Details</h2>
+                  {jobDetails && (
+                    <p className="text-xs text-gray-500 mt-0.5">{jobDetails.job.title}</p>
+                  )}
+                </div>
                 <button
                   onClick={() => {
                     setSelectedJob(null);
                     setJobDetails(null);
                   }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-100 rounded"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -636,287 +411,284 @@ export default function AdminDashboard() {
                   <LoadingSpinner text="Loading campaign details..." />
                 </div>
               ) : jobDetails ? (
-                <div className="p-4 space-y-4">
-                  {/* Campaign Basic Info */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Campaign Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div>
-                        <p className="text-xs font-medium text-gray-600 mb-0.5">Title</p>
-                        <p className="text-sm font-semibold">{jobDetails.job.title}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Status</p>
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs ${
-                            jobDetails.job.status === 'open' ? 'bg-green-100 text-green-800' :
-                            jobDetails.job.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                            jobDetails.job.status === 'paid' ? 'bg-purple-100 text-purple-800' :
-                            'bg-gray-100 text-gray-800'
+                <div className="p-4 space-y-3">
+                  {/* Campaign Header - Compact */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Campaign Info */}
+                    <Card className="md:col-span-2">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold">Campaign Info</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            jobDetails.job.status === 'open' ? 'bg-green-100 text-green-700 border border-green-200' :
+                            jobDetails.job.status === 'approved' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                            jobDetails.job.status === 'paid' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                            'bg-gray-100 text-gray-700 border border-gray-200'
                           }`}>
-                            {jobDetails.job.status}
+                            {jobDetails.job.status?.toUpperCase()}
+                          </span>
+                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
+                            ${jobDetails.job.basePayout?.toFixed(2) || '0.00'}
+                          </span>
+                          {jobDetails.job.primaryThing && (
+                            <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">
+                              {jobDetails.job.primaryThing}
+                            </span>
+                          )}
+                          <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">
+                            Limit: {jobDetails.job.acceptedSubmissionsLimit || 1}
                           </span>
                         </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Base Payout</p>
-                          <p className="text-sm font-semibold">${jobDetails.job.basePayout?.toFixed(2) || '0.00'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Created</p>
-                          <p className="text-xs">{jobDetails.job.createdAt?.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Deadline</p>
-                          <p className="text-xs">{jobDetails.job.deadlineAt?.toLocaleString()}</p>
-                        </div>
-                      </div>
-                      {jobDetails.job.description && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Description</p>
-                          <p className="text-xs whitespace-pre-wrap">{jobDetails.job.description}</p>
-                        </div>
-                      )}
-                      {jobDetails.job.productDescription && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Product Description</p>
-                          <p className="text-xs whitespace-pre-wrap">{jobDetails.job.productDescription}</p>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Primary Category</p>
-                          <p className="text-xs">{jobDetails.job.primaryThing || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Visibility</p>
-                          <p className="text-xs">{jobDetails.job.visibility || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Accepted Submissions Limit</p>
-                          <p className="text-xs">{jobDetails.job.acceptedSubmissionsLimit || 1}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">AI Compliance Required</p>
-                          <p className="text-xs">{jobDetails.job.aiComplianceRequired ? 'Yes' : 'No'}</p>
-                        </div>
-                      </div>
-                      {jobDetails.job.deliverables && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 mb-0.5">Deliverables</p>
-                          <div className="text-xs space-y-0.5">
-                            <p>Videos: {jobDetails.job.deliverables.videos || 0}</p>
-                            <p>Photos: {jobDetails.job.deliverables.photos || 0}</p>
-                            <p>Raw Footage: {jobDetails.job.deliverables.raw ? 'Yes' : 'No'}</p>
-                            {jobDetails.job.deliverables.notes && (
-                              <p>Notes: {jobDetails.job.deliverables.notes}</p>
+                        {jobDetails.job.deliverables && (
+                          <div className="flex items-center gap-2 flex-wrap text-xs">
+                            {jobDetails.job.deliverables.videos > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">📹 {jobDetails.job.deliverables.videos} videos</span>
+                            )}
+                            {jobDetails.job.deliverables.photos > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700">📸 {jobDetails.job.deliverables.photos} photos</span>
+                            )}
+                            {jobDetails.job.deliverables.raw && (
+                              <span className="px-2 py-0.5 rounded bg-yellow-50 text-yellow-700">🎬 Raw footage</span>
+                            )}
+                            {jobDetails.job.aiComplianceRequired && (
+                              <span className="px-2 py-0.5 rounded bg-green-50 text-green-700">🤖 AI Compliance</span>
                             )}
                           </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                          <div>
+                            <span className="font-medium">Created:</span> {jobDetails.job.createdAt?.toLocaleDateString()}
+                          </div>
+                          <div>
+                            <span className="font-medium">Deadline:</span> {jobDetails.job.deadlineAt?.toLocaleDateString()}
+                          </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
 
-                  {/* Brand Information */}
+                    {/* Brand Info - Compact */}
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold">Brand</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-1.5 text-xs">
+                        {jobDetails.brand?.companyName && (
+                          <div>
+                            <p className="font-semibold text-gray-900">{jobDetails.brand.companyName}</p>
+                          </div>
+                        )}
+                        {jobDetails.brand?.name && (
+                          <div className="text-gray-600">{jobDetails.brand.name}</div>
+                        )}
+                        {jobDetails.brand?.email && (
+                          <div className="text-gray-500 truncate">{jobDetails.brand.email}</div>
+                        )}
+                        <div className="pt-1 border-t">
+                          <p className="text-[10px] font-mono text-gray-400">{jobDetails.job.brandId.substring(0, 12)}...</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Submissions - Compact Table */}
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Brand Information</CardTitle>
+                      <CardTitle className="text-sm font-semibold">Submissions ({jobDetails.jobSubmissions.length})</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-1.5 text-sm">
-                      <div>
-                        <p className="text-xs font-medium text-gray-600 mb-0.5">Brand ID</p>
-                        <p className="text-xs font-mono">{jobDetails.job.brandId}</p>
-                      </div>
-                      {jobDetails.brand && (
-                        <>
-                          {jobDetails.brand.companyName && (
-                            <div>
-                              <p className="text-xs font-medium text-gray-600 mb-0.5">Company Name</p>
-                              <p className="text-xs">{jobDetails.brand.companyName}</p>
-                            </div>
-                          )}
-                          {jobDetails.brand.name && (
-                            <div>
-                              <p className="text-xs font-medium text-gray-600 mb-0.5">Contact Name</p>
-                              <p className="text-xs">{jobDetails.brand.name}</p>
-                            </div>
-                          )}
-                          {jobDetails.brand.email && (
-                            <div>
-                              <p className="text-xs font-medium text-gray-600 mb-0.5">Email</p>
-                              <p className="text-xs">{jobDetails.brand.email}</p>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Submissions */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Submissions ({jobDetails.jobSubmissions.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                       {jobDetails.jobSubmissions.length === 0 ? (
-                        <p className="text-xs text-gray-500">No submissions yet</p>
+                        <div className="p-4 text-center">
+                          <p className="text-xs text-gray-500">No submissions yet</p>
+                        </div>
                       ) : (
-                        <div className="space-y-3">
-                          {jobDetails.jobSubmissions.map((sub) => (
-                            <div key={sub.id} className="border rounded-lg p-3 space-y-2">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="text-xs font-medium">Creator: {sub.creatorName}</p>
-                                  <p className="text-xs text-gray-500">{sub.creatorEmail}</p>
-                                  <p className="text-xs text-gray-400 mt-0.5">ID: {sub.id.substring(0, 8)}...</p>
-                                </div>
-                                <span className={`px-2 py-0.5 rounded text-xs ${
-                                  sub.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                  sub.status === 'submitted' ? 'bg-yellow-100 text-yellow-800' :
-                                  sub.status === 'needs_changes' ? 'bg-orange-100 text-orange-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {sub.status}
-                                </span>
-                              </div>
-                              {sub.aiEvaluation && (
-                                <div className="mt-2 pt-2 border-t">
-                                  <p className="text-xs font-medium mb-1.5">AI Evaluation</p>
-                                  <div className="grid grid-cols-2 gap-2 text-xs">
-                                    <div>
-                                      <p className="text-gray-600 text-xs">Quality Score</p>
-                                      <p className="font-semibold text-sm">{sub.aiEvaluation.qualityScore}/100</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-gray-600 text-xs">Compliance</p>
-                                      <p className={sub.aiEvaluation.compliancePassed ? 'text-green-600 font-semibold text-xs' : 'text-red-600 font-semibold text-xs'}>
-                                        {sub.aiEvaluation.compliancePassed ? 'Passed' : 'Failed'}
-                                      </p>
-                                    </div>
-                                    {sub.aiEvaluation.qualityBreakdown && (
-                                      <>
-                                        <div>
-                                          <p className="text-gray-600 text-xs">Hook</p>
-                                          <p className="font-medium text-xs">{sub.aiEvaluation.qualityBreakdown.hook || 0}</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead className="bg-gray-50 border-b">
+                              <tr>
+                                <th className="text-left p-2 font-semibold text-gray-700">Creator</th>
+                                <th className="text-left p-2 font-semibold text-gray-700">Status</th>
+                                <th className="text-center p-2 font-semibold text-gray-700">Score</th>
+                                <th className="text-center p-2 font-semibold text-gray-700">Compliance</th>
+                                <th className="text-left p-2 font-semibold text-gray-700">Date</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {jobDetails.jobSubmissions.map((sub) => {
+                                const isExpanded = expandedSubmissions.has(sub.id);
+                                return (
+                                  <>
+                                    <tr key={sub.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => {
+                                      setExpandedSubmissions(prev => {
+                                        const newSet = new Set(prev);
+                                        if (newSet.has(sub.id)) {
+                                          newSet.delete(sub.id);
+                                        } else {
+                                          newSet.add(sub.id);
+                                        }
+                                        return newSet;
+                                      });
+                                    }}>
+                                      <td className="p-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-gray-400">{isExpanded ? '▼' : '▶'}</span>
+                                          <div>
+                                            <p className="font-medium text-gray-900">{sub.creatorName}</p>
+                                            <p className="text-[10px] text-gray-500 truncate max-w-[150px]">{sub.creatorEmail}</p>
+                                          </div>
                                         </div>
-                                        <div>
-                                          <p className="text-gray-600 text-xs">Lighting</p>
-                                          <p className="font-medium text-xs">{sub.aiEvaluation.qualityBreakdown.lighting || 0}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-gray-600 text-xs">Product Clarity</p>
-                                          <p className="font-medium text-xs">{sub.aiEvaluation.qualityBreakdown.productClarity || 0}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-gray-600 text-xs">Authenticity</p>
-                                          <p className="font-medium text-xs">{sub.aiEvaluation.qualityBreakdown.authenticity || 0}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-gray-600 text-xs">Editing</p>
-                                          <p className="font-medium text-xs">{sub.aiEvaluation.qualityBreakdown.editing || 0}</p>
-                                        </div>
-                                      </>
+                                      </td>
+                                      <td className="p-2">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                          sub.status === 'approved' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                          sub.status === 'submitted' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                                          sub.status === 'needs_changes' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                                          'bg-gray-100 text-gray-700 border border-gray-200'
+                                        }`}>
+                                          {sub.status?.toUpperCase()}
+                                        </span>
+                                      </td>
+                                      <td className="p-2 text-center">
+                                        {sub.aiEvaluation ? (
+                                          <div>
+                                            <span className={`font-bold ${
+                                              sub.aiEvaluation.qualityScore >= 80 ? 'text-green-600' :
+                                              sub.aiEvaluation.qualityScore >= 60 ? 'text-blue-600' :
+                                              sub.aiEvaluation.qualityScore >= 40 ? 'text-yellow-600' :
+                                              'text-red-600'
+                                            }`}>
+                                              {sub.aiEvaluation.qualityScore}
+                                            </span>
+                                            <span className="text-gray-400 text-[10px]">/100</span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-400">—</span>
+                                        )}
+                                      </td>
+                                      <td className="p-2 text-center">
+                                        {sub.aiEvaluation ? (
+                                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                            sub.aiEvaluation.compliancePassed 
+                                              ? 'bg-green-100 text-green-700 border border-green-200' 
+                                              : 'bg-red-100 text-red-700 border border-red-200'
+                                          }`}>
+                                            {sub.aiEvaluation.compliancePassed ? '✓' : '✗'}
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-400">—</span>
+                                        )}
+                                      </td>
+                                      <td className="p-2 text-gray-500">
+                                        {sub.createdAt?.toLocaleDateString()}
+                                      </td>
+                                    </tr>
+                                    {isExpanded && sub.aiEvaluation && (
+                                      <tr className="bg-gray-50">
+                                        <td colSpan={5} className="p-3">
+                                          <div className="space-y-3">
+                                            {/* Quality Breakdown */}
+                                            {sub.aiEvaluation.qualityBreakdown && (
+                                              <div>
+                                                <p className="text-xs font-semibold text-gray-700 mb-2">Quality Breakdown</p>
+                                                <div className="grid grid-cols-5 gap-2">
+                                                  {Object.entries(sub.aiEvaluation.qualityBreakdown).map(([key, value]: [string, any]) => (
+                                                    <div key={key} className="bg-white p-2 rounded border">
+                                                      <p className="text-[10px] text-gray-500 mb-0.5 capitalize">{key}</p>
+                                                      <p className="font-bold text-xs">{value || 0}</p>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                            {/* Compliance Issues */}
+                                            {sub.aiEvaluation.complianceIssues && sub.aiEvaluation.complianceIssues.length > 0 && (
+                                              <div>
+                                                <p className="text-xs font-semibold text-red-700 mb-1">Compliance Issues</p>
+                                                <ul className="list-disc list-inside space-y-0.5">
+                                                  {sub.aiEvaluation.complianceIssues.map((issue: string, idx: number) => (
+                                                    <li key={idx} className="text-[10px] text-red-600">{issue}</li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            )}
+                                            {/* Improvement Tips */}
+                                            {sub.aiEvaluation.improvementTips && sub.aiEvaluation.improvementTips.length > 0 && (
+                                              <div>
+                                                <p className="text-xs font-semibold text-blue-700 mb-1">Improvement Tips</p>
+                                                <ul className="list-disc list-inside space-y-0.5">
+                                                  {sub.aiEvaluation.improvementTips.map((tip: string, idx: number) => (
+                                                    <li key={idx} className="text-[10px] text-blue-600">{tip}</li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
                                     )}
-                                  </div>
-                                  {sub.aiEvaluation.complianceIssues && sub.aiEvaluation.complianceIssues.length > 0 && (
-                                    <div className="mt-1.5">
-                                      <p className="text-xs font-medium text-red-600">Compliance Issues:</p>
-                                      <ul className="text-xs text-red-600 list-disc list-inside">
-                                        {sub.aiEvaluation.complianceIssues.map((issue: string, idx: number) => (
-                                          <li key={idx}>{issue}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                  {sub.aiEvaluation.improvementTips && sub.aiEvaluation.improvementTips.length > 0 && (
-                                    <div className="mt-1.5">
-                                      <p className="text-xs font-medium text-blue-600">Improvement Tips:</p>
-                                      <ul className="text-xs text-blue-600 list-disc list-inside">
-                                        {sub.aiEvaluation.improvementTips.map((tip: string, idx: number) => (
-                                          <li key={idx}>{tip}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                              <div className="text-xs text-gray-400 mt-1">
-                                Created: {sub.createdAt?.toLocaleString()}
-                              </div>
-                            </div>
-                          ))}
+                                  </>
+                                );
+                              })}
+                            </tbody>
+                          </table>
                         </div>
                       )}
                     </CardContent>
                   </Card>
 
-                  {/* Payments */}
+                  {/* Payments - Compact Table */}
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Payments ({jobDetails.jobPayments.length})</CardTitle>
+                      <CardTitle className="text-sm font-semibold">Payments ({jobDetails.jobPayments.length})</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                       {jobDetails.jobPayments.length === 0 ? (
-                        <p className="text-xs text-gray-500">No payments yet</p>
+                        <div className="p-4 text-center">
+                          <p className="text-xs text-gray-500">No payments yet</p>
+                        </div>
                       ) : (
-                        <div className="space-y-2">
-                          {jobDetails.jobPayments.map((payment) => (
-                            <div key={payment.id} className="border rounded-lg p-3">
-                              <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div>
-                                  <p className="text-gray-600 mb-0.5">Creator ID</p>
-                                  <p className="font-mono text-xs">{payment.creatorId.substring(0, 8)}...</p>
-                                </div>
-                                <div>
-                                  <p className="text-gray-600 mb-0.5">Status</p>
-                                  <span className={`inline-block px-2 py-0.5 rounded text-xs ${
-                                    payment.status === 'transferred' || payment.status === 'balance_transferred' 
-                                      ? 'bg-green-100 text-green-800' :
-                                    payment.status === 'pending' 
-                                      ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-gray-100 text-gray-800'
-                                  }`}>
-                                    {payment.status}
-                                  </span>
-                                </div>
-                                <div>
-                                  <p className="text-gray-600 mb-0.5">Base Payout</p>
-                                  <p className="font-semibold text-xs">${(payment.basePayout || 0).toFixed(2)}</p>
-                                </div>
-                                <div>
-                                  <p className="text-gray-600 mb-0.5">Platform Fee</p>
-                                  <p className="font-semibold text-green-600 text-xs">${(payment.platformFee || 0).toFixed(2)}</p>
-                                </div>
-                                <div>
-                                  <p className="text-gray-600 mb-0.5">Creator Net</p>
-                                  <p className="font-semibold text-xs">${(payment.creatorNet || 0).toFixed(2)}</p>
-                                </div>
-                                {payment.bonusAmount && (
-                                  <div>
-                                    <p className="text-gray-600 mb-0.5">Bonus</p>
-                                    <p className="font-semibold text-xs">${payment.bonusAmount.toFixed(2)}</p>
-                                  </div>
-                                )}
-                                {payment.reimbursementAmount && (
-                                  <div>
-                                    <p className="text-gray-600 mb-0.5">Reimbursement</p>
-                                    <p className="font-semibold text-xs">${payment.reimbursementAmount.toFixed(2)}</p>
-                                  </div>
-                                )}
-                                <div>
-                                  <p className="text-gray-600 mb-0.5">Created</p>
-                                  <p className="text-xs">{payment.createdAt?.toLocaleString()}</p>
-                                </div>
-                                {payment.transferredAt && (
-                                  <div>
-                                    <p className="text-gray-600 mb-0.5">Transferred</p>
-                                    <p className="text-xs">{payment.transferredAt.toLocaleString()}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead className="bg-gray-50 border-b">
+                              <tr>
+                                <th className="text-left p-2 font-semibold text-gray-700">Creator</th>
+                                <th className="text-right p-2 font-semibold text-gray-700">Base</th>
+                                <th className="text-right p-2 font-semibold text-gray-700">Platform Fee</th>
+                                <th className="text-right p-2 font-semibold text-gray-700">Net</th>
+                                <th className="text-center p-2 font-semibold text-gray-700">Status</th>
+                                <th className="text-left p-2 font-semibold text-gray-700">Date</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {jobDetails.jobPayments.map((payment) => (
+                                <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                                  <td className="p-2">
+                                    <p className="font-mono text-[10px] text-gray-600">{payment.creatorId.substring(0, 12)}...</p>
+                                  </td>
+                                  <td className="p-2 text-right font-semibold">${(payment.basePayout || 0).toFixed(2)}</td>
+                                  <td className="p-2 text-right">
+                                    <span className="font-semibold text-green-600">${(payment.platformFee || 0).toFixed(2)}</span>
+                                  </td>
+                                  <td className="p-2 text-right font-semibold text-gray-900">${(payment.creatorNet || 0).toFixed(2)}</td>
+                                  <td className="p-2 text-center">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                      payment.status === 'transferred' || payment.status === 'balance_transferred' 
+                                        ? 'bg-green-100 text-green-700 border border-green-200' :
+                                      payment.status === 'pending' 
+                                        ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                                        'bg-gray-100 text-gray-700 border border-gray-200'
+                                    }`}>
+                                      {payment.status === 'balance_transferred' ? 'SENT' : payment.status?.replace('_', ' ').toUpperCase()}
+                                    </span>
+                                  </td>
+                                  <td className="p-2 text-gray-500">
+                                    {payment.createdAt?.toLocaleDateString()}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       )}
                     </CardContent>

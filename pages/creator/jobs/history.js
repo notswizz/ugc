@@ -222,7 +222,7 @@ export default function JobHistory() {
       return { status: job.submission.status || 'unknown', text: job.submission.status || 'Unknown', color: 'text-gray-600' };
     }
 
-    if (job.payment.status === 'transferred') {
+    if (job.payment.status === 'transferred' || job.payment.status === 'balance_transferred') {
       return { status: 'paid', text: 'Paid', color: 'text-green-600' };
     } else if (job.payment.status === 'captured') {
       return { status: 'captured', text: 'Payment Captured - Transferring Soon', color: 'text-yellow-600' };
@@ -350,20 +350,6 @@ export default function JobHistory() {
                           </div>
                         )}
 
-                        {/* Content Link - Subtle */}
-                        {job.submission?.contentLink && (
-                          <div className="mt-2">
-                            <a
-                              href={job.submission.contentLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-orange-600 hover:text-orange-700 font-medium inline-flex items-center gap-1"
-                            >
-                              View Submission <span>→</span>
-                            </a>
-                          </div>
-                        )}
-                        
                         {/* Action Button for Pending Submission */}
                         {!job.submission && (
                           <div className="mt-2">
