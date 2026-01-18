@@ -4,10 +4,7 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <meta 
-          name="viewport" 
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" 
-        />
+        {/* Viewport should be in _app.tsx or next.config.js, not here */}
       </Head>
       <body>
         <Main />

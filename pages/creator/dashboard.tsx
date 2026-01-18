@@ -18,11 +18,15 @@ export default function CreatorDashboard() {
   const router = useRouter();
   const [statsOpen, setStatsOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [communityOpen, setCommunityOpen] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
   const [creatorData, setCreatorData] = useState<any>(null);
   const [verifyingTikTok, setVerifyingTikTok] = useState(false);
+  const [communityLeaderboard, setCommunityLeaderboard] = useState<any[]>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [communityName, setCommunityName] = useState<string>('');
   const [stats, setStats] = useState({
     totalEarnings: 0,
     acceptedGigs: 0,
@@ -116,6 +120,53 @@ export default function CreatorDashboard() {
       fetchStats();
     }
   }, [user, appUser]);
+
+  // Fetch community leaderboard
+  const fetchCommunityLeaderboard = async () => {
+    if (!creatorData?.communityId) return;
+    
+    setLoadingLeaderboard(true);
+    try {
+      // Get community name
+      const communityDoc = await getDoc(doc(db, 'communities', creatorData.communityId));
+      if (communityDoc.exists()) {
+        setCommunityName(communityDoc.data().name);
+      }
+
+      // Fetch all creators in this community
+      const creatorsQuery = query(
+        collection(db, 'creators'),
+        where('communityId', '==', creatorData.communityId)
+      );
+      const creatorsSnapshot = await getDocs(creatorsQuery);
+      
+      // Map and sort by rep points
+      const leaderboard = creatorsSnapshot.docs
+        .map(doc => ({
+          uid: doc.id,
+          username: doc.data().username,
+          rep: doc.data().rep || 0,
+        }))
+        .sort((a, b) => b.rep - a.rep)
+        .map((creator, index) => ({
+          ...creator,
+          rank: index + 1,
+        }));
+
+      setCommunityLeaderboard(leaderboard);
+    } catch (error) {
+      console.error('Error fetching community leaderboard:', error);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  // Fetch leaderboard when switching to community tab
+  useEffect(() => {
+    if (communityOpen && creatorData?.communityId && communityLeaderboard.length === 0) {
+      fetchCommunityLeaderboard();
+    }
+  }, [communityOpen, creatorData?.communityId]);
 
   // Handle TikTok verification success/error messages
   useEffect(() => {
@@ -512,6 +563,111 @@ export default function CreatorDashboard() {
                           {link}
                         </a>
                       ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+        )}
+
+        {/* Community Leaderboard - Collapsible */}
+        {creatorData?.communityId && (
+          <Card className="mb-3">
+            <button
+              onClick={() => setCommunityOpen(!communityOpen)}
+              className="w-full"
+            >
+              <CardHeader className="py-2 px-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    🏆 Community
+                  </CardTitle>
+                  {communityOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
+              </CardHeader>
+            </button>
+            {communityOpen && (
+              <CardContent className="pt-0 px-3 pb-3">
+                {loadingLeaderboard ? (
+                  <div className="text-center py-4">
+                    <div className="text-xs text-gray-500">Loading...</div>
+                  </div>
+                ) : communityLeaderboard.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-xs text-gray-500">No leaderboard data</p>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Community Name */}
+                    {communityName && (
+                      <div className="text-center mb-3">
+                        <p className="text-sm font-bold text-purple-700">{communityName}</p>
+                        <p className="text-xs text-gray-600">{communityLeaderboard.length} members</p>
+                      </div>
+                    )}
+
+                    {/* Leaderboard List */}
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                      {communityLeaderboard.map((creator) => {
+                        const isCurrentUser = creator.uid === user.uid;
+                        const { level } = getRepLevel(creator.rep);
+                        
+                        return (
+                          <div
+                            key={creator.uid}
+                            className={`flex items-center justify-between p-2 rounded-lg ${
+                              isCurrentUser 
+                                ? 'bg-gradient-to-r from-brand-50 to-accent-50 border-2 border-brand-300' 
+                                : 'bg-gray-50 border border-gray-200'
+                            }`}
+                          >
+                            {/* Rank & User */}
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {/* Rank Badge */}
+                              <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                                creator.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
+                                creator.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800' :
+                                creator.rank === 3 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
+                                isCurrentUser ? 'bg-brand-500 text-white' :
+                                'bg-gray-300 text-gray-700'
+                              }`}>
+                                {creator.rank}
+                              </div>
+
+                              {/* Username */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1">
+                                  <p className={`text-xs font-bold truncate ${isCurrentUser ? 'text-brand-900' : 'text-gray-900'}`}>
+                                    @{creator.username}
+                                  </p>
+                                  {isCurrentUser && (
+                                    <span className="text-[10px] bg-brand-600 text-white px-1 py-0.5 rounded-full font-semibold">
+                                      You
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-gray-600">Lvl {level}</p>
+                              </div>
+                            </div>
+
+                            {/* Rep Points */}
+                            <div className="text-right flex-shrink-0">
+                              <div className={`text-sm font-bold ${isCurrentUser ? 'text-brand-700' : 'text-purple-700'}`}>
+                                {creator.rep}
+                              </div>
+                              <p className="text-[10px] text-gray-600">rep</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Info */}
+                    <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-[10px] text-blue-800">
+                        🎯 Complete gigs to climb the ranks and win prizes!
+                      </p>
                     </div>
                   </div>
                 )}
