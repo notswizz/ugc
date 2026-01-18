@@ -74,7 +74,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
 
             return {
               gigId: gigDoc.id,
-              jobTitle: gigData.title,
+              gigTitle: gigData.title,
               brandName,
               submission: null,
               gig: {
@@ -113,7 +113,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
 
           const paymentsQuery = query(
             collection(db, 'payments'),
-            where('jobId', '==', submission.jobId), // Database still uses jobId field
+            where('gigId', '==', submission.gigId),
             where('creatorId', '==', user.uid)
           );
           const paymentsSnapshot = await getDocs(paymentsQuery);
@@ -127,7 +127,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
           const payment = payments[0];
 
           return {
-            gigId: gigData.id || submission.jobId, // Use jobId from submission
+            gigId: gigDoc.id,
             gigTitle: gigData.title,
             brandName,
             submission: {
@@ -175,13 +175,13 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
       const uniqueGigs = {};
       allGigs.forEach(gig => {
         if (!uniqueGigs[gig.gigId]) {
-          uniqueGigs[gig.gigId] = job;
+          uniqueGigs[gig.gigId] = gig;
         } else if (gig.submission && uniqueGigs[gig.gigId].submission) {
           if (gig.submission.createdAt > uniqueGigs[gig.gigId].submission.createdAt) {
-            uniqueGigs[gig.gigId] = job;
+            uniqueGigs[gig.gigId] = gig;
           }
         } else if (gig.submission && !uniqueGigs[gig.gigId].submission) {
-          uniqueGigs[gig.gigId] = job;
+          uniqueGigs[gig.gigId] = gig;
         }
       });
 
