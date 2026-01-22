@@ -68,7 +68,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const creator = creatorSnap.data();
-    const useUsername = username ?? creator?.username ?? '';
+    const useUsername = (typeof username === 'string' && username.trim())
+      ? String(username).trim().replace(/^@/, '')
+      : (creator?.username ?? '');
+    if (!useUsername) {
+      return res.status(400).json({
+        error: 'Missing username',
+        message: 'Set your username in Settings first, then verify your phone.',
+      });
+    }
+
     const useInterests = Array.isArray(interests) ? interests : (creator?.interests ?? []);
     const useBio = typeof bio === 'string' ? bio : (creator?.bio ?? '');
 
@@ -81,15 +90,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    // request_data: pathway variables Bland uses during the call (e.g. {{username}} in nodes).
+    // request_metadata: optional extra context; we also store username in our DB for the webhook.
     const payload: Record<string, unknown> = {
       phone_number: e164,
       pathway_id: pathwayId,
       webhook: wh,
+      request_data: {
+        username: useUsername,
+        user_name: useUsername,
+        interests: useInterests,
+        bio: useBio,
+      },
       request_metadata: {
         user_id: userId,
         username: useUsername,
-        interests: useInterests,
-        bio: useBio,
       },
     };
 
@@ -124,6 +139,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await adminDb.collection(BLAND_COLLECTION).doc(String(callId)).set({
       userId,
       phoneNumber: e164,
+      username: useUsername,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 
 export function useCreatorData(user: any, appUser: any) {
@@ -8,13 +8,13 @@ export function useCreatorData(user: any, appUser: any) {
 
   const fetchCreatorData = async () => {
     if (!user || !appUser || appUser.role !== 'creator') return;
-    
     try {
       setLoading(true);
       const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
       if (creatorDoc.exists()) {
-        const data = creatorDoc.data();
-        setCreatorData(data);
+        setCreatorData(creatorDoc.data());
+      } else {
+        setCreatorData(null);
       }
     } catch (error) {
       console.error('Error fetching creator data:', error);
@@ -24,10 +24,32 @@ export function useCreatorData(user: any, appUser: any) {
   };
 
   useEffect(() => {
-    if (user && appUser) {
-      fetchCreatorData();
+    if (!user || !appUser || appUser.role !== 'creator') {
+      setCreatorData(null);
+      setLoading(false);
+      return;
     }
-  }, [user, appUser]);
+
+    setLoading(true);
+    const creatorRef = doc(db, 'creators', user.uid);
+    const unsub = onSnapshot(
+      creatorRef,
+      (snap) => {
+        if (snap.exists()) {
+          setCreatorData(snap.data());
+        } else {
+          setCreatorData(null);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error subscribing to creator data:', err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsub();
+  }, [user?.uid, appUser?.role]);
 
   return {
     creatorData,

@@ -43,6 +43,11 @@ export default function PhoneVerificationDialog({
       return;
     }
 
+    if (!creatorData?.username?.trim()) {
+      toast.error('Set your username in Settings first, then verify your phone.');
+      return;
+    }
+
     setLoading(true);
     try {
       const body: Record<string, unknown> = {
@@ -82,8 +87,9 @@ export default function PhoneVerificationDialog({
         <DialogHeader>
           <DialogTitle>Verify phone</DialogTitle>
           <DialogDescription>
-            Bland AI will call you to confirm your username and chat about your interests and hobbies.
-            This helps us match you with the right brands.
+            Bland AI will call you to confirm your username
+            {creatorData?.username ? ` (@${creatorData.username})` : ''} and chat about your interests.
+            {!creatorData?.username?.trim() && ' Set your username in Settings first.'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -102,7 +108,10 @@ export default function PhoneVerificationDialog({
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !phoneNumber.trim()}>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || !phoneNumber.trim() || !creatorData?.username?.trim()}
+          >
             {loading ? 'Calling…' : 'Request call'}
           </Button>
         </DialogFooter>
