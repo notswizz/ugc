@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import Head from "next/head";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/lib/auth/AuthContext";
+import { Analytics } from "@vercel/analytics/next";
 
 export default function App({ Component, pageProps }) {
   return (
@@ -15,6 +16,7 @@ export default function App({ Component, pageProps }) {
       <AuthProvider>
         <Component {...pageProps} />
         <Toaster position="top-right" />
+        <Analytics />
       </AuthProvider>
     </>
   );
