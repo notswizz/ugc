@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import GigCard from '@/components/gigs/GigCard';
-import { canAcceptGig } from '@/lib/trustScore/calculator';
+import { canAcceptGig, calculateTrustScore } from '@/lib/trustScore/calculator';
 import { THINGS } from '@/lib/things/constants';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
@@ -36,8 +36,8 @@ export default function CreatorGigs() {
       console.log('Fetching creator data for:', user.uid);
       const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
       if (creatorDoc.exists()) {
-        const data = creatorDoc.data();
-        console.log('Creator profile found:', { trustScore: data.trustScore, hardNos: data.hardNos });
+        const data = { ...creatorDoc.data(), uid: user.uid };
+        console.log('Creator profile found:', { trustScore: calculateTrustScore(data), hardNos: data.hardNos });
         setCreatorData(data);
       } else {
         // If creator profile doesn't exist yet, use empty defaults
@@ -268,6 +268,13 @@ export default function CreatorGigs() {
           console.log(`Gig ${gig.id} filtered: Status is ${gig.status}`);
           return false;
         }
+
+        // Filter out ended gigs (deadline passed) — inactive, no sign-up or accept
+        const deadlineMs = gig.deadlineAt ? new Date(gig.deadlineAt).getTime() : null;
+        if (deadlineMs != null && deadlineMs < Date.now()) {
+          console.log(`Gig ${gig.id} filtered: Deadline passed (ended)`);
+          return false;
+        }
         
         // Rep-based early access filter (only for open gigs, NOT squad gigs)
         // Squad gigs bypass the rep system - all squad members see them immediately
@@ -295,10 +302,11 @@ export default function CreatorGigs() {
         }
         
         // Trust Score gating
-        // Only filter if gig has a trustScoreMin requirement AND creator's score is below it
-        // If creatorData is null or trustScore is undefined, use minimum score (20) to allow seeing open gigs
+        // Use calculated trust score (reflects current verifications), not stored field
         if (gig.trustScoreMin) {
-          const creatorTrustScore = creatorData?.trustScore ?? 20; // Default to 20 for new users
+          const creatorTrustScore = creatorData?.uid
+            ? calculateTrustScore(creatorData)
+            : (creatorData?.trustScore ?? 20);
           if (creatorTrustScore < gig.trustScoreMin) {
             console.log(`Gig ${gig.id} filtered: Trust score ${creatorTrustScore} < ${gig.trustScoreMin}`);
             return false;
@@ -357,10 +365,13 @@ export default function CreatorGigs() {
         return true;
       });
       
+      const displayedTrustScore = creatorData?.uid
+        ? calculateTrustScore(creatorData)
+        : (creatorData?.trustScore ?? 20);
       console.log(`Gigs: ${fetchedGigs.length} fetched, ${filteredGigs.length} visible after filtering`);
       console.log('Creator data:', { 
         hasCreatorData: !!creatorData, 
-        trustScore: creatorData?.trustScore ?? 20, 
+        trustScore: displayedTrustScore, 
         hardNos: creatorHardNos 
       });
 

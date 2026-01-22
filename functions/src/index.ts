@@ -43,6 +43,14 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
         await handlePayoutPaid(event.data.object as Stripe.Payout);
         break;
 
+      case 'identity.verification_session.verified':
+        await handleIdentityVerificationVerified(event.data.object as Stripe.Identity.VerificationSession);
+        break;
+
+      case 'identity.verification_session.requires_input':
+        await handleIdentityVerificationRequiresInput(event.data.object as Stripe.Identity.VerificationSession);
+        break;
+
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
@@ -170,4 +178,44 @@ async function handleConnectAccountUpdated(account: Stripe.Account) {
 async function handlePayoutPaid(payout: Stripe.Payout) {
   // Log payout completion
   console.log('Payout completed:', payout.id);
+}
+
+async function handleIdentityVerificationVerified(session: Stripe.Identity.VerificationSession) {
+  const creatorId = session.metadata?.creatorId;
+
+  if (!creatorId) {
+    console.error('Missing creatorId in verification session metadata');
+    return;
+  }
+
+  // Update creator's identity verification status
+  await admin.firestore()
+    .doc(`creators/${creatorId}`)
+    .update({
+      'stripe.identityVerified': true,
+      'stripe.identityVerifiedAt': admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  console.log('Identity verification completed for creator:', creatorId);
+}
+
+async function handleIdentityVerificationRequiresInput(session: Stripe.Identity.VerificationSession) {
+  const creatorId = session.metadata?.creatorId;
+
+  if (!creatorId) {
+    console.error('Missing creatorId in verification session metadata');
+    return;
+  }
+
+  // Update creator's identity verification status
+  await admin.firestore()
+    .doc(`creators/${creatorId}`)
+    .update({
+      'stripe.identityVerified': false,
+      'stripe.identityVerificationStatus': 'requires_input',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  console.log('Identity verification requires additional input for creator:', creatorId);
 }

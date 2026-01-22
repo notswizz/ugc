@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { canAccessGig } from '@/lib/rep/service';
+import { calculateTrustScore } from '@/lib/trustScore/calculator';
 
 export function useDashboardData(user: any, appUser: any, creatorData: any) {
   const [balance, setBalance] = useState<number | null>(null);
@@ -100,14 +101,19 @@ export function useDashboardData(user: any, appUser: any, creatorData: any) {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt),
+        deadlineAt: doc.data().deadlineAt?.toDate ? doc.data().deadlineAt.toDate() : (doc.data().deadlineAt ? new Date(doc.data().deadlineAt) : null),
       })) as any[];
 
       // Filter based on creator eligibility
       const creatorRep = creatorData.rep || 0;
+      const now = Date.now();
       const eligibleGigs = fetchedGigs
         .filter(gig => {
+          // Exclude ended gigs (deadline passed)
+          const deadlineMs = gig.deadlineAt ? new Date(gig.deadlineAt).getTime() : null;
+          if (deadlineMs != null && deadlineMs < now) return false;
           // Basic filters
-          if (gig.trustScoreMin && (creatorData.trustScore || 20) < gig.trustScoreMin) return false;
+          if (gig.trustScoreMin && calculateTrustScore(creatorData) < gig.trustScoreMin) return false;
           if (gig.minFollowers && gig.minFollowersPlatform) {
             const platform = gig.minFollowersPlatform.toLowerCase();
             const creatorFollowers = creatorData.followingCount?.[platform] || 0;

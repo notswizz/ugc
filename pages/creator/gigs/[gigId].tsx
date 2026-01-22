@@ -181,11 +181,19 @@ export default function GigDetail() {
 
   // Placeholder handlers (no backend mutations)
   const handleAcceptGig = () => {
+    if (isEnded) {
+      toast.error('This gig has ended');
+      return;
+    }
     toast.success('Gig accepted! (Placeholder - implement backend)');
     // router.push(`/creator/gigs/${gigId}/submit`);
   };
 
   const handleStartSubmission = () => {
+    if (isEnded) {
+      toast.error('This gig has ended');
+      return;
+    }
     router.push(`/creator/gigs/${gigId}/submit`);
   };
 
@@ -222,7 +230,8 @@ export default function GigDetail() {
   const deliverables = gig.deliverables || { videos: 0, photos: 0 };
   const deadlineDate = gig.deadlineAt instanceof Date ? gig.deadlineAt : new Date(gig.deadlineAt);
   const timeLeftMinutes = Math.max(0, Math.floor((deadlineDate.getTime() - Date.now()) / (1000 * 60)));
-  const isUrgent = timeLeftMinutes < 120;
+  const isEnded = deadlineDate.getTime() < Date.now();
+  const isUrgent = !isEnded && timeLeftMinutes < 120;
   const brandInitial = gig.brandName?.charAt(0).toUpperCase() || 'B';
 
   // Format deliverables text
@@ -636,13 +645,23 @@ export default function GigDetail() {
           <div className="max-w-[430px] mx-auto flex gap-3">
             {currentStatus === 'open' && (
               <>
-                <Button
-                  onClick={handleAcceptGig}
-                  className="flex-1 h-11 text-base font-semibold"
-                  size="lg"
-                >
-                  Accept Gig
-                </Button>
+                {isEnded ? (
+                  <Button
+                    disabled
+                    className="flex-1 h-11 text-base font-semibold bg-zinc-200 text-zinc-500 cursor-not-allowed"
+                    size="lg"
+                  >
+                    Gig ended
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleAcceptGig}
+                    className="flex-1 h-11 text-base font-semibold"
+                    size="lg"
+                  >
+                    Accept Gig
+                  </Button>
+                )}
                 <Button variant="outline" size="icon" className="h-11 w-11">
                   <Share2 className="w-4 h-4" />
                 </Button>
@@ -650,13 +669,23 @@ export default function GigDetail() {
             )}
             {currentStatus === 'accepted' && (
               <>
-                <Button
-                  onClick={handleStartSubmission}
-                  className="flex-1 h-11 text-base font-semibold"
-                  size="lg"
-                >
-                  Start / Upload Submission
-                </Button>
+                {isEnded ? (
+                  <Button
+                    disabled
+                    className="flex-1 h-11 text-base font-semibold bg-zinc-200 text-zinc-500 cursor-not-allowed"
+                    size="lg"
+                  >
+                    Gig ended
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleStartSubmission}
+                    className="flex-1 h-11 text-base font-semibold"
+                    size="lg"
+                  >
+                    Start / Upload Submission
+                  </Button>
+                )}
                 <Button variant="outline" size="icon" className="h-11 w-11">
                   <MessageCircle className="w-4 h-4" />
                 </Button>

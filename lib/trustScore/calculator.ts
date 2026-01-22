@@ -1,14 +1,16 @@
 import { Creator } from '../models/types';
 
 /**
- * Calculate Trust Score (0-100) based on plan.txt requirements
+ * Calculate Trust Score (0-100) based on verification and account connections only
  * 
  * Trust Score inputs:
- * - Email + phone verified
- * - Stripe Connect onboarded
- * - Connected socials (TikTok, IG, YouTube, LinkedIn optional)
- * - Platform history: gigs completed, on-time rate, dispute rate, refund rate
- * - Account age
+ * - Email verified (10 points)
+ * - Phone verified (10 points)
+ * - Stripe Connect onboarded (15 points)
+ * - Identity verification via Stripe (20 points)
+ * - Connected socials (TikTok, IG, YouTube, LinkedIn optional) - max 20 points
+ * 
+ * Total possible: 75 points (can be adjusted to reach 100 if needed)
  */
 export function calculateTrustScore(creator: Creator | Partial<Creator>): number {
   if (!creator) return 0;
@@ -21,12 +23,18 @@ export function calculateTrustScore(creator: Creator | Partial<Creator>): number
   }
   
   // Phone verification (10 points)
-  // Would check if phoneVerified is true
-  score += 0; // Placeholder - needs phone verification data
+  if (creator.phoneVerified) {
+    score += 10;
+  }
   
   // Stripe Connect onboarded (15 points)
   if (creator.stripe?.onboardingComplete) {
     score += 15;
+  }
+  
+  // Identity verification via Stripe (20 points)
+  if (creator.stripe?.identityVerified) {
+    score += 20;
   }
   
   // Connected socials (max 20 points)
@@ -38,61 +46,7 @@ export function calculateTrustScore(creator: Creator | Partial<Creator>): number
   if (socials?.linkedin) socialScore += 1; // Optional
   score += Math.min(socialScore, 20);
   
-  // Platform history (max 35 points)
-  const historyScore = calculateHistoryScore(creator);
-  score += historyScore;
-  
-  // Account age (max 10 points)
-  const accountAgeDays = creator.accountAge || 0;
-  if (accountAgeDays >= 365) {
-    score += 10;
-  } else if (accountAgeDays >= 180) {
-    score += 7;
-  } else if (accountAgeDays >= 90) {
-    score += 5;
-  } else if (accountAgeDays >= 30) {
-    score += 2;
-  }
-  
   return Math.min(Math.max(score, 0), 100);
-}
-
-function calculateHistoryScore(creator: Creator | Partial<Creator>): number {
-  const metrics = creator.metrics || {
-    gigsCompleted: 0,
-    onTimeRate: 100,
-    disputeRate: 0,
-    refundRate: 0,
-  };
-  let score = 0;
-  
-  // Gigs completed (max 10 points)
-  const gigsCompleted = (metrics as any).gigsCompleted || 0;
-  if (gigsCompleted >= 50) {
-    score += 10;
-  } else if (gigsCompleted >= 25) {
-    score += 8;
-  } else if (gigsCompleted >= 10) {
-    score += 6;
-  } else if (gigsCompleted >= 5) {
-    score += 4;
-  } else if (gigsCompleted >= 1) {
-    score += 2;
-  }
-  
-  // On-time rate (max 10 points)
-  const onTimeRate = (metrics as any).onTimeRate || 100;
-  score += (onTimeRate / 100) * 10;
-  
-  // Dispute rate penalty (max -5 points)
-  const disputeRate = (metrics as any).disputeRate || 0;
-  score -= (disputeRate / 100) * 5;
-  
-  // Refund rate penalty (max -5 points)
-  const refundRate = (metrics as any).refundRate || 0;
-  score -= (refundRate / 100) * 5;
-  
-  return Math.max(score, 0);
 }
 
 /**

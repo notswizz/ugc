@@ -68,6 +68,13 @@ export default function SubmitGig() {
         return;
       }
 
+      const deadlineAt = gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt);
+      if (deadlineAt && deadlineAt.getTime() < Date.now()) {
+        toast.error('This gig has ended');
+        router.push(`/creator/gigs/${gigId}`);
+        return;
+      }
+
       // Calculate payout if dynamic
       let payout = gigData.basePayout || 0;
       if (gigData.payoutType === 'dynamic' && user) {
@@ -283,6 +290,12 @@ export default function SubmitGig() {
     if (!gig || !user) {
       console.error('Cannot submit: missing gig or user', { hasGig: !!gig, hasUser: !!user });
       toast.error('Missing required information. Please refresh the page.');
+      return;
+    }
+
+    const deadlineMs = gig.deadlineAt ? new Date(gig.deadlineAt).getTime() : null;
+    if (deadlineMs != null && deadlineMs < Date.now()) {
+      toast.error('This gig has ended');
       return;
     }
     
@@ -688,6 +701,8 @@ export default function SubmitGig() {
       </Layout>
     );
   }
+
+  const isEnded = gig.deadlineAt && new Date(gig.deadlineAt).getTime() < Date.now();
 
   return (
     <Layout>
@@ -1151,7 +1166,7 @@ export default function SubmitGig() {
                 </div>
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting || isUploading}
+                  disabled={submitting || isUploading || isEnded}
                   className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   size="lg"
                 >
@@ -1159,7 +1174,9 @@ export default function SubmitGig() {
                     ? 'Uploading files...' 
                     : submitting 
                       ? 'Submitting...' 
-                      : `Submit Content - $${gig.calculatedPayout || gig.basePayout || 0}`
+                      : isEnded 
+                        ? 'Gig ended' 
+                        : `Submit Content - $${gig.calculatedPayout || gig.basePayout || 0}`
                   }
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">

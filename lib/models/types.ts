@@ -43,6 +43,7 @@ export interface Creator {
     tiktok?: string;
     instagram?: string;
     youtube?: string;
+    x?: string;
     linkedin?: string;
   };
   
@@ -51,6 +52,7 @@ export interface Creator {
     tiktok?: number;
     instagram?: number;
     youtube?: number;
+    x?: number;
     linkedin?: number;
   };
   
@@ -67,11 +69,19 @@ export interface Creator {
       verified: boolean;
       verifiedAt?: Date;
       followerCount?: number;
+      username?: string;
     };
     youtube?: {
       verified: boolean;
       verifiedAt?: Date;
       subscriberCount?: number;
+      username?: string;
+    };
+    x?: {
+      verified: boolean;
+      verifiedAt?: Date;
+      followerCount?: number;
+      username?: string;
     };
   };
   
