@@ -32,10 +32,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const pathwayId = process.env.BLAND_PATHWAY_ID;
 
   if (!apiKey || !pathwayId) {
-    console.error('[verify-phone] Missing BLAND_API_KEY or BLAND_PATHWAY_ID');
+    const missing: string[] = [];
+    if (!apiKey) missing.push('BLAND_API_KEY');
+    if (!pathwayId) missing.push('BLAND_PATHWAY_ID');
+    console.error('[verify-phone] Missing env:', missing.join(', '));
     return res.status(500).json({
       error: 'Bland AI not configured',
-      message: 'Set BLAND_API_KEY and BLAND_PATHWAY_ID in .env',
+      message: `Add to .env.local: ${missing.join(', ')}`,
     });
   }
 
@@ -83,10 +86,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const wh = webhookUrl();
     if (!wh) {
+      const hint =
+        process.env.VERCEL_URL
+          ? 'BLAND_WEBHOOK_URL is not set; webhook uses VERCEL_URL on Vercel.'
+          : !process.env.BLAND_WEBHOOK_URL && !process.env.NEXT_PUBLIC_APP_URL
+            ? 'Set BLAND_WEBHOOK_URL or NEXT_PUBLIC_APP_URL to an HTTPS URL (e.g. ngrok for local dev).'
+            : 'Webhook URL must be HTTPS. Use BLAND_WEBHOOK_URL or NEXT_PUBLIC_APP_URL.';
+      console.error('[verify-phone] No webhook URL:', hint);
       return res.status(400).json({
-        error: 'Webhook URL must be HTTPS',
-        message:
-          'Set BLAND_WEBHOOK_URL or NEXT_PUBLIC_APP_URL to an HTTPS URL (e.g. ngrok for local dev).',
+        error: 'Webhook URL required',
+        message: hint,
       });
     }
 

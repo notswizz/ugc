@@ -22,9 +22,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body ?? {};
-    const callId = body.call_id ?? body.id ?? body.callId;
-    const status = (body.status ?? '').toString().toLowerCase();
+    const raw = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body ?? {};
+    const data = raw.data ?? raw.payload ?? raw;
+    const body = typeof data === 'object' && data !== null ? { ...raw, ...data } : raw;
+
+    const callId =
+      body.call_id ?? body.id ?? body.callId ?? body.callID ?? (body.call && (body.call as { id?: string }).id);
+
+    const status = (body.status ?? body.call_status ?? '').toString().toLowerCase();
+    const customVerified =
+      body.verified === true ||
+      body.username_verified === true ||
+      (typeof (body as { variable?: Record<string, unknown> }).variable === 'object' &&
+        (body as { variable?: { username_verified?: boolean } }).variable?.username_verified === true);
+
+    console.log('[bland-webhook] Incoming', {
+      keys: Object.keys(body),
+      callId: callId ?? null,
+      status: status || null,
+      customVerified,
+    });
 
     if (!callId) {
       console.warn('[bland-webhook] No call_id in payload', Object.keys(body));
@@ -33,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const doc = await adminDb.collection(BLAND_COLLECTION).doc(String(callId)).get();
     if (!doc.exists) {
-      console.warn('[bland-webhook] Unknown call_id', callId);
+      console.warn('[bland-webhook] Unknown call_id', callId, '(store doc IDs from verify-phone create response)');
       return res.status(200).json({ received: true });
     }
 
@@ -45,7 +62,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ received: true });
     }
 
-    const completed = ['completed', 'done', 'finished'].some((s) => status.includes(s));
+    const completed =
+      customVerified ||
+      [
+        'completed',
+        'complete',
+        'done',
+        'finished',
+        'success',
+        'successful',
+        'ended',
+        'verified',
+      ].some((s) => status.includes(s));
 
     if (completed) {
       await adminDb.collection('creators').doc(userId).update({
@@ -54,7 +82,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         phoneVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      console.log('[bland-webhook] Marked phone verified', { userId, callId });
+      console.log('[bland-webhook] Marked phone verified', { userId, callId, status });
+    } else {
+      console.log('[bland-webhook] Call not treated as completed', { callId, status, customVerified });
     }
 
     await docRef.delete();
