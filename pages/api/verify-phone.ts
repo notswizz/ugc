@@ -86,25 +86,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const wh = webhookUrl();
     if (!wh) {
-      const hint =
-        process.env.VERCEL_URL
-          ? 'BLAND_WEBHOOK_URL is not set; webhook uses VERCEL_URL on Vercel.'
-          : !process.env.BLAND_WEBHOOK_URL && !process.env.NEXT_PUBLIC_APP_URL
-            ? 'Set BLAND_WEBHOOK_URL or NEXT_PUBLIC_APP_URL to an HTTPS URL (e.g. ngrok for local dev).'
-            : 'Webhook URL must be HTTPS. Use BLAND_WEBHOOK_URL or NEXT_PUBLIC_APP_URL.';
-      console.error('[verify-phone] No webhook URL:', hint);
-      return res.status(400).json({
-        error: 'Webhook URL required',
-        message: hint,
-      });
+      console.warn(
+        '[verify-phone] No webhook URL. Call will still be placed, but we won\'t mark phone verified when it ends. ' +
+          'Set BLAND_WEBHOOK_URL or NEXT_PUBLIC_APP_URL (or use Vercel) for verification.'
+      );
     }
 
     // request_data: pathway variables Bland uses during the call (e.g. {{username}} in nodes).
     // request_metadata: optional extra context; we also store username in our DB for the webhook.
+    // Webhook is optional — Bland will place the call either way; we need it only to mark verified.
     const payload: Record<string, unknown> = {
       phone_number: e164,
       pathway_id: pathwayId,
-      webhook: wh,
       request_data: {
         username: useUsername,
         user_name: useUsername,
@@ -116,6 +109,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         username: useUsername,
       },
     };
+    if (wh) payload.webhook = wh;
+
+    console.log('[verify-phone] Calling Bland', { phone: e164, pathwayId, hasWebhook: !!wh, username: useUsername });
 
     const blandRes = await fetch(`${BLAND_API_BASE}/calls`, {
       method: 'POST',
@@ -126,13 +122,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       body: JSON.stringify(payload),
     });
 
-    const data = (await blandRes.json().catch(() => ({}))) as { call_id?: string; id?: string; error?: string; message?: string };
+    const data = (await blandRes.json().catch(() => ({}))) as {
+      call_id?: string;
+      id?: string;
+      error?: string;
+      message?: string;
+      errors?: unknown;
+    };
 
     if (!blandRes.ok) {
+      const msg =
+        data?.message || data?.error || (Array.isArray(data?.errors) ? (data.errors as { message?: string }[]).map((e) => e?.message).filter(Boolean).join('; ') : null) || `Bland returned ${blandRes.status}`;
       console.error('[verify-phone] Bland API error', { status: blandRes.status, data });
       return res.status(502).json({
         error: 'Bland API error',
-        message: data?.message || data?.error || `Bland returned ${blandRes.status}`,
+        message: String(msg),
       });
     }
 
@@ -141,7 +145,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('[verify-phone] No call_id in Bland response', data);
       return res.status(502).json({
         error: 'Bland API error',
-        message: 'No call ID in response',
+        message: data?.message || data?.error || 'No call ID in response',
       });
     }
 

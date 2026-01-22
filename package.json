@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "delete-db": "node scripts/delete-database.js",
-    "set-gigs-open": "node scripts/set-gigs-open.js"
+    "set-gigs-open": "node scripts/set-gigs-open.js",
+    "remove-phone-verifications": "node scripts/remove-phone-verifications.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
