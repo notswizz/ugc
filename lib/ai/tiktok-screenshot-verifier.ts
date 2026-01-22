@@ -56,7 +56,7 @@ export async function verifyTikTokScreenshot(imageUrl: string): Promise<TikTokVe
   const jsonStr = jsonMatch ? jsonMatch[0] : text;
 
   try {
-    const parsed = JSON.parse(jsonStr) as { gigletInBio?: boolean; username?: string | null; followerCount?: number | null };
+    const parsed = JSON.parse(jsonStr) as { gigletInBio?: boolean; username?: string | null; followerCount?: number | string | null };
     return {
       gigletInBio: !!parsed.gigletInBio,
       username: typeof parsed.username === 'string' ? parsed.username.replace(/^@/, '').trim() || null : null,

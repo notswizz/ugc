@@ -82,7 +82,7 @@ function parseResult(text: string): SocialVerifyResult {
     const parsed = JSON.parse(jsonStr) as {
       gigletInBio?: boolean;
       username?: string | null;
-      followerCount?: number | null;
+      followerCount?: number | string | null;
     };
     return {
       gigletInBio: !!parsed.gigletInBio,

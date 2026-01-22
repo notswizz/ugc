@@ -61,7 +61,8 @@ export default async function handler(
     return res.status(400).json({ success: false, error: message, message });
   }
 
-  if (!isPlatform(String(platform))) {
+  const platformStr = String(platform);
+  if (!isPlatform(platformStr)) {
     console.error('[verify-social-screenshot] 400 INVALID_PLATFORM', { platform, bodyKeys });
     return res.status(400).json({
       success: false,
@@ -76,16 +77,16 @@ export default async function handler(
     });
   }
 
-  const label = platformLabel(platform);
-  const countType = countLabel(platform);
+  const label = platformLabel(platformStr);
+  const countType = countLabel(platformStr);
 
   try {
-    console.log('[verify-social-screenshot] calling AI verifier', { platform, screenshotUrlLen: String(screenshotUrl).length });
-    const result = await verifySocialScreenshot(String(screenshotUrl), platform as SocialPlatform);
+    console.log('[verify-social-screenshot] calling AI verifier', { platform: platformStr, screenshotUrlLen: String(screenshotUrl).length });
+    const result = await verifySocialScreenshot(String(screenshotUrl), platformStr);
     console.log('[verify-social-screenshot] AI result', { gigletInBio: result.gigletInBio, followerCount: result.followerCount, username: result.username });
 
     if (!result.gigletInBio) {
-      console.error('[verify-social-screenshot] 400 GIGLET_NOT_IN_BIO', { platform, raw: result.raw?.slice(0, 200) });
+      console.error('[verify-social-screenshot] 400 GIGLET_NOT_IN_BIO', { platform: platformStr, raw: result.raw?.slice(0, 200) });
       return res.status(400).json({
         success: false,
         error: 'GIGLET not found in bio',
@@ -94,7 +95,7 @@ export default async function handler(
     }
 
     if (result.followerCount == null || result.followerCount < 0) {
-      console.error('[verify-social-screenshot] 400 COULD_NOT_READ_COUNT', { platform, raw: result.raw?.slice(0, 200) });
+      console.error('[verify-social-screenshot] 400 COULD_NOT_READ_COUNT', { platform: platformStr, raw: result.raw?.slice(0, 200) });
       return res.status(400).json({
         success: false,
         error: 'Could not read count',
@@ -113,26 +114,26 @@ export default async function handler(
     const extractedUsername = result.username?.trim().replace(/^@/, '') || null;
     const existingUsername =
       (expectedUsername && String(expectedUsername).trim().replace(/^@/, '')) ||
-      creatorData?.socials?.[platform];
+      creatorData?.socials?.[platformStr];
 
     const usernameToStore = existingUsername || extractedUsername;
 
     const updatedFollowingCount = {
       ...(creatorData?.followingCount || {}),
-      [platform]: result.followerCount,
+      [platformStr]: result.followerCount,
     };
 
     const platformVerification: Record<string, unknown> = {
       verified: true,
       verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
       followerCount: result.followerCount,
-      ...(platform === 'youtube' && { subscriberCount: result.followerCount }),
+      ...(platformStr === 'youtube' && { subscriberCount: result.followerCount }),
       ...(usernameToStore && { username: usernameToStore }),
     };
 
     const verificationData = {
       ...(creatorData?.socialVerification || {}),
-      [platform]: platformVerification,
+      [platformStr]: platformVerification,
     };
 
     const updatePayload: Record<string, unknown> = {
@@ -144,16 +145,16 @@ export default async function handler(
     if (usernameToStore) {
       updatePayload.socials = {
         ...(creatorData?.socials || {}),
-        [platform]: usernameToStore,
+        [platformStr]: usernameToStore,
       };
     }
 
     await creatorRef.update(updatePayload);
-    console.log('[verify-social-screenshot] 200 OK', { platform, userId: String(userId).slice(0, 8), followerCount: result.followerCount });
+    console.log('[verify-social-screenshot] 200 OK', { platform: platformStr, userId: String(userId).slice(0, 8), followerCount: result.followerCount });
 
     return res.status(200).json({
       success: true,
-      platform,
+      platform: platformStr,
       followerCount: result.followerCount,
       username: usernameToStore,
       message: `${label} verified successfully`,

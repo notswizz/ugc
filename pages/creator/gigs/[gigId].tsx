@@ -722,7 +722,7 @@ export default function GigDetail() {
             {currentStatus === 'paid' && (
               <>
                 <Button
-                  onClick={() => toast.info('View payout (placeholder)')}
+                  onClick={() => toast('View payout (placeholder)')}
                   className="flex-1 h-11 text-base font-semibold"
                   size="lg"
                 >

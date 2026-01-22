@@ -93,7 +93,9 @@ export interface Creator {
   
   // Community (school/group)
   communityId?: string; // Assigned community ID (cannot be changed)
-  
+
+  phoneVerified?: boolean;
+
   rates: {
     perGigSuggested?: number;
   };
@@ -115,6 +117,7 @@ export interface Creator {
   stripe: {
     connectAccountId?: string;
     onboardingComplete?: boolean;
+    identityVerified?: boolean;
   };
   
   balance?: number; // Account balance in USD
