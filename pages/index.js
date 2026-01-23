@@ -1,6 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -11,6 +11,11 @@ import ComparisonChart from "@/components/ComparisonChart";
 export default function Home() {
   const { user, appUser, loading } = useAuth();
   const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (loading) {
     return <LoadingSpinner fullScreen text="Loading Giglet..." size="lg" />;
@@ -58,190 +63,252 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 flex justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex justify-center">
         <div className="w-full max-w-[428px] bg-white min-h-screen shadow-2xl">
           {/* Header */}
-          <header className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
+          <header className="bg-white sticky top-0 z-50 border-b border-gray-200/60">
             <div className="px-4">
-              <div className="flex justify-between items-center h-16">
-                <div className="flex items-center gap-2">
+              <div className="flex justify-between items-center h-14">
+                <div className="flex items-center gap-1.5">
                   <img 
                     src="/logo1.png" 
                     alt="Giglet Logo" 
-                    className="h-9 w-auto"
+                    className="h-6 w-auto"
                   />
-                  <span className="text-xl font-bold bg-gradient-to-r from-red-600 via-orange-500 to-orange-600 bg-clip-text text-transparent">
+                  <span className="text-lg font-semibold text-gray-900">
                     Giglet
                   </span>
                 </div>
-                <div className="flex gap-2">
-                  <Link href="/auth/login">
-                    <Button variant="ghost" size="sm" className="h-9 px-4 text-sm font-medium hover:bg-orange-50">Sign In</Button>
-                  </Link>
-                </div>
+                <Link href="/auth/login">
+                  <Button variant="ghost" size="sm" className="h-8 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100">Sign In</Button>
+                </Link>
               </div>
             </div>
           </header>
 
           {/* Hero Section */}
-          <section className="px-6 pt-16 pb-12 relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-orange-100/30 to-transparent pointer-events-none" />
-            <div className="text-center relative z-10">
-              <div className="mb-8 flex justify-center">
-                <img 
-                  src="/logotext.png" 
-                  alt="Giglet" 
-                  className="h-20 w-auto drop-shadow-lg"
-                />
+          <section className="px-6 pt-8 pb-8 relative">
+            <div className="text-center">
+              {/* Logo in Glass Card */}
+              <div 
+                className={`mb-6 flex justify-center transition-all duration-700 ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
+                <div 
+                  className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50"
+                  style={{
+                    animation: mounted ? 'sparkle 0.6s ease-out 0.3s forwards' : 'none'
+                  }}
+                >
+                  <img 
+                    src="/logotext.png" 
+                    alt="Giglet" 
+                    className="h-16 w-auto"
+                  />
+                </div>
               </div>
-              <div className="inline-block px-4 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold mb-4">
-                🚀 The Future of UGC
+
+              {/* Confidence Pill */}
+              <div 
+                className={`inline-block px-4 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium mb-5 transition-all duration-700 delay-100 ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
+                ⚡ Paid gigs. No pitching.
               </div>
-              <h1 className="text-4xl font-black text-gray-900 mb-4 leading-tight">
-                DoorDash for<br/>
-                <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                  Content Creators
-                </span>
+
+              {/* Headline */}
+              <h1 
+                className={`text-4xl font-black text-gray-900 mb-3 leading-tight transition-all duration-700 delay-200 ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
+                Get Paid to Post
               </h1>
-              <p className="text-lg text-gray-600 mb-10 leading-relaxed">
-                Get gigs instantly. Create amazing content.<br/>Get paid instantly. 💰
+
+              {/* Subheadline */}
+              <p 
+                className={`text-base text-gray-600 mb-6 leading-snug transition-all duration-700 delay-300 ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
+                Brands post gigs. You grab one,<br/>post naturally, and get paid.
               </p>
-              <div className="flex flex-col gap-3">
+
+              {/* 3-Step Micro Flow */}
+              <div 
+                className={`flex items-center justify-center gap-2 mb-8 text-xs text-gray-500 transition-all duration-700 delay-400 ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
+                <span className="flex items-center gap-1">
+                  <span className="text-gray-400">Grab a Gig</span>
+                </span>
+                <span className="text-gray-300">→</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-gray-400">Post</span>
+                </span>
+                <span className="text-gray-300">→</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-gray-400">Get Paid</span>
+                </span>
+              </div>
+
+              {/* Primary CTA */}
+              <div 
+                className={`mb-3 transition-all duration-700 delay-500 ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
                 <Link href="/auth/signup">
-                  <Button size="lg" className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 h-14 text-base font-semibold shadow-lg shadow-orange-500/30 transition-all hover:shadow-xl hover:shadow-orange-500/40">
-                    🎬 Start Creating
+                  <Button 
+                    size="lg" 
+                    className="w-full bg-gray-900 hover:bg-gray-800 text-white h-14 text-base font-bold shadow-lg transition-all duration-200 active:scale-[0.98] pulse-after-idle"
+                  >
+                    💸 Start Earning
                   </Button>
                 </Link>
+              </div>
+
+              {/* Secondary CTA */}
+              <div 
+                className={`mb-6 transition-all duration-700 delay-600 ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
                 <Link href="/auth/login">
-                  <Button size="lg" variant="outline" className="w-full h-14 text-base font-semibold border-2 hover:bg-orange-50 hover:border-orange-300">
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="w-full h-11 text-sm font-medium border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
                     Sign In
                   </Button>
                 </Link>
               </div>
+
+              {/* Social Proof Strip */}
+              <div 
+                className={`flex items-center justify-center gap-6 text-xs text-gray-500 transition-all duration-700 delay-700 ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-400">👥</span>
+                  <span>2,100+ creators</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-400">💰</span>
+                  <span>$18k paid out</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-400">⚡</span>
+                  <span>Same-day payouts</span>
+                </div>
+              </div>
             </div>
           </section>
 
-          {/* Stats Bar */}
-          <section className="px-6 py-6 bg-gradient-to-r from-orange-600 to-red-600 text-white">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold mb-1">⚡</div>
-                <div className="text-xs opacity-90">Instant Match</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold mb-1">💰</div>
-                <div className="text-xs opacity-90">Instant Pay</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold mb-1">🔥</div>
-                <div className="text-xs opacity-90">Hot Gigs</div>
-              </div>
-            </div>
-          </section>
 
           {/* Features Grid */}
-          <section className="px-6 py-12">
-            <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
-              Why Creators Love Giglet
-            </h2>
+          <section className="px-6 py-10 bg-gray-50/50">
             <div className="mb-6 text-center">
               <Button
                 variant="outline"
                 onClick={() => setComparisonOpen(true)}
-                className="text-sm font-medium border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
+                className="text-xs font-medium border-gray-300 text-gray-700 hover:bg-gray-100"
               >
                 📊 See How We Compare
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="p-5 text-center border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-default">
-                <div className="text-4xl mb-3">📱</div>
-                <h3 className="text-base font-bold mb-2">Real-Time Gigs</h3>
-                <p className="text-xs text-gray-600">Get notified instantly when brands post gigs you're perfect for</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="p-4 text-center border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-default bg-white">
+                <div className="text-3xl mb-2">📱</div>
+                <h3 className="text-sm font-bold mb-1 text-gray-900">Real-Time Gigs</h3>
+                <p className="text-xs text-gray-600 leading-tight">Get notified instantly when brands post gigs</p>
               </Card>
-              <Card className="p-5 text-center border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-default">
-                <div className="text-4xl mb-3">💰</div>
-                <h3 className="text-base font-bold mb-2">Instant Payments</h3>
-                <p className="text-xs text-gray-600">Get paid instantly upon approval. No waiting!</p>
+              <Card className="p-4 text-center border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-default bg-white">
+                <div className="text-3xl mb-2">💰</div>
+                <h3 className="text-sm font-bold mb-1 text-gray-900">Instant Payments</h3>
+                <p className="text-xs text-gray-600 leading-tight">Get paid instantly upon approval</p>
               </Card>
-              <Card className="p-5 text-center border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-default">
-                <div className="text-4xl mb-3">🎯</div>
-                <h3 className="text-base font-bold mb-2">Smart Matching</h3>
-                <p className="text-xs text-gray-600">Our AI matches you with gigs you'll actually love</p>
+              <Card className="p-4 text-center border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-default bg-white">
+                <div className="text-3xl mb-2">🎯</div>
+                <h3 className="text-sm font-bold mb-1 text-gray-900">Smart Matching</h3>
+                <p className="text-xs text-gray-600 leading-tight">AI matches you with perfect gigs</p>
               </Card>
-              <Card className="p-5 text-center border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-default">
-                <div className="text-4xl mb-3">🚀</div>
-                <h3 className="text-base font-bold mb-2">Go Online</h3>
-                <p className="text-xs text-gray-600">Accept gigs anytime, anywhere. Work on your schedule</p>
+              <Card className="p-4 text-center border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-default bg-white">
+                <div className="text-3xl mb-2">⚡</div>
+                <h3 className="text-sm font-bold mb-1 text-gray-900">Work Anywhere</h3>
+                <p className="text-xs text-gray-600 leading-tight">Accept gigs on your schedule</p>
               </Card>
             </div>
           </section>
 
           {/* How It Works */}
-          <section className="px-6 py-12 bg-gradient-to-b from-orange-50 to-white">
-            <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
+          <section className="px-6 py-10">
+            <h2 className="text-xl font-bold text-center text-gray-900 mb-6">
               How It Works
             </h2>
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                   1
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-1">Browse Hot Gigs</h3>
-                  <p className="text-sm text-gray-600">See real-time gig offers from brands looking for creators like you</p>
+                  <h3 className="font-bold text-gray-900 mb-1 text-sm">Browse Gigs</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">See real-time gig offers from brands</p>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                   2
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-1">Accept & Create</h3>
-                  <p className="text-sm text-gray-600">Tap to accept gigs you love. Create amazing content on your terms</p>
+                  <h3 className="font-bold text-gray-900 mb-1 text-sm">Accept & Post</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">Tap to accept, create content naturally</p>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                   3
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-1">Get Paid Instantly</h3>
-                  <p className="text-sm text-gray-600">Submit your content and get paid instantly. Cha-ching! 💸</p>
+                  <h3 className="font-bold text-gray-900 mb-1 text-sm">Get Paid</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">Submit and get paid instantly</p>
                 </div>
               </div>
             </div>
           </section>
 
           {/* CTA Section */}
-          <section className="px-6 py-12 bg-gradient-to-br from-orange-600 via-red-600 to-orange-700 text-white mx-6 rounded-2xl mb-12 shadow-2xl">
+          <section className="px-6 py-10 bg-gray-900 text-white mx-6 rounded-2xl mb-8 shadow-xl">
             <div className="text-center">
-              <div className="text-5xl mb-4">🎉</div>
-              <h2 className="text-3xl font-black mb-3">Ready to Start?</h2>
-              <p className="text-lg text-orange-100 mb-6 leading-relaxed">
-                Join thousands of creators earning from<br/>UGC gigs on their own schedule
+              <h2 className="text-2xl font-black mb-2">Ready to Start?</h2>
+              <p className="text-sm text-gray-300 mb-6 leading-relaxed">
+                Join thousands earning from<br/>UGC gigs on their schedule
               </p>
               <Link href="/auth/signup">
-                <Button size="lg" className="w-full bg-white text-orange-600 hover:bg-orange-50 h-14 text-base font-bold shadow-xl transition-all hover:scale-105">
-                  🚀 Get Started for Free
+                <Button size="lg" className="w-full bg-white text-gray-900 hover:bg-gray-100 h-12 text-sm font-bold shadow-lg transition-all active:scale-[0.98]">
+                  💸 Start Earning
                 </Button>
               </Link>
-              <p className="text-xs text-orange-200 mt-4">No credit card required • Free forever</p>
+              <p className="text-xs text-gray-400 mt-3">No credit card required</p>
             </div>
           </section>
 
           {/* Footer */}
-          <footer className="px-6 py-8 border-t bg-gray-50">
+          <footer className="px-6 py-6 border-t border-gray-200 bg-white">
             <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="flex items-center justify-center gap-2 mb-2">
                 <img 
                   src="/logo1.png" 
                   alt="Giglet Logo" 
-                  className="h-6 w-auto"
+                  className="h-5 w-auto"
                 />
-                <span className="font-bold text-gray-900">Giglet</span>
+                <span className="font-semibold text-gray-900 text-sm">Giglet</span>
               </div>
-              <p className="text-xs text-gray-500 mb-4">The DoorDash of UGC</p>
               <p className="text-xs text-gray-400">© 2025 Giglet. All rights reserved.</p>
             </div>
           </footer>
