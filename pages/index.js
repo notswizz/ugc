@@ -1,13 +1,16 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth/AuthContext";
 import AnimatedLogo from "@/components/branding/AnimatedLogo";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import ComparisonChart from "@/components/ComparisonChart";
 
 export default function Home() {
   const { user, appUser, loading } = useAuth();
+  const [comparisonOpen, setComparisonOpen] = useState(false);
 
   if (loading) {
     return <LoadingSpinner fullScreen text="Loading Giglet..." size="lg" />;
@@ -141,6 +144,15 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
               Why Creators Love Giglet
             </h2>
+            <div className="mb-6 text-center">
+              <Button
+                variant="outline"
+                onClick={() => setComparisonOpen(true)}
+                className="text-sm font-medium border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
+              >
+                📊 See How We Compare
+              </Button>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Card className="p-5 text-center border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-default">
                 <div className="text-4xl mb-3">📱</div>
@@ -235,6 +247,9 @@ export default function Home() {
           </footer>
         </div>
       </div>
+      
+      {/* Comparison Chart Modal */}
+      <ComparisonChart open={comparisonOpen} onOpenChange={setComparisonOpen} />
     </>
   );
 }

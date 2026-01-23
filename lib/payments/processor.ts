@@ -1,12 +1,5 @@
-import Stripe from 'stripe';
 import admin, { adminDb } from '@/lib/firebase/admin';
 import { transferBalance, updateBalance, getOrCreateBankAccount } from './balance';
-
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16' as any,
-    })
-  : null;
 
 export interface PaymentData {
   submissionId: string;
@@ -19,7 +12,8 @@ export interface PaymentData {
 
 /**
  * Processes automatic payment for approved submission
- * Uses Stripe if configured, otherwise uses balance system
+ * Uses balance system only - transfers balance from brand to creator
+ * Stripe is only used for withdrawals (creators withdrawing from balance to bank)
  */
 export async function processPayment(data: PaymentData): Promise<void> {
   const { submissionId, gigId, creatorId, brandId, gig, submission } = data;
@@ -124,43 +118,7 @@ export async function processPayment(data: PaymentData): Promise<void> {
     return;
   }
 
-  // If Stripe is configured, try Stripe first
-  if (stripe) {
-    // Get creator data to check Stripe Connect account
-    const creatorDoc = await adminDb.collection('creators').doc(creatorId).get();
-    if (!creatorDoc.exists) {
-      throw new Error('Creator not found');
-    }
-
-    const creator = creatorDoc.data();
-    const connectAccountId = creator?.stripe?.connectAccountId;
-
-    if (connectAccountId) {
-      // Process via Stripe
-      try {
-        await processStripePayment({
-          submissionId,
-          gigId,
-          creatorId,
-          brandId,
-          basePayout,
-          bonusAmount,
-          reimbursementAmount,
-          platformFee,
-          creatorNet,
-          connectAccountId,
-        });
-        return; // Successfully processed via Stripe
-      } catch (stripeError: any) {
-        console.error('Stripe payment failed, falling back to balance system:', stripeError);
-        // Fall through to balance system
-      }
-    } else {
-      console.log('Creator does not have Stripe Connect account set up, using balance system');
-    }
-  }
-
-  // Process via balance system (either Stripe not configured or Stripe failed)
+  // Process via balance system only (Stripe is only used for withdrawals)
   await processBalancePayment({
     submissionId,
     gigId,
@@ -175,116 +133,9 @@ export async function processPayment(data: PaymentData): Promise<void> {
 }
 
 /**
- * Processes payment via Stripe
- */
-async function processStripePayment(data: {
-  submissionId: string;
-  gigId: string;
-  creatorId: string;
-  brandId: string;
-  basePayout: number;
-  bonusAmount: number;
-  reimbursementAmount: number;
-  platformFee: number;
-  creatorNet: number;
-  connectAccountId: string;
-}): Promise<void> {
-  const {
-    submissionId,
-    gigId,
-    creatorId,
-    brandId,
-    basePayout,
-    bonusAmount,
-    reimbursementAmount,
-    platformFee,
-    creatorNet,
-    connectAccountId,
-  } = data;
-
-  // Convert to cents for Stripe
-  const transferAmount = Math.round(creatorNet * 100);
-
-  try {
-    // Create Stripe transfer
-    const transfer = await stripe!.transfers.create({
-      amount: transferAmount,
-      currency: 'usd',
-      destination: connectAccountId,
-      metadata: {
-        submissionId,
-        gigId,
-        creatorId,
-        brandId,
-      },
-    });
-
-    // Create payment document
-    const paymentData: any = {
-      submissionId,
-      gigId,
-      brandId,
-      creatorId,
-      basePayout,
-      platformFee,
-      creatorNet,
-      stripe: {
-        transferId: transfer.id,
-      },
-      status: 'transferred',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      transferredAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-
-    // Only include optional fields if they have values
-    if (bonusAmount > 0) {
-      paymentData.bonusAmount = bonusAmount;
-    }
-    if (reimbursementAmount > 0) {
-      paymentData.reimbursementAmount = reimbursementAmount;
-    }
-
-    await adminDb!.collection('payments').add(paymentData);
-
-    console.log('Stripe payment processed successfully:', {
-      submissionId,
-      transferId: transfer.id,
-      amount: creatorNet,
-    });
-  } catch (stripeError: any) {
-    console.error('Stripe transfer error:', stripeError);
-    
-    // Create payment document with pending status
-    const paymentData: any = {
-      submissionId,
-      gigId,
-      brandId,
-      creatorId,
-      basePayout,
-      platformFee,
-      creatorNet,
-      stripe: {},
-      status: 'pending',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      error: stripeError.message,
-    };
-
-    // Only include optional fields if they have values
-    if (bonusAmount > 0) {
-      paymentData.bonusAmount = bonusAmount;
-    }
-    if (reimbursementAmount > 0) {
-      paymentData.reimbursementAmount = reimbursementAmount;
-    }
-
-    await adminDb!.collection('payments').add(paymentData);
-    
-    throw new Error(`Stripe payment processing failed: ${stripeError.message}`);
-  }
-}
-
-/**
  * Processes payment via balance system
+ * Brand-to-creator payments are always balance transfers
+ * Stripe is only used for withdrawals (creators withdrawing from balance to bank)
  */
 async function processBalancePayment(data: {
   submissionId: string;

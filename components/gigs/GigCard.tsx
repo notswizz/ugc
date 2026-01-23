@@ -117,18 +117,20 @@ export default function GigCard({
 
           {/* Right: Payout Module */}
           <div className="flex-shrink-0 text-right">
-            <div className="mb-0.5">
-              <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-wide">Payout</span>
+            <div className="inline-flex flex-col items-end bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg px-3 py-2 border border-green-200/50">
+              <div className="mb-0.5">
+                <span className="text-[9px] text-green-700 font-semibold uppercase tracking-wider">Payout</span>
+              </div>
+              <div className="text-2xl font-extrabold text-green-700 leading-none tracking-tight">
+                {formatMoney(payoutCents)}
+              </div>
+              {payoutType === 'dynamic' && (
+                <p className="text-[9px] text-green-600 font-medium mt-1 px-1.5 py-0.5 bg-green-100/60 rounded-full">dynamic</p>
+              )}
+              {payoutType === 'fixed' && (
+                <p className="text-[9px] text-green-600 font-medium mt-1 px-1.5 py-0.5 bg-green-100/60 rounded-full">instant</p>
+              )}
             </div>
-            <div className="text-2xl font-bold text-zinc-900 leading-none">
-              {formatMoney(payoutCents)}
-            </div>
-            {payoutType === 'dynamic' && (
-              <p className="text-[10px] text-zinc-500 mt-0.5">dynamic</p>
-            )}
-            {payoutType === 'fixed' && (
-              <p className="text-[10px] text-zinc-500 mt-0.5">instant</p>
-            )}
           </div>
         </div>
 

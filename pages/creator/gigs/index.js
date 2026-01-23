@@ -9,7 +9,7 @@ import { canAcceptGig, calculateTrustScore } from '@/lib/trustScore/calculator';
 import { THINGS } from '@/lib/things/constants';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
+import { calculatePayout, getCreatorFollowingCount, getCreatorNetPayout } from '@/lib/payments/calculate-payout';
 import HistoryTab from './_history-tab';
 import { canAccessGig, getRepLevel } from '@/lib/rep/service';
 
@@ -540,9 +540,10 @@ export default function CreatorGigs() {
               }
               const deliverablesText = deliverableParts.length > 0 ? deliverableParts.join(' + ') : 'No deliverables';
               
-              // Calculate payout in cents
-              const payoutDollars = gig.calculatedPayout || gig.basePayout || 0;
-              const payoutCents = Math.round(payoutDollars * 100);
+              // Calculate payout in cents - show creator's net payout (after 15% platform fee)
+              const basePayoutDollars = gig.calculatedPayout || gig.basePayout || 0;
+              const creatorNetPayoutDollars = getCreatorNetPayout(basePayoutDollars);
+              const payoutCents = Math.round(creatorNetPayoutDollars * 100);
               
               // Determine if gig is new (created within last 24 hours)
               const createdAt = gig.createdAt?.toDate ? gig.createdAt.toDate() : new Date(gig.createdAt);

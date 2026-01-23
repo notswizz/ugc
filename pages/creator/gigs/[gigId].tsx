@@ -14,7 +14,7 @@ import { THINGS } from '@/lib/things/constants';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
+import { calculatePayout, getCreatorFollowingCount, getCreatorNetPayout } from '@/lib/payments/calculate-payout';
 import {
   Clock,
   Play,
@@ -79,6 +79,7 @@ export default function GigDetail() {
   const { user, appUser } = useAuth();
   const [gig, setGig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<GigStatus>('open');
 
   useEffect(() => {
@@ -152,8 +153,11 @@ export default function GigDetail() {
       else if (submissionStatus === 'needs_changes') status = 'needs_changes';
       else if (submissionStatus === 'submitted') status = 'submitted';
       else if (hasCreatorSubmission || gigData.acceptedBy === user?.uid) status = 'accepted';
-      else if (!gigData.status || gigData.status === 'open') status = 'open';
-      else status = 'closed';
+      else if (gigData.status === 'closed') status = 'closed';
+      else status = 'open'; // Default to open for any other status or no status
+
+      const basePayout = calculatedPayout || gigData.basePayout || 0;
+      const creatorNetPayout = getCreatorNetPayout(basePayout);
 
       const gig = {
         id: gigDoc.id,
@@ -162,7 +166,8 @@ export default function GigDetail() {
         deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
         createdAt: gigData.createdAt?.toDate ? gigData.createdAt.toDate() : new Date(gigData.createdAt),
         brandName,
-        payout: calculatedPayout || gigData.basePayout || 0,
+        payout: creatorNetPayout, // Show creator's net payout (after 15% platform fee)
+        basePayout, // Keep original for reference
         calculatedPayout,
         hasCreatorSubmission,
         submissionStatus,
@@ -179,14 +184,52 @@ export default function GigDetail() {
     }
   };
 
-  // Placeholder handlers (no backend mutations)
-  const handleAcceptGig = () => {
+  const handleAcceptGig = async () => {
     if (isEnded) {
       toast.error('This gig has ended');
       return;
     }
-    toast.success('Gig accepted! (Placeholder - implement backend)');
-    // router.push(`/creator/gigs/${gigId}/submit`);
+
+    if (!user?.uid) {
+      toast.error('Please sign in');
+      return;
+    }
+
+    if (!gigId || typeof gigId !== 'string') {
+      toast.error('Invalid gig');
+      return;
+    }
+
+    setAccepting(true);
+    try {
+      const response = await fetch('/api/accept-gig', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          gigId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        if (data.alreadyAccepted) {
+          toast.success('Gig already accepted');
+        } else {
+          toast.success('Gig accepted successfully!');
+        }
+        // Refresh gig data to update status
+        await fetchGig();
+      } else {
+        toast.error(data.message || data.error || 'Failed to accept gig');
+      }
+    } catch (error: any) {
+      console.error('Error accepting gig:', error);
+      toast.error(error.message || 'Failed to accept gig');
+    } finally {
+      setAccepting(false);
+    }
   };
 
   const handleStartSubmission = () => {
@@ -246,7 +289,7 @@ export default function GigDetail() {
 
   return (
     <Layout>
-      <div className="max-w-[430px] mx-auto min-h-screen flex flex-col pb-24">
+      <div className="max-w-[430px] mx-auto min-h-screen flex flex-col pb-32">
         {/* Sticky Top Bar */}
         <div className="sticky top-0 z-10 bg-white border-b border-zinc-200 px-4 py-3 flex items-center justify-between">
           <Link href="/creator/gigs" className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">
@@ -256,9 +299,7 @@ export default function GigDetail() {
           <h1 className="text-sm font-semibold text-zinc-900 truncate flex-1 mx-4 text-center">
             {gig.title}
           </h1>
-          <button className="text-zinc-400 hover:text-zinc-600 transition-colors">
-            <Share2 className="w-4 h-4" />
-          </button>
+          <div className="w-4 h-4" /> {/* Spacer for alignment */}
         </div>
 
         {/* Main Content - Scrollable */}
@@ -640,11 +681,11 @@ export default function GigDetail() {
           </Card>
         </div>
 
-        {/* Sticky Bottom Action Bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 px-4 py-3 safe-area-bottom z-20">
-          <div className="max-w-[430px] mx-auto flex gap-3">
+        {/* Sticky Bottom Action Bar - Above Menu */}
+        <div className="fixed bottom-[70px] left-0 right-0 bg-white border-t border-zinc-200 px-4 py-3 z-[60] shadow-lg">
+          <div className="max-w-[430px] mx-auto">
             {currentStatus === 'open' && (
-              <>
+              <div className="flex gap-3">
                 {isEnded ? (
                   <Button
                     disabled
@@ -656,19 +697,17 @@ export default function GigDetail() {
                 ) : (
                   <Button
                     onClick={handleAcceptGig}
-                    className="flex-1 h-11 text-base font-semibold"
+                    disabled={accepting}
+                    className="w-full h-11 text-base font-semibold"
                     size="lg"
                   >
-                    Accept Gig
+                    {accepting ? 'Accepting...' : 'Accept Gig'}
                   </Button>
                 )}
-                <Button variant="outline" size="icon" className="h-11 w-11">
-                  <Share2 className="w-4 h-4" />
-                </Button>
-              </>
+              </div>
             )}
             {currentStatus === 'accepted' && (
-              <>
+              <div className="flex gap-3">
                 {isEnded ? (
                   <Button
                     disabled
@@ -689,10 +728,10 @@ export default function GigDetail() {
                 <Button variant="outline" size="icon" className="h-11 w-11">
                   <MessageCircle className="w-4 h-4" />
                 </Button>
-              </>
+              </div>
             )}
             {currentStatus === 'submitted' && (
-              <>
+              <div className="flex gap-3">
                 <Button
                   onClick={handleViewSubmission}
                   className="flex-1 h-11 text-base font-semibold"
@@ -703,10 +742,10 @@ export default function GigDetail() {
                 <Button variant="outline" size="icon" className="h-11 w-11">
                   <MessageCircle className="w-4 h-4" />
                 </Button>
-              </>
+              </div>
             )}
             {currentStatus === 'needs_changes' && (
-              <>
+              <div className="flex gap-3">
                 <Button
                   onClick={handleUploadRevision}
                   className="flex-1 h-11 text-base font-semibold"
@@ -717,10 +756,10 @@ export default function GigDetail() {
                 <Button variant="outline" size="lg" className="h-11">
                   View Feedback
                 </Button>
-              </>
+              </div>
             )}
             {currentStatus === 'paid' && (
-              <>
+              <div className="flex gap-3">
                 <Button
                   onClick={() => toast('View payout (placeholder)')}
                   className="flex-1 h-11 text-base font-semibold"
@@ -732,7 +771,7 @@ export default function GigDetail() {
                   <Star className="w-4 h-4 mr-2" />
                   Rate Brand
                 </Button>
-              </>
+              </div>
             )}
           </div>
         </div>

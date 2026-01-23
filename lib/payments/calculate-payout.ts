@@ -51,3 +51,18 @@ export function getCreatorFollowingCount(creator: any): number {
          (counts.youtube || 0) + 
          (counts.linkedin || 0);
 }
+
+/**
+ * Calculate creator's net payout after platform fee (15%)
+ * @param basePayout - The base payout amount
+ * @returns Creator's net payout (85% of base)
+ */
+export function getCreatorNetPayout(basePayout: number): number {
+  const platformFeePercentage = parseFloat(
+    process.env.PLATFORM_FEE_PERCENTAGE || 
+    process.env.platform_fee_percentage || 
+    '15'
+  );
+  const platformFeeRate = platformFeePercentage / 100;
+  return basePayout * (1 - platformFeeRate);
+}

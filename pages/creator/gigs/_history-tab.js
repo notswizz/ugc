@@ -111,20 +111,40 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
             console.error('Error fetching brand name:', err);
           }
 
-          const paymentsQuery = query(
+          // Query payments by submissionId first (most specific), then fallback to gigId+creatorId
+          let payment = null;
+          
+          // Try by submissionId first
+          const paymentsQueryBySubmission = query(
             collection(db, 'payments'),
-            where('gigId', '==', submission.gigId),
+            where('submissionId', '==', submission.id),
             where('creatorId', '==', user.uid)
           );
-          const paymentsSnapshot = await getDocs(paymentsQuery);
-          const payments = paymentsSnapshot.docs.map(payDoc => ({
-            id: payDoc.id,
-            ...payDoc.data(),
-            createdAt: payDoc.data().createdAt?.toDate ? payDoc.data().createdAt.toDate() : new Date(payDoc.data().createdAt),
-            transferredAt: payDoc.data().transferredAt?.toDate ? payDoc.data().transferredAt.toDate() : null,
-          }));
-
-          const payment = payments[0];
+          const paymentsBySubmission = await getDocs(paymentsQueryBySubmission);
+          
+          if (!paymentsBySubmission.empty) {
+            payment = {
+              id: paymentsBySubmission.docs[0].id,
+              ...paymentsBySubmission.docs[0].data(),
+              createdAt: paymentsBySubmission.docs[0].data().createdAt?.toDate ? paymentsBySubmission.docs[0].data().createdAt.toDate() : new Date(paymentsBySubmission.docs[0].data().createdAt),
+              transferredAt: paymentsBySubmission.docs[0].data().transferredAt?.toDate ? paymentsBySubmission.docs[0].data().transferredAt.toDate() : null,
+            };
+          } else {
+            // Fallback to gigId + creatorId
+            const paymentsQuery = query(
+              collection(db, 'payments'),
+              where('gigId', '==', submission.gigId),
+              where('creatorId', '==', user.uid)
+            );
+            const paymentsSnapshot = await getDocs(paymentsQuery);
+            const payments = paymentsSnapshot.docs.map(payDoc => ({
+              id: payDoc.id,
+              ...payDoc.data(),
+              createdAt: payDoc.data().createdAt?.toDate ? payDoc.data().createdAt.toDate() : new Date(payDoc.data().createdAt),
+              transferredAt: payDoc.data().transferredAt?.toDate ? payDoc.data().transferredAt.toDate() : null,
+            }));
+            payment = payments[0] || null;
+          }
 
           return {
             gigId: gigDoc.id,
@@ -232,7 +252,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
       case 'paid':
         return { bg: 'bg-green-100', text: 'text-green-800', label: 'Paid', icon: '✓' };
       case 'approved':
-        return { bg: 'bg-green-100', text: 'text-green-800', label: 'Approved', icon: '✓' };
+        return { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Approved', icon: '✓' };
       case 'submitted':
         return { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Pending', icon: '⏳' };
       case 'rejected':
@@ -247,7 +267,7 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
   return (
     <div>
       {/* Filter Tabs */}
-      <div className="border-b border-gray-200 mb-6 pb-2">
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 mb-6 pb-2 pt-2">
         <div className="flex gap-2">
         <button
           onClick={() => setFilter('all')}
@@ -290,9 +310,19 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
             const qualityScore = gig.submission?.aiEvaluation?.qualityScore;
             const amountPaid = gig.payment?.creatorNet || (gig.submission?.status === 'approved' ? gig.basePayout : null);
             
-            const badgeStatus = paymentStatus.status === 'paid' 
-              ? 'paid' 
-              : (gig.submission?.status || paymentStatus.status || 'unknown');
+            // Determine badge status: prioritize payment status over submission status
+            // If paid, show paid. If approved but no payment, show approved. Otherwise show submission status.
+            let badgeStatus = 'unknown';
+            // Check payment status first - if payment exists and is transferred, it's paid
+            if (gig.payment && (gig.payment.status === 'transferred' || gig.payment.status === 'balance_transferred')) {
+              badgeStatus = 'paid';
+            } else if (paymentStatus.status === 'paid') {
+              badgeStatus = 'paid';
+            } else if (gig.submission?.status === 'approved' && !gig.payment) {
+              badgeStatus = 'approved'; // Approved but payment processing
+            } else {
+              badgeStatus = gig.submission?.status || paymentStatus.status || 'unknown';
+            }
             const statusConfig = getStatusConfig(badgeStatus);
             
             return (
@@ -340,15 +370,15 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
                         </div>
                       </div>
 
-                      {/* Payment status */}
-                      {paymentStatus.status !== 'unknown' && paymentStatus.status !== 'rejected' && (
-                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ml-5 ${
-                          paymentStatus.status === 'paid' ? 'bg-green-100 text-green-800 border-2 border-green-200' :
-                          paymentStatus.status === 'approved' ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-200' :
-                          'bg-blue-100 text-blue-800 border-2 border-blue-200'
-                        }`}>
-                          {paymentStatus.status === 'paid' ? '✓' : paymentStatus.status === 'approved' ? '⏳' : '•'}
-                          {paymentStatus.status === 'paid' ? 'Paid' : paymentStatus.status === 'approved' ? 'Awaiting Payment' : 'Pending'}
+                      {/* Payment status - only show if different from main badge or if paid */}
+                      {paymentStatus.status === 'paid' && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ml-5 bg-green-100 text-green-800 border-2 border-green-200">
+                          ✓ Paid
+                        </div>
+                      )}
+                      {paymentStatus.status === 'approved' && badgeStatus !== 'paid' && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ml-5 bg-yellow-100 text-yellow-800 border-2 border-yellow-200">
+                          ⏳ Processing Payment
                         </div>
                       )}
 
