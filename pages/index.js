@@ -1,21 +1,75 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth/AuthContext";
 import AnimatedLogo from "@/components/branding/AnimatedLogo";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import ComparisonChart from "@/components/ComparisonChart";
+import confetti from "canvas-confetti";
 
 export default function Home() {
   const { user, appUser, loading } = useAuth();
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const clickCountRef = useRef(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const triggerConfetti = (e) => {
+    // Get click position relative to viewport
+    const x = e.clientX / window.innerWidth;
+    const y = e.clientY / window.innerHeight;
+
+    // Random confetti configurations
+    const configs = [
+      {
+        particleCount: 50,
+        spread: 60,
+        origin: { x, y },
+        colors: ['#f97316', '#ef4444', '#fbbf24', '#10b981', '#3b82f6']
+      },
+      {
+        particleCount: 100,
+        angle: 60,
+        spread: 55,
+        origin: { x, y },
+        colors: ['#f97316', '#ef4444', '#fbbf24']
+      },
+      {
+        particleCount: 100,
+        angle: 120,
+        spread: 55,
+        origin: { x, y },
+        colors: ['#10b981', '#3b82f6', '#8b5cf6']
+      },
+      {
+        particleCount: 80,
+        spread: 70,
+        origin: { x, y },
+        startVelocity: 30,
+        colors: ['#f97316', '#ef4444', '#fbbf24', '#10b981']
+      }
+    ];
+
+    // Pick random config
+    const config = configs[Math.floor(Math.random() * configs.length)];
+    confetti(config);
+
+    // Occasionally trigger a second burst
+    if (Math.random() > 0.7) {
+      setTimeout(() => {
+        confetti({
+          ...config,
+          particleCount: Math.floor(config.particleCount * 0.6),
+          origin: { x: x + (Math.random() - 0.5) * 0.3, y: y + (Math.random() - 0.5) * 0.3 }
+        });
+      }, 200);
+    }
+  };
 
   if (loading) {
     return <LoadingSpinner fullScreen text="Loading Giglet..." size="lg" />;
@@ -63,7 +117,10 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex justify-center">
+      <div 
+        className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex justify-center cursor-pointer"
+        onClick={triggerConfetti}
+      >
         <div className="w-full max-w-[428px] bg-white min-h-screen shadow-2xl">
           {/* Header */}
           <header className="bg-white sticky top-0 z-50 border-b border-gray-200/60">
