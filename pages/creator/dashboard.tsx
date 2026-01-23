@@ -82,8 +82,16 @@ export default function CreatorDashboard() {
         const data = await response.json();
         
         if (data.success) {
-          // Refresh creator data after checking status
-          await refetchCreatorData();
+          // Show success message if onboarding was completed
+          if (data.status?.onboardingComplete) {
+            toast.success('Stripe Connect setup complete! Trust score updated.');
+            // Force multiple refreshes to ensure UI updates
+            await refetchCreatorData();
+            setTimeout(() => refetchCreatorData(), 500);
+            setTimeout(() => refetchCreatorData(), 1500);
+          } else {
+            await refetchCreatorData();
+          }
         }
       } catch (error) {
         console.error('Error checking Stripe status:', error);
@@ -438,12 +446,12 @@ export default function CreatorDashboard() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              {/* Check if Stripe Connect is set up */}
+              {/* Show Stripe Connect setup only if not set up and user is trying to withdraw */}
               {!creatorData?.stripe?.connectAccountId && (
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm font-semibold text-blue-900 mb-2">Payment Setup Required</p>
                   <p className="text-xs text-blue-700 mb-3">
-                    You need to set up your payment method before withdrawing. This only takes a minute.
+                    Set up your payment method to withdraw funds. This only takes a minute.
                   </p>
                   <Button
                     onClick={async () => {
@@ -469,6 +477,8 @@ export default function CreatorDashboard() {
                   </Button>
                 </div>
               )}
+              {creatorData?.stripe?.connectAccountId && (
+                <>
               <div>
                 <label className="text-sm font-medium text-zinc-900 mb-2 block">
                   Amount
@@ -524,6 +534,8 @@ export default function CreatorDashboard() {
                   </p>
                 )}
               </div>
+                </>
+              )}
             </div>
             <DialogFooter>
               <Button

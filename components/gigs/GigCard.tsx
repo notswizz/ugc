@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import VisibilityBadge from '@/components/gigs/VisibilityBadge';
-import { Clock, Play, ChevronRight } from 'lucide-react';
+import { Clock, Play, ChevronRight, Lock } from 'lucide-react';
 
 export interface GigCardProps {
   id: string;
@@ -17,6 +18,8 @@ export interface GigCardProps {
   payoutType?: 'fixed' | 'dynamic'; // 'dynamic' means based on followers
   href?: string; // Optional custom href, defaults to `/creator/gigs/${id}`
   onClick?: () => void; // Optional click handler
+  isLocked?: boolean; // Whether gig is locked due to rep requirements
+  unlockAtTimestamp?: number | null; // Timestamp (ms) when gig will unlock
 }
 
 // Utility: Format money from cents
@@ -58,7 +61,41 @@ export default function GigCard({
   payoutType = 'fixed',
   href,
   onClick,
+  isLocked = false,
+  unlockAtTimestamp = null,
 }: GigCardProps) {
+  const [currentUnlockMinutes, setCurrentUnlockMinutes] = useState<number | null>(null);
+  
+  // Update unlock countdown in real-time
+  useEffect(() => {
+    if (!isLocked || unlockAtTimestamp === null) {
+      setCurrentUnlockMinutes(null);
+      return;
+    }
+    
+    // Calculate minutes until unlock
+    const calculateMinutes = () => {
+      const now = Date.now();
+      const diff = unlockAtTimestamp - now;
+      return Math.max(0, Math.ceil(diff / (1000 * 60)));
+    };
+    
+    // Set initial value
+    setCurrentUnlockMinutes(calculateMinutes());
+    
+    // Update every 30 seconds to keep it relatively accurate
+    const interval = setInterval(() => {
+      const newMinutes = calculateMinutes();
+      setCurrentUnlockMinutes(newMinutes);
+      if (newMinutes <= 0) {
+        clearInterval(interval);
+        // Gig should unlock - could trigger a refresh here if needed
+      }
+    }, 30000); // Update every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [isLocked, unlockAtTimestamp]);
+  
   const isUrgent = timeLeftMinutes < 120;
   const cardHref = href || `/creator/gigs/${id}`;
   const brandInitial = brandName.charAt(0).toUpperCase();
@@ -67,22 +104,23 @@ export default function GigCard({
     <Card
       className={`
         group relative overflow-hidden
-        border border-zinc-200 bg-white
+        border ${isLocked ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white'}
         rounded-2xl shadow-sm
-        hover:shadow-md hover:border-zinc-300 hover:-translate-y-0.5
+        ${isLocked ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-md hover:border-zinc-300 hover:-translate-y-0.5 cursor-pointer'}
         active:translate-y-0 active:shadow-sm
         transition-all duration-200
-        cursor-pointer
         ${isUrgent ? 'ring-1 ring-orange-200' : ''}
       `}
-      onClick={onClick}
+      onClick={isLocked ? undefined : onClick}
     >
       {/* Slim left accent bar for visibility type */}
       <div
         className={`
           absolute left-0 top-0 bottom-0 w-1
           ${
-            visibilityType === 'open'
+            isLocked
+              ? 'bg-zinc-400'
+              : visibilityType === 'open'
               ? 'bg-green-500'
               : visibilityType === 'squad'
               ? 'bg-purple-500'
@@ -90,6 +128,23 @@ export default function GigCard({
           }
         `}
       />
+      
+      {/* Locked overlay */}
+      {isLocked && (
+        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-2xl">
+          <div className="text-center px-4">
+            <Lock className="w-6 h-6 text-zinc-500 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-zinc-700 mb-1">Unlocks Soon</p>
+            {currentUnlockMinutes !== null && currentUnlockMinutes > 0 && (
+              <p className="text-xs text-zinc-600">
+                {currentUnlockMinutes < 60 
+                  ? `${currentUnlockMinutes}m` 
+                  : `${Math.floor(currentUnlockMinutes / 60)}h ${currentUnlockMinutes % 60}m`}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <CardContent className="p-4">
         {/* Top Row: Brand + Title | Payout */}
@@ -159,36 +214,56 @@ export default function GigCard({
         <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
           {/* Left: Time + Deliverables */}
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Time Left */}
-            <div
-              className={`flex items-center gap-1.5 ${
-                isUrgent ? 'text-orange-600' : 'text-zinc-600'
-              }`}
-            >
-              <Clock className={`w-3.5 h-3.5 ${isUrgent ? 'animate-pulse' : ''}`} />
-              <span className="text-xs font-semibold">{formatTimeLeft(timeLeftMinutes)}</span>
-            </div>
+            {/* Unlock Time (if locked) */}
+            {isLocked && currentUnlockMinutes !== null && currentUnlockMinutes > 0 ? (
+              <div className="flex items-center gap-1.5 text-zinc-600">
+                <Lock className="w-3.5 h-3.5" />
+                <span className="text-xs font-semibold">
+                  Unlocks in {currentUnlockMinutes < 60 
+                    ? `${currentUnlockMinutes}m` 
+                    : `${Math.floor(currentUnlockMinutes / 60)}h ${currentUnlockMinutes % 60}m`}
+                </span>
+              </div>
+            ) : (
+              <>
+                {/* Time Left */}
+                <div
+                  className={`flex items-center gap-1.5 ${
+                    isUrgent ? 'text-orange-600' : 'text-zinc-600'
+                  }`}
+                >
+                  <Clock className={`w-3.5 h-3.5 ${isUrgent ? 'animate-pulse' : ''}`} />
+                  <span className="text-xs font-semibold">{formatTimeLeft(timeLeftMinutes)}</span>
+                </div>
 
-            {/* Deliverables */}
-            <div className="flex items-center gap-1.5 text-zinc-500">
-              <Play className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">{deliverablesText}</span>
-            </div>
+                {/* Deliverables */}
+                <div className="flex items-center gap-1.5 text-zinc-500">
+                  <Play className="w-3.5 h-3.5" />
+                  <span className="text-xs font-medium">{deliverablesText}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right: Details Chevron */}
-          <div className="flex-shrink-0 flex items-center gap-1 text-zinc-400 group-hover:text-zinc-600 transition-colors">
-            <span className="text-xs font-medium">Details</span>
-            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-          </div>
+          {!isLocked && (
+            <div className="flex-shrink-0 flex items-center gap-1 text-zinc-400 group-hover:text-zinc-600 transition-colors">
+              <span className="text-xs font-medium">Details</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 
-  // Wrap in Link if onClick is not provided
+  // Wrap in Link if onClick is not provided and not locked
   if (onClick) {
     return content;
+  }
+
+  if (isLocked) {
+    return <div className="block">{content}</div>;
   }
 
   return (

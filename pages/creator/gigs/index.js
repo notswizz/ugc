@@ -282,13 +282,17 @@ export default function CreatorGigs() {
           const creatorRep = creatorData?.rep || 0;
           const gigAccess = canAccessGig(creatorRep, gig.createdAt);
           if (!gigAccess.canAccess) {
-            console.log(`Gig ${gig.id} filtered: Rep-based early access locked for ${gigAccess.minutesUntilUnlock} more minutes`);
-            // Still mark it on the gig object so we can show a locked state
+            console.log(`Gig ${gig.id} locked: Rep-based early access locked for ${gigAccess.minutesUntilUnlock} more minutes`);
+            // Mark it on the gig object so we can show a locked state
             gig.repLocked = true;
             gig.unlockAt = gigAccess.unlockAt;
             gig.minutesUntilUnlock = gigAccess.minutesUntilUnlock;
-            return false;
+            // Don't filter out - show it as locked
+          } else {
+            gig.repLocked = false;
           }
+        } else {
+          gig.repLocked = false;
         }
         
         // Hard No filter - creators should never see gigs that violate their hard no's
@@ -550,6 +554,13 @@ export default function CreatorGigs() {
               const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
               const isNew = hoursSinceCreation < 24;
               
+              // Get unlock timestamp if locked
+              let unlockAtTimestamp = null;
+              if (gig.repLocked && gig.unlockAt) {
+                const unlockDate = gig.unlockAt instanceof Date ? gig.unlockAt : new Date(gig.unlockAt);
+                unlockAtTimestamp = unlockDate.getTime();
+              }
+              
               return (
                 <GigCard
                   key={gig.id}
@@ -563,6 +574,8 @@ export default function CreatorGigs() {
                   timeLeftMinutes={timeLeftMinutes}
                   deliverablesText={deliverablesText}
                   isNew={isNew}
+                  isLocked={gig.repLocked || false}
+                  unlockAtTimestamp={unlockAtTimestamp}
                   payoutType={gig.payoutType === 'dynamic' ? 'dynamic' : 'fixed'}
                 />
               );

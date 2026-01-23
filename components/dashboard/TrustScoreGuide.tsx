@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Circle, Zap, Link2, ArrowRight } from 'lucide-react';
 import { calculateTrustScore } from '@/lib/trustScore/calculator';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import PhoneVerificationDialog from './PhoneVerificationDialog';
 
@@ -39,6 +39,19 @@ export default function TrustScoreGuide({
   const currentScore = calculateTrustScore(creatorData);
   const socials = creatorData.socials || {};
   const hasStripeConnect = !!creatorData.stripe?.connectAccountId;
+  const isStripeComplete = !!creatorData.stripe?.onboardingComplete;
+  
+  // Debug logging when data changes
+  useEffect(() => {
+    if (hasStripeConnect) {
+      console.log('TrustScoreGuide - Stripe Connect status:', {
+        connectAccountId: creatorData.stripe?.connectAccountId,
+        onboardingComplete: creatorData.stripe?.onboardingComplete,
+        isStripeComplete,
+        fullStripe: creatorData.stripe
+      });
+    }
+  }, [creatorData.stripe?.onboardingComplete, hasStripeConnect, isStripeComplete]);
 
   const handleStripeConnect = async () => {
     if (!userId) {
@@ -152,8 +165,8 @@ export default function TrustScoreGuide({
       id: 'stripe',
       title: 'Complete Stripe Connect Setup',
       points: 15,
-      completed: !!creatorData.stripe?.onboardingComplete,
-      description: 'Link your payment account and complete verification',
+      completed: isStripeComplete,
+      description: 'Link your payment account to withdraw earnings',
       action: 'Set up payment account',
       onClick: handleStripeConnect,
       loading: loading === 'stripe',

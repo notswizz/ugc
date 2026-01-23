@@ -36,7 +36,12 @@ export function useCreatorData(user: any, appUser: any) {
       creatorRef,
       (snap) => {
         if (snap.exists()) {
-          setCreatorData(snap.data());
+          const data = snap.data();
+          setCreatorData(data);
+          // Log when Stripe status changes
+          if (data?.stripe?.onboardingComplete) {
+            console.log('Stripe Connect onboarding detected as complete in Firestore:', data.stripe);
+          }
         } else {
           setCreatorData(null);
         }

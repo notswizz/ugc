@@ -259,7 +259,7 @@ export default function CreatorOnboarding() {
         followingCount: formData.followingCount,
         trustScore,
         rep: 0, // Initialize rep at 0
-        communityId: communityId || undefined, // Add community ID if provided
+        ...(communityId && { communityId }), // Only include communityId if it has a value
         rates: {}, // Rates managed by admin
         turnaroundDays: 7, // Default value
         portfolioLinks: formData.portfolioLinks,

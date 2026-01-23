@@ -36,6 +36,15 @@ export default async function handler(
     const connectAccountId = creator?.stripe?.connectAccountId;
     const identityVerificationId = creator?.stripe?.identityVerificationId;
 
+    // Ensure stripe object exists
+    if (!creator?.stripe) {
+      // Initialize stripe object if it doesn't exist
+      await adminDb.collection('creators').doc(userId).update({
+        stripe: {},
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
     const updates: any = {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -46,10 +55,36 @@ export default async function handler(
         const account = await stripe.accounts.retrieve(connectAccountId);
         
         // Update onboarding status based on details_submitted
+        // For Express accounts, details_submitted means they've completed onboarding
         const onboardingComplete = account.details_submitted === true;
-        if (onboardingComplete !== creator?.stripe?.onboardingComplete) {
-          updates['stripe.onboardingComplete'] = onboardingComplete;
+        const currentOnboardingStatus = creator?.stripe?.onboardingComplete || false;
+        
+        // Also check if charges_enabled and payouts_enabled (more reliable indicators for Express accounts)
+        // For Express accounts, these flags indicate the account is ready
+        const isFullyEnabled = account.charges_enabled && account.payouts_enabled;
+        
+        // Determine final onboarding status - use either details_submitted OR fully enabled flags
+        const finalOnboardingStatus = onboardingComplete || isFullyEnabled;
+        
+        if (finalOnboardingStatus !== currentOnboardingStatus) {
+          updates['stripe.onboardingComplete'] = finalOnboardingStatus;
+          console.log(`Stripe Connect onboarding status updated for ${userId}: ${finalOnboardingStatus}`, {
+            details_submitted: account.details_submitted,
+            charges_enabled: account.charges_enabled,
+            payouts_enabled: account.payouts_enabled,
+            previousStatus: currentOnboardingStatus
+          });
         }
+        
+        // Log current status for debugging
+        console.log(`Stripe account status for ${userId}:`, {
+          details_submitted: account.details_submitted,
+          charges_enabled: account.charges_enabled,
+          payouts_enabled: account.payouts_enabled,
+          currentOnboardingStatus,
+          finalOnboardingStatus,
+          willUpdate: finalOnboardingStatus !== currentOnboardingStatus
+        });
 
         // Check and update transfers capability status
         const transfersStatus = account.capabilities?.transfers;
@@ -106,7 +141,20 @@ export default async function handler(
 
     // Update creator document if there are changes
     if (Object.keys(updates).length > 1) { // More than just updatedAt
-      await adminDb.collection('creators').doc(userId).update(updates);
+      try {
+        await adminDb.collection('creators').doc(userId).update(updates);
+        console.log(`✅ Successfully updated creator ${userId} with:`, updates);
+        
+        // Verify the update by reading back
+        const verifyDoc = await adminDb.collection('creators').doc(userId).get();
+        const verifyData = verifyDoc.data();
+        console.log(`✅ Verification - creator ${userId} stripe.onboardingComplete is now:`, verifyData?.stripe?.onboardingComplete);
+      } catch (updateError: any) {
+        console.error(`❌ Error updating creator ${userId}:`, updateError);
+        throw updateError;
+      }
+    } else {
+      console.log(`ℹ️ No updates needed for creator ${userId} (current status matches)`);
     }
 
     // Return current status
