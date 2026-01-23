@@ -80,6 +80,9 @@ module.exports = {
         'brand': '0 4px 12px rgba(249, 115, 22, 0.15)',
         'brand-lg': '0 8px 24px rgba(249, 115, 22, 0.2)',
       },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+      },
     },
   },
   plugins: [],
