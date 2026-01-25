@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/lib/auth/AuthContext";
 import AnimatedLogo from "@/components/branding/AnimatedLogo";
 import LoadingSpinner from "@/components/ui/loading-spinner";
-import ComparisonChart from "@/components/ComparisonChart";
+import ComparisonChart from "@/components/shared/ComparisonChart";
 import confetti from "canvas-confetti";
 
 export default function Home() {
