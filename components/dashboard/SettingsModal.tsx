@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, X as XIcon, Save } from 'lucide-react';
+import { Settings as SettingsIcon, X as XIcon, Save, AtSign, FileText, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -205,35 +205,45 @@ export default function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] shadow-2xl overflow-hidden flex flex-col"
+        className="bg-zinc-50 w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-gradient-to-r from-slate-600 to-slate-700 p-5 flex items-center justify-between">
+        {/* Header */}
+        <div className="sticky top-0 bg-zinc-900 px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <SettingsIcon className="w-5 h-5 text-white" strokeWidth={2.5} />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-600 to-zinc-700 flex items-center justify-center">
+              <SettingsIcon className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-lg font-bold text-white">Settings</h2>
+            <div>
+              <h2 className="text-lg font-bold text-white">Settings</h2>
+              <p className="text-xs text-zinc-400">Edit your profile details</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-full transition-colors"
+            className="p-2 hover:bg-white/10 rounded-xl transition-colors"
           >
             <XIcon className="w-5 h-5 text-white" />
           </button>
         </div>
 
-        <div className="overflow-y-auto max-h-[calc(85vh-80px)]">
-          <div className="p-5 space-y-4">
-            <div>
-              <label className="text-sm font-medium text-zinc-900 mb-1.5 block">Username</label>
+        <div className="overflow-y-auto flex-1 p-4 space-y-4">
+          {/* Username */}
+          <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-100">
+              <div className="w-9 h-9 rounded-lg bg-violet-500 text-white flex items-center justify-center">
+                <AtSign className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold text-zinc-900">Username</span>
+            </div>
+            <div className="p-4">
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm font-medium">
                   @
                 </span>
                 <Input
@@ -247,73 +257,92 @@ export default function SettingsModal({
                     setLastCheckedAvailable(false);
                   }}
                   onBlur={handleUsernameBlur}
-                  className={`pl-8 ${usernameError ? 'border-red-500' : ''}`}
+                  className={`pl-8 h-12 text-base bg-zinc-50 ${usernameError ? 'border-red-500 focus-visible:ring-red-200' : 'border-zinc-200'}`}
                   disabled={saving}
                 />
               </div>
               {usernameError && (
-                <p className="text-xs text-red-600 mt-1">{usernameError}</p>
+                <p className="text-xs text-red-600 mt-2">{usernameError}</p>
               )}
               {!usernameError && normalized && USERNAME_REGEX.test(normalized) && !checkingUsername && lastCheckedAvailable && (
-                <p className="text-xs text-green-600 mt-1">
+                <p className="text-xs text-emerald-600 mt-2">
                   {usernameUnchanged ? 'No change' : 'Available'}
                 </p>
               )}
               {checkingUsername && (
-                <p className="text-xs text-gray-500 mt-1">Checking…</p>
+                <p className="text-xs text-zinc-500 mt-2">Checking…</p>
               )}
             </div>
+          </div>
 
-            <div>
-              <label className="text-sm font-medium text-zinc-900 mb-1.5 block">Bio</label>
+          {/* Bio */}
+          <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-100">
+              <div className="w-9 h-9 rounded-lg bg-blue-500 text-white flex items-center justify-center">
+                <FileText className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold text-zinc-900">Bio</span>
+            </div>
+            <div className="p-4">
               <textarea
                 placeholder="Tell brands about yourself, your style, and what makes you unique..."
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 disabled={saving}
                 rows={4}
-                className="w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-2.5 text-sm font-medium placeholder:text-gray-400 placeholder:font-normal transition-colors focus-visible:outline-none focus-visible:border-brand-500 focus-visible:ring-4 focus-visible:ring-brand-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50 resize-y min-h-[100px]"
+                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm placeholder:text-zinc-400 transition-colors focus-visible:outline-none focus-visible:border-zinc-400 focus-visible:ring-4 focus-visible:ring-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
               />
+              <p className="text-xs text-zinc-400 mt-2">{bio.length}/500 characters</p>
             </div>
+          </div>
 
-            <div>
-              <label className="text-sm font-medium text-zinc-900 mb-1.5 block">Interests</label>
-              <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-gray-200 rounded-lg bg-gray-50">
+          {/* Interests */}
+          <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-100">
+              <div className="w-9 h-9 rounded-lg bg-pink-500 text-white flex items-center justify-center">
+                <Heart className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <span className="text-sm font-semibold text-zinc-900">Interests</span>
+                <p className="text-xs text-zinc-500">{interests.length} selected</p>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="flex flex-wrap gap-2 max-h-[180px] overflow-y-auto">
                 {THINGS.map((thing) => (
                   <button
                     key={thing.id}
                     type="button"
                     onClick={() => toggleInterest(thing.id)}
                     disabled={saving}
-                    className={`px-3 py-2 rounded-full text-sm border flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                    className={`px-3 py-2 rounded-xl text-sm border-2 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
                       interests.includes(thing.id)
-                        ? 'bg-green-100 text-green-800 border-green-300'
-                        : 'bg-white hover:bg-gray-100 border-gray-200'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm'
+                        : 'bg-zinc-50 hover:bg-zinc-100 border-zinc-200 text-zinc-700'
                     }`}
                   >
                     <span>{thing.icon}</span>
-                    <span>{thing.name}</span>
+                    <span className="font-medium">{thing.name}</span>
                   </button>
                 ))}
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={onClose} disabled={saving} className="flex-1">
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={!canSave} className="flex-1">
-              {saving ? (
-                'Saving…'
-              ) : (
-                <>
-                  <Save className="w-3.5 h-3.5 mr-1.5" />
-                  Save
-                </>
-              )}
-            </Button>
-          </div>
-          </div>
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-white border-t border-zinc-200 p-4 pb-24 flex gap-3">
+          <Button variant="outline" onClick={onClose} disabled={saving} className="flex-1 h-12 rounded-xl">
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!canSave} className="flex-1 h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800">
+            {saving ? 'Saving…' : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>

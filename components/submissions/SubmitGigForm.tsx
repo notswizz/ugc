@@ -7,16 +7,16 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { db, storage } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
-import { calculatePayout, getCreatorFollowingCount } from '@/lib/payments/calculate-payout';
+import { calculatePayout, getCreatorFollowingCount, getCreatorNetPayout } from '@/lib/payments/calculate-payout';
 import { validateSubmission, hasVideoFiles } from '@/lib/submissions/validation';
 import type { SubmissionData, Gig } from '@/lib/submissions/validation';
 import FileUploadSection from './FileUploadSection';
 import ProductPurchaseSection from './ProductPurchaseSection';
 import EvaluationScreen from './EvaluationScreen';
 import EvaluationResult from './EvaluationResult';
+import { ArrowLeft, Video, Image as ImageIcon, Link as LinkIcon, FileVideo, CheckCircle2, Loader2, DollarSign } from 'lucide-react';
 
 interface UploadProgress {
   [key: string]: {
@@ -109,11 +109,13 @@ export default function SubmitGigForm() {
         }
       }
 
+      const netPayout = getCreatorNetPayout(payout);
       setGig({
         id: gigDoc.id,
         ...gigData,
         deadlineAt,
         calculatedPayout: payout,
+        creatorNetPayout: netPayout,
       });
     } catch (error) {
       console.error('Error fetching gig:', error);
@@ -284,7 +286,7 @@ export default function SubmitGigForm() {
         setEvaluationResult({ status: 'evaluating' });
 
         try {
-          const response = await fetch('/api/evaluate-submission', {
+          const response = await fetch('/api/gigs/evaluate-submission', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ submissionId, gigId: gig.id }),
@@ -304,7 +306,7 @@ export default function SubmitGigForm() {
             evaluation: result.evaluation,
             qualityScore,
             compliancePassed: approved,
-            payout: gig.calculatedPayout || gig.basePayout || 0,
+            payout: gig.creatorNetPayout || getCreatorNetPayout(gig.basePayout || 0),
           });
         } catch (evalError: any) {
           console.error('Error during AI evaluation:', evalError);
@@ -351,8 +353,11 @@ export default function SubmitGigForm() {
   if (loading) {
     return (
       <Layout>
-        <div className="max-w-4xl mx-auto py-8">
-          <div className="text-center py-8">Loading...</div>
+        <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+            <p className="text-sm text-zinc-500">Loading...</p>
+          </div>
         </div>
       </Layout>
     );
@@ -361,8 +366,9 @@ export default function SubmitGigForm() {
   if (!gig) {
     return (
       <Layout>
-        <div className="max-w-4xl mx-auto py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Gig Not Found</h1>
+        <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center px-4">
+          <h1 className="text-xl font-bold text-zinc-900 mb-2">Gig Not Found</h1>
+          <p className="text-zinc-500 mb-4">This gig may have been removed.</p>
           <Link href="/creator/gigs">
             <Button>Back to Gigs</Button>
           </Link>
@@ -372,51 +378,111 @@ export default function SubmitGigForm() {
   }
 
   const isEnded = gig.deadlineAt && new Date(gig.deadlineAt).getTime() < Date.now();
+  const videosUploaded = submissionData.videos.length;
+  const videosRequired = gig.deliverables?.videos || 0;
+  const photosUploaded = submissionData.photos.length;
+  const photosRequired = gig.deliverables?.photos || 0;
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link href={`/creator/gigs/${gig.id}`} className="text-orange-600 hover:underline mb-4 inline-block">
-            ← Back to Gig Details
-          </Link>
-          <h1 className="text-3xl font-bold mb-2">Submit Content</h1>
-          <p className="text-lg text-muted-foreground">{gig.title}</p>
+      <div className="min-h-screen bg-zinc-50 pb-32">
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-lg border-b border-zinc-200">
+          <div className="max-w-lg mx-auto px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Link href={`/creator/gigs/${gig.id}`} className="p-2 -ml-2 rounded-full hover:bg-zinc-100 transition-colors">
+                <ArrowLeft className="w-5 h-5 text-zinc-600" />
+              </Link>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base font-semibold text-zinc-900 truncate">Submit Content</h1>
+                <p className="text-xs text-zinc-500 truncate">{gig.title}</p>
+              </div>
+              <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 rounded-full">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-sm font-semibold text-emerald-600">{(gig.creatorNetPayout || 0).toFixed(0)}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
+          {/* Deliverables Progress */}
+          <div className="bg-white rounded-2xl border border-zinc-200 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900 mb-3">Required Deliverables</h3>
+            <div className="space-y-3">
+              {videosRequired > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${videosUploaded >= videosRequired ? 'bg-emerald-100' : 'bg-zinc-100'}`}>
+                    <Video className={`w-5 h-5 ${videosUploaded >= videosRequired ? 'text-emerald-600' : 'text-zinc-500'}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-zinc-900">Videos</p>
+                    <p className="text-xs text-zinc-500">{videosUploaded} of {videosRequired} uploaded</p>
+                  </div>
+                  {videosUploaded >= videosRequired && (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  )}
+                </div>
+              )}
+              {photosRequired > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${photosUploaded >= photosRequired ? 'bg-emerald-100' : 'bg-zinc-100'}`}>
+                    <ImageIcon className={`w-5 h-5 ${photosUploaded >= photosRequired ? 'text-emerald-600' : 'text-zinc-500'}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-zinc-900">Photos</p>
+                    <p className="text-xs text-zinc-500">{photosUploaded} of {photosRequired} uploaded</p>
+                  </div>
+                  {photosUploaded >= photosRequired && (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  )}
+                </div>
+              )}
+              {gig.deliverables?.raw && (
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${(submissionData.rawVideos.length > 0 || submissionData.rawPhotos.length > 0) ? 'bg-emerald-100' : 'bg-zinc-100'}`}>
+                    <FileVideo className={`w-5 h-5 ${(submissionData.rawVideos.length > 0 || submissionData.rawPhotos.length > 0) ? 'text-emerald-600' : 'text-zinc-500'}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-zinc-900">Raw Footage</p>
+                    <p className="text-xs text-zinc-500">{submissionData.rawVideos.length + submissionData.rawPhotos.length} files uploaded</p>
+                  </div>
+                  {(submissionData.rawVideos.length > 0 || submissionData.rawPhotos.length > 0) && (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Content Link */}
           {(gig.platform === 'tiktok' || gig.platform === 'instagram' || gig.platform === 'x') && (
-            <Card>
-              <CardHeader>
-                <CardTitle>
+            <div className="bg-white rounded-2xl border border-zinc-200 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <LinkIcon className="w-4 h-4 text-zinc-500" />
+                <h3 className="text-sm font-semibold text-zinc-900">
                   {gig.platform === 'tiktok' && 'TikTok Link'}
                   {gig.platform === 'instagram' && `Instagram ${gig.instagramFormat === 'story' ? 'Story' : 'Post'} Link`}
-                  {gig.platform === 'x' && 'X (Twitter) Post Link'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Input
-                  type="url"
-                  placeholder={
-                    gig.platform === 'tiktok'
-                      ? 'https://www.tiktok.com/@username/video/...'
-                      : gig.platform === 'instagram'
-                      ? 'https://www.instagram.com/p/...'
-                      : 'https://x.com/username/status/...'
-                  }
-                  value={submissionData.contentLink}
-                  onChange={(e) =>
-                    setSubmissionData((prev) => ({ ...prev, contentLink: e.target.value }))
-                  }
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Link to your published content (optional if uploading files)
-                </p>
-              </CardContent>
-            </Card>
+                  {gig.platform === 'x' && 'X Post Link'}
+                </h3>
+                <span className="text-xs text-zinc-400 ml-auto">Optional</span>
+              </div>
+              <Input
+                type="url"
+                placeholder={
+                  gig.platform === 'tiktok'
+                    ? 'https://www.tiktok.com/@username/video/...'
+                    : gig.platform === 'instagram'
+                    ? 'https://www.instagram.com/p/...'
+                    : 'https://x.com/username/status/...'
+                }
+                value={submissionData.contentLink}
+                onChange={(e) =>
+                  setSubmissionData((prev) => ({ ...prev, contentLink: e.target.value }))
+                }
+                className="w-full h-12 rounded-xl border-zinc-200"
+              />
+            </div>
           )}
 
           {/* Video Files */}
@@ -514,68 +580,41 @@ export default function SubmitGigForm() {
             />
           )}
 
-          {/* Deliverables Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Required Deliverables</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {gig.deliverables?.videos > 0 && (
-                  <div className="flex justify-between">
-                    <span>Videos:</span>
-                    <span className="font-medium">{gig.deliverables.videos}</span>
-                  </div>
-                )}
-                {gig.deliverables?.photos > 0 && (
-                  <div className="flex justify-between">
-                    <span>Photos:</span>
-                    <span className="font-medium">{gig.deliverables.photos}</span>
-                  </div>
-                )}
-                {gig.deliverables?.raw && (
-                  <div className="flex justify-between">
-                    <span>Raw Footage:</span>
-                    <span className="font-medium text-green-600">Required</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* AI Review Notice */}
+          <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-lg">🤖</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-900">AI-Powered Review</p>
+              <p className="text-xs text-blue-700 mt-0.5">Your submission will be instantly reviewed by AI for quality and compliance.</p>
+            </div>
+          </div>
+        </div>
 
-          {/* Submit Button */}
-          <Card className="border-orange-200 bg-orange-50">
-            <CardContent className="pt-6">
-              <div className="flex flex-col gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600 mb-1">
-                    ${gig.calculatedPayout || gig.basePayout || 0}
-                  </div>
-                  {gig.payoutType === 'dynamic' && (
-                    <p className="text-[10px] text-gray-500 mb-1">Based on your followers</p>
-                  )}
-                  <div className="text-sm text-muted-foreground">You'll be paid after approval</div>
-                </div>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting || isUploading || isEnded}
-                  className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  size="lg"
-                >
-                  {isUploading
-                    ? 'Uploading files...'
-                    : submitting
-                    ? 'Submitting...'
-                    : isEnded
-                    ? 'Gig ended'
-                    : `Submit Content - $${gig.calculatedPayout || gig.basePayout || 0}`}
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  Your submission will be reviewed by AI and the brand before approval
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Fixed Bottom Submit Bar */}
+        <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom))] left-0 right-0 max-w-[428px] mx-auto bg-white border-t border-zinc-200 px-4 py-3 z-40">
+          <Button
+            onClick={handleSubmit}
+            disabled={submitting || isUploading || isEnded}
+            className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Uploading...
+              </>
+            ) : submitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Submitting...
+              </>
+            ) : isEnded ? (
+              'Gig Ended'
+            ) : (
+              <>Submit & Earn ${(gig.creatorNetPayout || 0).toFixed(2)}</>
+            )}
+          </Button>
         </div>
       </div>
     </Layout>

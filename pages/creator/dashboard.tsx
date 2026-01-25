@@ -22,7 +22,6 @@ import {
   Zap,
   ArrowDownToLine,
   ArrowRight,
-  User,
   Trophy,
   Clock,
   Loader2,
@@ -32,6 +31,9 @@ import {
   TrendingUp,
   ChevronRight,
   Sparkles,
+  Star,
+  Link2,
+  CheckCircle2,
 } from 'lucide-react';
 import { useCreatorData } from '@/components/dashboard/useCreatorData';
 import { useDashboardData } from '@/components/dashboard/useDashboardData';
@@ -140,6 +142,17 @@ export default function CreatorDashboard() {
 
   const progressPercent = nextLevelRep > prevLevelRep ? ((rep - prevLevelRep) / (nextLevelRep - prevLevelRep)) * 100 : 100;
 
+  // Count linked socials
+  const socials = creatorData?.socials || {};
+  const linkedSocials = [socials.tiktok, socials.instagram, socials.youtube, socials.x].filter(Boolean).length;
+
+  // Count verifications
+  const verifications = [
+    creatorData?.stripe?.onboardingComplete,
+    creatorData?.stripe?.identityVerified,
+    creatorData?.phoneVerified,
+  ].filter(Boolean).length;
+
   const handleWithdraw = async () => {
     if (!user) return;
 
@@ -181,203 +194,252 @@ export default function CreatorDashboard() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-zinc-50">
-        <div className="max-w-lg mx-auto px-4 pt-3 pb-6 space-y-4">
-          {/* Greeting */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-zinc-500 text-sm">Welcome back</p>
-              <h1 className="text-xl font-bold text-zinc-900">@{creatorData?.username || 'Creator'}</h1>
-            </div>
-            <button
-              onClick={() => setSettingsModalOpen(true)}
-              className="w-10 h-10 rounded-full bg-white border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 transition-colors"
-            >
-              <Settings className="w-5 h-5 text-zinc-600" />
-            </button>
-          </div>
+      <div className="min-h-screen bg-gradient-to-b from-zinc-100 to-zinc-50 -mt-4">
+        <div className="max-w-lg mx-auto px-4 pb-6 space-y-5">
 
-          {/* Balance Card */}
-          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-5 text-white">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-1">Available Balance</p>
-                {loadingBalance ? (
-                  <div className="h-10 w-32 bg-zinc-700 animate-pulse rounded" />
-                ) : (
-                  <p className="text-4xl font-bold tracking-tight">{formatCurrency(balanceCents)}</p>
-                )}
-              </div>
-              {balanceCents > 0 && (
-                <button
-                  onClick={() => setWithdrawModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white text-zinc-900 rounded-xl font-semibold text-sm hover:bg-zinc-100 transition-colors"
-                >
-                  <ArrowDownToLine className="w-4 h-4" />
-                  Withdraw
-                </button>
-              )}
-            </div>
+          {/* Profile Header */}
+          <div className="relative">
+            {/* Decorative background blur circles */}
+            <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-violet-400/20 to-purple-400/20 rounded-full blur-2xl" />
+            <div className="absolute -top-2 right-8 w-20 h-20 bg-gradient-to-br from-violet-400/15 to-purple-400/15 rounded-full blur-2xl" />
 
-            {balanceCents === 0 ? (
-              <Link href="/creator/gigs" className="block">
-                <div className="flex items-center justify-between p-3 bg-white/10 rounded-xl hover:bg-white/15 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-                      <Briefcase className="w-4 h-4 text-white" />
+            <div className="relative flex items-center gap-2">
+              {/* Level Badge */}
+              {creatorData && (
+                <div className="flex-1 relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl blur opacity-50 group-hover:opacity-70 transition-opacity" />
+                  <div className="relative flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-600 to-purple-600 rounded-xl border border-white/10">
+                    <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-xs font-bold">{level}</span>
                     </div>
-                    <span className="text-sm font-medium">Find your first gig</span>
+                    <span className="text-white text-xs font-semibold flex-shrink-0">{levelLabel}</span>
+                    <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden mx-2">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-300 to-amber-400 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-violet-200 text-xs flex-shrink-0">{rep.toLocaleString()}</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-zinc-400" />
                 </div>
-              </Link>
-            ) : (
-              <div className="flex items-center gap-2 text-xs text-zinc-400">
-                {canUseInstant ? (
-                  <>
-                    <Zap className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Instant payout enabled</span>
-                  </>
-                ) : (
-                  <>
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>ACH (2-3 days) • Verify for instant</span>
-                  </>
-                )}
-              </div>
-            )}
+              )}
+
+              {/* Settings */}
+              <button
+                onClick={() => setSettingsModalOpen(true)}
+                className="w-10 h-10 rounded-xl bg-white border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-md transition-all shadow-sm"
+              >
+                <Settings className="w-5 h-5 text-zinc-500" />
+              </button>
+            </div>
           </div>
 
-          {/* Level Progress */}
-          {creatorData && (
-            <div className="bg-white rounded-2xl border border-zinc-200 p-4">
+          {/* Balance Card - Premium Design */}
+          <div className="relative overflow-hidden rounded-2xl">
+            {/* Background with mesh gradient effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-violet-500/10 via-transparent to-transparent" />
+
+            <div className="relative p-4">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">{level}</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-900">{levelLabel}</p>
-                    <p className="text-xs text-zinc-500">{rep.toLocaleString()} rep</p>
-                  </div>
+                <div>
+                  <p className="text-zinc-500 text-[10px] font-semibold uppercase tracking-widest mb-1">Available Balance</p>
+                  {loadingBalance ? (
+                    <div className="h-9 w-32 bg-zinc-700/50 animate-pulse rounded-lg" />
+                  ) : (
+                    <p className="text-3xl font-bold text-white tracking-tight">
+                      {formatCurrency(balanceCents)}
+                    </p>
+                  )}
                 </div>
-                {level < 7 && (
-                  <div className="text-right">
-                    <p className="text-xs text-zinc-500">Next level</p>
-                    <p className="text-sm font-semibold text-zinc-900">{nextLevelRep.toLocaleString()}</p>
-                  </div>
+                {balanceCents > 0 && (
+                  <button
+                    onClick={() => setWithdrawModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white text-zinc-900 rounded-xl font-semibold text-xs hover:bg-zinc-100 transition-all shadow-lg shadow-black/20"
+                  >
+                    <ArrowDownToLine className="w-3.5 h-3.5" />
+                    Withdraw
+                  </button>
                 )}
               </div>
-              {level < 7 && (
-                <div className="w-full bg-zinc-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-violet-500 to-purple-600 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* Stats Row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-2xl border border-zinc-200 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-emerald-500" />
-                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Earned</span>
-              </div>
-              {loadingStats ? (
-                <div className="h-7 w-20 bg-zinc-100 animate-pulse rounded" />
+              {balanceCents === 0 ? (
+                <Link href="/creator/gigs" className="block">
+                  <div className="flex items-center justify-between p-3 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                        <Briefcase className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm font-medium text-white">Find your first gig</span>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                  </div>
+                </Link>
               ) : (
-                <p className="text-2xl font-bold text-zinc-900">
-                  {formatCurrency(Math.round((stats.totalEarnings || 0) * 100))}
-                </p>
-              )}
-            </div>
-            <div className="bg-white rounded-2xl border border-zinc-200 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Briefcase className="w-4 h-4 text-blue-500" />
-                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Completed</span>
-              </div>
-              {loadingStats ? (
-                <div className="h-7 w-12 bg-zinc-100 animate-pulse rounded" />
-              ) : (
-                <p className="text-2xl font-bold text-zinc-900">{stats.acceptedGigs || 0}</p>
+                <div className="flex items-center gap-2 px-3 py-2 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+                  {canUseInstant ? (
+                    <>
+                      <div className="w-5 h-5 rounded-md bg-amber-500/20 flex items-center justify-center">
+                        <Zap className="w-3 h-3 text-amber-400" />
+                      </div>
+                      <span className="text-xs font-medium text-zinc-300">Instant payout enabled</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center">
+                        <Clock className="w-3 h-3 text-blue-400" />
+                      </div>
+                      <span className="text-xs text-zinc-400">ACH (2-3 days) • Verify for instant</span>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide px-1">Quick Actions</p>
+          {/* Stats Row - Glass Cards */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-emerald-100 to-transparent rounded-bl-full" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mb-3 shadow-lg shadow-emerald-500/20">
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Earned</p>
+                {loadingStats ? (
+                  <div className="h-8 w-24 bg-zinc-100 animate-pulse rounded" />
+                ) : (
+                  <p className="text-2xl font-black text-zinc-900">
+                    {formatCurrency(Math.round((stats.totalEarnings || 0) * 100))}
+                  </p>
+                )}
+              </div>
+            </div>
 
+            <div className="relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-blue-100 to-transparent rounded-bl-full" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center mb-3 shadow-lg shadow-blue-500/20">
+                  <Briefcase className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Completed</p>
+                {loadingStats ? (
+                  <div className="h-8 w-12 bg-zinc-100 animate-pulse rounded" />
+                ) : (
+                  <p className="text-2xl font-black text-zinc-900">{stats.acceptedGigs || 0}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions - Enhanced Cards */}
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider px-1">Quick Actions</p>
+
+            {/* Link Socials */}
             <button
               onClick={() => setProfileModalOpen(true)}
-              className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-zinc-200 hover:border-zinc-300 hover:shadow-sm transition-all"
+              className="w-full group relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 hover:border-orange-200 transition-all shadow-sm hover:shadow-lg hover:shadow-orange-500/10"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                  <User className="w-5 h-5 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative flex items-center justify-between p-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 via-pink-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/25 group-hover:shadow-orange-500/40 group-hover:scale-105 transition-all">
+                    <Link2 className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-base font-bold text-zinc-900">Link Socials</p>
+                    <p className="text-xs text-zinc-500">{linkedSocials}/4 connected</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-zinc-900">Edit Profile</p>
-                  <p className="text-xs text-zinc-500">Bio, interests, socials</p>
+                <div className="flex items-center gap-2">
+                  {linkedSocials === 4 && (
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    </div>
+                  )}
+                  <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-zinc-400" />
             </button>
 
+            {/* Verify Account */}
             <button
               onClick={() => setVerifyModalOpen(true)}
-              className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-zinc-200 hover:border-zinc-300 hover:shadow-sm transition-all"
+              className="w-full group relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 hover:border-emerald-200 transition-all shadow-sm hover:shadow-lg hover:shadow-emerald-500/10"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative flex items-center justify-between p-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:shadow-emerald-500/40 group-hover:scale-105 transition-all">
+                    <ShieldCheck className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-base font-bold text-zinc-900">Verify Account</p>
+                    <p className="text-xs text-zinc-500">{verifications}/3 verified</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-zinc-900">Verify Account</p>
-                  <p className="text-xs text-zinc-500">
-                    Trust score: {trustScore}/100
-                    {trustScore < 50 && ' • Verify to unlock perks'}
-                  </p>
+                <div className="flex items-center gap-2">
+                  {verifications === 3 && (
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    </div>
+                  )}
+                  <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-zinc-400" />
             </button>
 
+            {/* Community */}
             {creatorData?.communityId && (
               <button
                 onClick={() => setCommunityModalOpen(true)}
-                className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-zinc-200 hover:border-zinc-300 hover:shadow-sm transition-all"
+                className="w-full group relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 hover:border-amber-200 transition-all shadow-sm hover:shadow-lg hover:shadow-amber-500/10"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                    <Trophy className="w-5 h-5 text-white" />
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex items-center justify-between p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:shadow-amber-500/40 group-hover:scale-105 transition-all">
+                      <Trophy className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-base font-bold text-zinc-900">Community</p>
+                      <p className="text-xs text-zinc-500">{communityName || 'View leaderboard'}</p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="text-sm font-semibold text-zinc-900">Community</p>
-                    <p className="text-xs text-zinc-500">{communityName || 'View leaderboard'}</p>
-                  </div>
+                  <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
                 </div>
-                <ChevronRight className="w-5 h-5 text-zinc-400" />
               </button>
             )}
           </div>
 
-          {/* Find Gigs CTA */}
-          <Link href="/creator/gigs" className="block">
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl p-4 flex items-center justify-between hover:shadow-lg hover:shadow-emerald-500/20 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
+          {/* Find Gigs CTA - Enhanced */}
+          <Link href="/creator/gigs" className="block group">
+            <div className="relative overflow-hidden rounded-2xl">
+              {/* Animated gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 bg-[length:200%_100%] group-hover:animate-[shimmer_2s_linear_infinite]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+              {/* Sparkle decorations */}
+              <div className="absolute top-3 right-12 w-2 h-2 bg-white/40 rounded-full" />
+              <div className="absolute top-6 right-6 w-1.5 h-1.5 bg-white/30 rounded-full" />
+              <div className="absolute bottom-4 right-20 w-1 h-1 bg-white/40 rounded-full" />
+
+              <div className="relative p-5 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-lg">Browse Gigs</p>
+                    <p className="text-emerald-100 text-sm">Find your next opportunity</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-white font-semibold">Browse Available Gigs</p>
-                  <p className="text-emerald-100 text-xs">Find your next opportunity</p>
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:translate-x-1 transition-transform">
+                  <ArrowRight className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-white" />
             </div>
           </Link>
         </div>
@@ -531,6 +593,13 @@ export default function CreatorDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <style jsx>{`
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
     </Layout>
   );
 }

@@ -24,12 +24,12 @@ export function cleanJSON(jsonStr: string): string {
 }
 
 /**
- * Extracts tips from JSON string (handles multi-line strings)
+ * Extracts tips from JSON string (handles multi-line strings and truncated JSON)
  */
 export function extractTipsFromJSON(jsonStr: string, originalText: string): string[] {
   const tips: string[] = [];
-  
-  // First try from cleaned JSON
+
+  // First try from cleaned JSON with complete array
   const tipsMatch = jsonStr.match(/"improvementTips"\s*:\s*\[([^\]]+)\]/i);
   if (tipsMatch) {
     const tipsContent = tipsMatch[1];
@@ -42,23 +42,42 @@ export function extractTipsFromJSON(jsonStr: string, originalText: string): stri
       }).filter(t => t.length > 0));
     }
   }
-  
-  // If extraction failed, try from original text
+
+  // If extraction failed, try from original text (handles truncated JSON)
   if (tips.length === 0) {
-    const originalTipsMatch = originalText.match(/"improvementTips"\s*:\s*\[([\s\S]*?)\]/i);
+    // Try to match even if array is not closed (truncated response)
+    const originalTipsMatch = originalText.match(/"improvementTips"\s*:\s*\[([\s\S]*?)(?:\]|$)/i);
     if (originalTipsMatch) {
       const tipsContent = originalTipsMatch[1];
-      const allQuotedStrings = tipsContent.match(/"([^"]*(?:\n[^"]*)*)"/g);
+      // Match complete quoted strings
+      const allQuotedStrings = tipsContent.match(/"([^"]+)"/g);
       if (allQuotedStrings) {
         tips.push(...allQuotedStrings.map(t => {
           let tip = t.replace(/^"|"$/g, '');
           tip = tip.replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
           return tip;
-        }).filter(t => t.length > 5));
+        }).filter(t => t.length > 10)); // Filter out very short strings
       }
     }
   }
-  
+
+  // Also try to extract from jsonStr directly for truncated arrays
+  if (tips.length === 0) {
+    const truncatedMatch = jsonStr.match(/"improvementTips"\s*:\s*\[([\s\S]*)/i);
+    if (truncatedMatch) {
+      const tipsContent = truncatedMatch[1];
+      const allQuotedStrings = tipsContent.match(/"([^"]+)"/g);
+      if (allQuotedStrings) {
+        tips.push(...allQuotedStrings.map(t => {
+          let tip = t.replace(/^"|"$/g, '');
+          tip = tip.replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
+          return tip;
+        }).filter(t => t.length > 10));
+      }
+    }
+  }
+
+  console.log('Extracted tips:', tips);
   return tips;
 }
 
@@ -156,7 +175,8 @@ export function parseJSONResponse(
     quality: parsed.quality,
     breakdown: parsed.breakdown,
     tipsCount: finalTips.length,
-    tips: finalTips
+    tips: finalTips,
+    rawImprovementTips: parsed.improvementTips,
   });
   
   // Validate and structure the response

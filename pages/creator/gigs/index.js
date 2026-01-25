@@ -505,13 +505,6 @@ export default function CreatorGigs() {
             </button>
           </div>
           
-          {/* Page Title */}
-          {activeTab === 'browse' && (
-            <h1 className="text-2xl font-bold">Available Gigs</h1>
-          )}
-          {activeTab === 'history' && (
-            <h1 className="text-2xl font-bold">Gig History</h1>
-          )}
         </div>
 
         {/* Scrollable Content Area */}

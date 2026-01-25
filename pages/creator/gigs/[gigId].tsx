@@ -242,7 +242,7 @@ export default function GigDetail() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-zinc-50 pb-28">
+      <div className="min-h-screen bg-zinc-50 pb-40">
         {/* Header */}
         <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-zinc-200">
           <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
@@ -503,63 +503,63 @@ export default function GigDetail() {
           </div>
         </div>
 
-        {/* Bottom Action Bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 p-4 z-30">
-          <div className="max-w-lg mx-auto flex gap-3">
-            {currentStatus === 'open' && (
+        {/* Bottom Action Bar - positioned above bottom nav */}
+        <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom))] left-0 right-0 max-w-[428px] mx-auto bg-white border-t border-zinc-200 px-4 py-3 z-40">
+          <div className="flex gap-3">
+            {currentStatus === 'open' ? (
               isEnded ? (
-                <Button disabled className="flex-1 h-12 text-base font-semibold bg-zinc-200 text-zinc-500">
+                <Button disabled className="flex-1 h-14 text-base font-semibold bg-zinc-200 text-zinc-500 rounded-xl">
                   Gig Ended
                 </Button>
               ) : (
-                <Button onClick={handleAcceptGig} disabled={accepting} className="flex-1 h-12 text-base font-semibold">
+                <Button onClick={handleAcceptGig} disabled={accepting} className="flex-1 h-14 text-base font-semibold rounded-xl">
                   {accepting ? 'Accepting...' : 'Accept Gig'}
                 </Button>
               )
-            )}
-            {currentStatus === 'accepted' && (
+            ) : currentStatus === 'accepted' ? (
               <>
                 <Button
                   onClick={() => router.push(`/creator/gigs/${gigId}/submit`)}
                   disabled={isEnded}
-                  className="flex-1 h-12 text-base font-semibold"
+                  className="flex-1 h-14 text-base font-semibold rounded-xl"
                 >
-                  <Upload className="w-4 h-4 mr-2" />
+                  <Upload className="w-5 h-5 mr-2" />
                   Upload Submission
                 </Button>
-                <Button variant="outline" size="icon" className="h-12 w-12">
+                <Button variant="outline" size="icon" className="h-14 w-14 rounded-xl">
                   <MessageCircle className="w-5 h-5" />
                 </Button>
               </>
-            )}
-            {currentStatus === 'submitted' && (
+            ) : currentStatus === 'submitted' ? (
               <>
                 <Button
                   onClick={() => router.push(`/creator/gigs/${gigId}/submit`)}
                   variant="outline"
-                  className="flex-1 h-12 text-base font-semibold"
+                  className="flex-1 h-14 text-base font-semibold rounded-xl"
                 >
                   View Submission
                 </Button>
-                <Button variant="outline" size="icon" className="h-12 w-12">
+                <Button variant="outline" size="icon" className="h-14 w-14 rounded-xl">
                   <MessageCircle className="w-5 h-5" />
                 </Button>
               </>
-            )}
-            {currentStatus === 'needs_changes' && (
+            ) : currentStatus === 'needs_changes' ? (
               <Button
                 onClick={() => router.push(`/creator/gigs/${gigId}/submit`)}
-                className="flex-1 h-12 text-base font-semibold"
+                className="flex-1 h-14 text-base font-semibold rounded-xl"
               >
                 Upload Revision
               </Button>
-            )}
-            {currentStatus === 'paid' && (
-              <Button variant="outline" className="flex-1 h-12 text-base font-semibold text-emerald-600 border-emerald-200 bg-emerald-50">
-                <CheckCircle2 className="w-4 h-4 mr-2" />
+            ) : currentStatus === 'paid' ? (
+              <Button variant="outline" className="flex-1 h-14 text-base font-semibold text-emerald-600 border-emerald-200 bg-emerald-50 rounded-xl">
+                <CheckCircle2 className="w-5 h-5 mr-2" />
                 Paid - {formatMoney(gig.payout)}
               </Button>
-            )}
+            ) : currentStatus === 'closed' ? (
+              <Button disabled className="flex-1 h-14 text-base font-semibold bg-zinc-200 text-zinc-500 rounded-xl">
+                Gig Closed
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>

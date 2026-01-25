@@ -1,63 +1,56 @@
+import { Loader2 } from 'lucide-react';
+
 export default function EvaluationScreen() {
   return (
-    <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-purple-900 via-pink-900 to-orange-900">
-      {/* Animated gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 via-purple-600/30 to-pink-600/30 animate-pulse"></div>
-
-      {/* Floating particles */}
+    <div className="fixed inset-0 bg-zinc-900 flex flex-col items-center justify-center px-6">
+      {/* Animated background gradient */}
       <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full opacity-60 animate-float"
-            style={{
-              width: `${Math.random() * 8 + 4}px`,
-              height: `${Math.random() * 8 + 4}px`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#06b6d4'][Math.floor(Math.random() * 5)],
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${Math.random() * 3 + 4}s`,
-            }}
-          />
-        ))}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
-      {/* Main content */}
-      <div className="relative flex flex-col items-center justify-center min-h-screen text-center px-4">
-        {/* Concentric animated rings */}
-        <div className="relative mb-12">
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center text-center max-w-sm">
+        {/* Animated loader */}
+        <div className="relative mb-8">
           {/* Outer ring */}
-          <div
-            className="absolute inset-0 rounded-full border-4 border-transparent bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-spin"
-            style={{ width: '200px', height: '200px', margin: '-100px', animationDuration: '3s' }}
-          ></div>
-          {/* Middle ring */}
-          <div
-            className="absolute inset-0 rounded-full border-4 border-transparent bg-gradient-to-r from-pink-500 via-orange-500 to-blue-500 animate-spin"
-            style={{ width: '160px', height: '160px', margin: '-80px', animationDuration: '2s', animationDirection: 'reverse' }}
-          ></div>
-          {/* Inner ring */}
-          <div
-            className="absolute inset-0 rounded-full border-4 border-transparent bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 animate-spin"
-            style={{ width: '120px', height: '120px', margin: '-60px', animationDuration: '1.5s' }}
-          ></div>
-
-          {/* Center pulsing orb */}
-          <div
-            className="relative w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 shadow-2xl animate-pulse"
-            style={{ boxShadow: '0 0 60px rgba(139, 92, 246, 0.6), 0 0 100px rgba(236, 72, 153, 0.4)' }}
-          >
-            <div
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 opacity-75 animate-ping"
-              style={{ animationDuration: '2s' }}
-            ></div>
-            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500"></div>
+          <div className="w-24 h-24 rounded-full border-4 border-zinc-700 border-t-violet-500 animate-spin" />
+          {/* Inner icon */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center">
+              <span className="text-2xl">🤖</span>
+            </div>
           </div>
         </div>
 
-        {/* Minimal text */}
-        <h2 className="text-2xl font-bold text-white drop-shadow-lg animate-pulse">Analyzing</h2>
+        {/* Text */}
+        <h2 className="text-2xl font-bold text-white mb-2">Analyzing Your Content</h2>
+        <p className="text-zinc-400 text-sm mb-8">Our AI is reviewing your submission for quality and compliance</p>
+
+        {/* Progress steps */}
+        <div className="space-y-3 w-full">
+          <div className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl border border-zinc-700">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+              <span className="text-emerald-400">✓</span>
+            </div>
+            <span className="text-sm text-zinc-300">Video uploaded successfully</span>
+          </div>
+          <div className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl border border-violet-500/50">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
+              <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
+            </div>
+            <span className="text-sm text-white font-medium">Checking compliance...</span>
+          </div>
+          <div className="flex items-center gap-3 p-3 bg-zinc-800/30 rounded-xl border border-zinc-800">
+            <div className="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center">
+              <span className="text-zinc-500">3</span>
+            </div>
+            <span className="text-sm text-zinc-500">Quality scoring</span>
+          </div>
+        </div>
+
+        {/* Tip */}
+        <p className="text-xs text-zinc-500 mt-8">This usually takes 30-60 seconds</p>
       </div>
     </div>
   );

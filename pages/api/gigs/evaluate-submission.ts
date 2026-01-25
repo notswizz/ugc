@@ -3,7 +3,7 @@ import admin, { adminDb } from '@/lib/firebase/admin';
 import { evaluateSubmission } from '@/lib/ai/evaluation-service';
 import { processPayment } from '@/lib/payments/processor';
 import { createNotification } from '@/lib/notifications/service';
-import { awardGigCompletionRep, awardAIScoreRep, deductFailedSubmissionRep } from '@/lib/rep/service';
+import { awardGigCompletionRepAdmin, awardAIScoreRepAdmin, deductFailedSubmissionRepAdmin } from '@/lib/rep/admin-service';
 
 export default async function handler(
   req: NextApiRequest,
@@ -228,7 +228,7 @@ export default async function handler(
         // Deduct rep for failed submission
         try {
           console.log('Deducting rep for failed submission from creator:', submission.creatorId);
-          await deductFailedSubmissionRep(submission.creatorId);
+          await deductFailedSubmissionRepAdmin(submission.creatorId);
           console.log('✅ Rep deducted successfully');
         } catch (repError) {
           console.error('❌ Error deducting rep:', repError);
@@ -263,13 +263,13 @@ export default async function handler(
       // Award rep for completing the gig
       try {
         console.log('Awarding gig completion rep to creator:', submission.creatorId);
-        await awardGigCompletionRep(submission.creatorId);
+        await awardGigCompletionRepAdmin(submission.creatorId);
         
         // Award bonus rep based on AI score
         const qualityScore = aiEvaluationData.qualityScore;
         if (qualityScore >= 70) {
           console.log(`Awarding AI score bonus rep (score: ${qualityScore})`);
-          await awardAIScoreRep(submission.creatorId, qualityScore);
+          await awardAIScoreRepAdmin(submission.creatorId, qualityScore);
         }
         
         console.log('✅ Rep awarded successfully');

@@ -1,38 +1,47 @@
-// This file exports the HistoryTab component for use in gigs/index.js
-// It's extracted from pages/creator/gigs/history.js to be used as a tab
-
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { collection, query, where, orderBy, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import LoadingSpinner from '@/components/ui/loading-spinner';
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  FileVideo,
+  AlertCircle,
+  TrendingUp,
+  Loader2,
+  DollarSign
+} from 'lucide-react';
 
-export default function HistoryTab({ user, hideFiltersInComponent = false }) {
+export default function HistoryTab({ user }) {
   const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const [expandedFeedback, setExpandedFeedback] = useState(new Set());
+  const [expandedId, setExpandedId] = useState(null);
+  const [stats, setStats] = useState({ total: 0, completed: 0, earned: 0, avgScore: 0 });
 
   useEffect(() => {
     if (user) {
       fetchGigHistory();
     }
-  }, [user, filter]);
+  }, [user]);
 
   const fetchGigHistory = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
-      
+
       const acceptedGigsQuery = query(
         collection(db, 'gigs'),
         where('acceptedBy', '==', user.uid)
       );
       const acceptedGigsSnapshot = await getDocs(acceptedGigsQuery);
-      const acceptedGigIds = new Set(acceptedGigsSnapshot.docs.map(doc => doc.id));
 
       const submissionsQuery = query(
         collection(db, 'submissions'),
@@ -46,7 +55,6 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
         id: subDoc.id,
         ...subDoc.data(),
         createdAt: subDoc.data().createdAt?.toDate ? subDoc.data().createdAt.toDate() : new Date(subDoc.data().createdAt),
-        updatedAt: subDoc.data().updatedAt?.toDate ? subDoc.data().updatedAt.toDate() : new Date(subDoc.data().updatedAt),
       }));
 
       const submittedGigIds = new Set(submissionDocs.map(sub => sub.gigId));
@@ -56,156 +64,96 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
           .filter(gigDoc => !submittedGigIds.has(gigDoc.id))
           .map(async (gigDoc) => {
             const gigData = gigDoc.data();
-            
-            let brandName = '';
+            let brandName = 'Brand';
             try {
               const brandDoc = await getDoc(doc(db, 'brands', gigData.brandId));
               if (brandDoc.exists()) {
-                brandName = brandDoc.data().companyName || '';
+                brandName = brandDoc.data().companyName || 'Brand';
               } else {
                 const userDoc = await getDoc(doc(db, 'users', gigData.brandId));
-                if (userDoc.exists()) {
-                  brandName = userDoc.data().name || '';
-                }
+                if (userDoc.exists()) brandName = userDoc.data().companyName || 'Brand';
               }
-            } catch (err) {
-              console.error('Error fetching brand name:', err);
-            }
+            } catch (err) {}
 
             return {
-              gigId: gigDoc.id,
-              gigTitle: gigData.title,
+              id: gigDoc.id,
+              title: gigData.title,
               brandName,
+              status: 'accepted',
+              payout: gigData.basePayout || 0,
+              createdAt: gigData.createdAt?.toDate ? gigData.createdAt.toDate() : new Date(),
               submission: null,
-              gig: {
-                basePayout: gigData.basePayout || 0,
-                bonusPool: gigData.bonusPool,
-                deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
-                primaryThing: gigData.primaryThing,
-                status: gigData.status,
-              },
               payment: null,
             };
           })
       );
 
-      const gigsWithDetails = await Promise.all(
+      const gigsWithSubmissions = await Promise.all(
         submissionDocs.map(async (submission) => {
           const gigDoc = await getDoc(doc(db, 'gigs', submission.gigId));
           if (!gigDoc.exists()) return null;
 
           const gigData = gigDoc.data();
-          
-          let brandName = '';
+          let brandName = 'Brand';
           try {
             const brandDoc = await getDoc(doc(db, 'brands', gigData.brandId));
             if (brandDoc.exists()) {
-              brandName = brandDoc.data().companyName || '';
+              brandName = brandDoc.data().companyName || 'Brand';
             } else {
               const userDoc = await getDoc(doc(db, 'users', gigData.brandId));
-              if (userDoc.exists()) {
-                brandName = userDoc.data().name || '';
-              }
+              if (userDoc.exists()) brandName = userDoc.data().companyName || 'Brand';
             }
-          } catch (err) {
-            console.error('Error fetching brand name:', err);
-          }
+          } catch (err) {}
 
-          // Query payments by submissionId first (most specific), then fallback to gigId+creatorId
-          let payment = null;
-          
-          // Try by submissionId first
-          const paymentsQueryBySubmission = query(
+          const paymentsQuery = query(
             collection(db, 'payments'),
-            where('submissionId', '==', submission.id),
+            where('gigId', '==', submission.gigId),
             where('creatorId', '==', user.uid)
           );
-          const paymentsBySubmission = await getDocs(paymentsQueryBySubmission);
-          
-          if (!paymentsBySubmission.empty) {
-            payment = {
-              id: paymentsBySubmission.docs[0].id,
-              ...paymentsBySubmission.docs[0].data(),
-              createdAt: paymentsBySubmission.docs[0].data().createdAt?.toDate ? paymentsBySubmission.docs[0].data().createdAt.toDate() : new Date(paymentsBySubmission.docs[0].data().createdAt),
-              transferredAt: paymentsBySubmission.docs[0].data().transferredAt?.toDate ? paymentsBySubmission.docs[0].data().transferredAt.toDate() : null,
-            };
-          } else {
-            // Fallback to gigId + creatorId
-            const paymentsQuery = query(
-              collection(db, 'payments'),
-              where('gigId', '==', submission.gigId),
-              where('creatorId', '==', user.uid)
-            );
-            const paymentsSnapshot = await getDocs(paymentsQuery);
-            const payments = paymentsSnapshot.docs.map(payDoc => ({
-              id: payDoc.id,
-              ...payDoc.data(),
-              createdAt: payDoc.data().createdAt?.toDate ? payDoc.data().createdAt.toDate() : new Date(payDoc.data().createdAt),
-              transferredAt: payDoc.data().transferredAt?.toDate ? payDoc.data().transferredAt.toDate() : null,
-            }));
-            payment = payments[0] || null;
-          }
+          const paymentsSnapshot = await getDocs(paymentsQuery);
+          const payment = paymentsSnapshot.docs[0]?.data() || null;
 
           return {
-            gigId: gigDoc.id,
-            gigTitle: gigData.title,
+            id: gigDoc.id,
+            title: gigData.title,
             brandName,
+            status: payment?.status === 'transferred' || payment?.status === 'balance_transferred'
+              ? 'paid'
+              : submission.status,
+            payout: payment?.creatorNet || gigData.basePayout || 0,
+            createdAt: submission.createdAt,
             submission: {
               id: submission.id,
               status: submission.status,
-              contentLink: submission.contentLink,
-              createdAt: submission.createdAt,
-              updatedAt: submission.updatedAt,
               aiEvaluation: submission.aiEvaluation,
             },
-            gig: {
-              basePayout: gigData.basePayout || 0,
-              bonusPool: gigData.bonusPool,
-              deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
-              primaryThing: gigData.primaryThing,
-              status: gigData.status,
-            },
-            payment: payment || null,
+            payment,
           };
         })
       );
 
-      let allGigs = [...acceptedNotSubmittedGigs, ...gigsWithDetails.filter(gig => gig !== null)];
-
-      if (filter === 'pending') {
-        allGigs = allGigs.filter(gig => 
-          !gig.submission || 
-          gig.submission.status === 'submitted' || 
-          gig.submission.status === 'needs_changes'
-        );
-      } else if (filter === 'paid') {
-        allGigs = allGigs.filter(gig => 
-          gig.payment && gig.payment.status === 'transferred'
-        );
-      } else if (filter === 'completed') {
-        allGigs = allGigs.filter(gig => 
-          gig.submission && (
-            gig.submission.status === 'approved' || 
-            gig.submission.status === 'rejected' || 
-            gig.payment?.status === 'transferred'
-          )
-        );
-      }
+      let allGigs = [...acceptedNotSubmittedGigs, ...gigsWithSubmissions.filter(Boolean)];
 
       const uniqueGigs = {};
       allGigs.forEach(gig => {
-        if (!uniqueGigs[gig.gigId]) {
-          uniqueGigs[gig.gigId] = gig;
-        } else if (gig.submission && uniqueGigs[gig.gigId].submission) {
-          if (gig.submission.createdAt > uniqueGigs[gig.gigId].submission.createdAt) {
-            uniqueGigs[gig.gigId] = gig;
-          }
-        } else if (gig.submission && !uniqueGigs[gig.gigId].submission) {
-          uniqueGigs[gig.gigId] = gig;
+        if (!uniqueGigs[gig.id] || (gig.submission && !uniqueGigs[gig.id].submission)) {
+          uniqueGigs[gig.id] = gig;
         }
       });
 
-      setGigs(Object.values(uniqueGigs));
+      const gigsList = Object.values(uniqueGigs).sort((a, b) => b.createdAt - a.createdAt);
+      setGigs(gigsList);
+
+      const completed = gigsList.filter(g => g.status === 'paid' || g.status === 'approved').length;
+      const earned = gigsList.reduce((sum, g) =>
+        (g.status === 'paid' || g.status === 'approved') ? sum + (g.payment?.creatorNet || 0) : sum, 0
+      );
+      const scores = gigsList
+        .filter(g => g.submission?.aiEvaluation?.qualityScore)
+        .map(g => g.submission.aiEvaluation.qualityScore);
+      const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+
+      setStats({ total: gigsList.length, completed, earned, avgScore });
     } catch (error) {
       console.error('Error fetching gig history:', error);
     } finally {
@@ -213,320 +161,246 @@ export default function HistoryTab({ user, hideFiltersInComponent = false }) {
     }
   };
 
-  const getPaymentStatus = (gig) => {
-    if (!gig.submission) {
-      return { status: 'pending_submission', text: 'Pending Submission', color: 'text-blue-600' };
-    }
-
-    if (!gig.payment) {
-      if (gig.submission.status === 'approved') {
-        return { status: 'approved', text: 'Approved - Payment Pending', color: 'text-yellow-600' };
-      } else if (gig.submission.status === 'rejected') {
-        return { status: 'rejected', text: 'Rejected', color: 'text-red-600' };
-      } else if (gig.submission.status === 'submitted') {
-        return { status: 'pending', text: 'Pending Approval', color: 'text-blue-600' };
-      } else if (gig.submission.status === 'needs_changes') {
-        return { status: 'needs_changes', text: 'Needs Changes', color: 'text-orange-600' };
-      }
-      return { status: gig.submission.status || 'unknown', text: gig.submission.status || 'Unknown', color: 'text-gray-600' };
-    }
-
-    if (gig.payment.status === 'transferred' || gig.payment.status === 'balance_transferred') {
-      return { status: 'paid', text: 'Paid', color: 'text-green-600' };
-    } else if (gig.payment.status === 'captured') {
-      return { status: 'captured', text: 'Payment Captured - Transferring Soon', color: 'text-yellow-600' };
-    } else if (gig.payment.status === 'pending') {
-      return { status: 'pending', text: 'Payment Pending', color: 'text-blue-600' };
-    }
-    return { status: 'unknown', text: 'Payment Status Unknown', color: 'text-gray-600' };
-  };
-
-  if (loading) {
-    return <LoadingSpinner text="Loading gig history..." />;
-  }
-
   const getStatusConfig = (status) => {
     switch (status) {
-      case 'pending_submission':
-        return { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Pending Submission', icon: '📝' };
       case 'paid':
-        return { bg: 'bg-green-100', text: 'text-green-800', label: 'Paid', icon: '✓' };
+        return { icon: CheckCircle2, bg: 'bg-emerald-500', text: 'Paid', color: 'text-emerald-600' };
       case 'approved':
-        return { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Approved', icon: '✓' };
+        return { icon: CheckCircle2, bg: 'bg-emerald-500', text: 'Approved', color: 'text-emerald-600' };
       case 'submitted':
-        return { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Pending', icon: '⏳' };
+        return { icon: Clock, bg: 'bg-blue-500', text: 'Reviewing', color: 'text-blue-600' };
       case 'rejected':
-        return { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejected', icon: '✗' };
+        return { icon: XCircle, bg: 'bg-red-500', text: 'Rejected', color: 'text-red-600' };
       case 'needs_changes':
-        return { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Changes', icon: '↻' };
+        return { icon: AlertCircle, bg: 'bg-amber-500', text: 'Changes', color: 'text-amber-600' };
+      case 'accepted':
+        return { icon: FileVideo, bg: 'bg-violet-500', text: 'To Submit', color: 'text-violet-600' };
       default:
-        return { bg: 'bg-gray-100', text: 'text-gray-800', label: status || 'Unknown', icon: '•' };
+        return { icon: Clock, bg: 'bg-zinc-400', text: status, color: 'text-zinc-600' };
     }
   };
 
+  const filteredGigs = gigs.filter(gig => {
+    if (filter === 'all') return true;
+    if (filter === 'completed') return gig.status === 'paid' || gig.status === 'approved';
+    if (filter === 'pending') return gig.status === 'submitted' || gig.status === 'accepted' || gig.status === 'needs_changes';
+    return true;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+        <p className="text-sm text-zinc-500 mt-3">Loading history...</p>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      {/* Filter Tabs */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 mb-6 pb-2 pt-2">
+    <div className="space-y-4">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-zinc-50 -mx-4 px-4 pt-1 pb-4 space-y-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-2xl border border-zinc-200 p-3 text-center">
+            <p className="text-2xl font-bold text-zinc-900">{stats.completed}</p>
+            <p className="text-xs text-zinc-500">Completed</p>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-3 text-center">
+            <p className="text-2xl font-bold text-white">${stats.earned.toFixed(0)}</p>
+            <p className="text-xs text-emerald-100">Earned</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-zinc-200 p-3 text-center">
+            <div className="flex items-center justify-center gap-1">
+              <Star className="w-4 h-4 text-amber-500" />
+              <p className="text-2xl font-bold text-zinc-900">{stats.avgScore || '-'}</p>
+            </div>
+            <p className="text-xs text-zinc-500">Avg Score</p>
+          </div>
+        </div>
+
+        {/* Filter Pills */}
         <div className="flex gap-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-            filter === 'all'
-              ? 'border-orange-600 text-orange-600'
-              : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          All ({gigs.length})
-        </button>
-        <button
-          onClick={() => setFilter('pending')}
-          className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-            filter === 'pending'
-              ? 'border-orange-600 text-orange-600'
-              : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          Pending
-        </button>
-        <button
-          onClick={() => setFilter('completed')}
-          className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-            filter === 'completed'
-              ? 'border-orange-600 text-orange-600'
-              : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          Completed
-        </button>
+          {['all', 'completed', 'pending'].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                filter === f
+                  ? 'bg-zinc-900 text-white'
+                  : 'bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-300'
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Gigs List */}
-      {gigs.length > 0 ? (
+      {filteredGigs.length > 0 ? (
         <div className="space-y-3">
-          {gigs.map((gig) => {
-            const paymentStatus = getPaymentStatus(gig);
+          {filteredGigs.map((gig) => {
+            const statusConfig = getStatusConfig(gig.status);
+            const StatusIcon = statusConfig.icon;
+            const isExpanded = expandedId === gig.id;
+            const hasAIFeedback = gig.submission?.aiEvaluation;
             const qualityScore = gig.submission?.aiEvaluation?.qualityScore;
-            const amountPaid = gig.payment?.creatorNet || (gig.submission?.status === 'approved' ? gig.basePayout : null);
-            
-            // Determine badge status: prioritize payment status over submission status
-            // If paid, show paid. If approved but no payment, show approved. Otherwise show submission status.
-            let badgeStatus = 'unknown';
-            // Check payment status first - if payment exists and is transferred, it's paid
-            if (gig.payment && (gig.payment.status === 'transferred' || gig.payment.status === 'balance_transferred')) {
-              badgeStatus = 'paid';
-            } else if (paymentStatus.status === 'paid') {
-              badgeStatus = 'paid';
-            } else if (gig.submission?.status === 'approved' && !gig.payment) {
-              badgeStatus = 'approved'; // Approved but payment processing
-            } else {
-              badgeStatus = gig.submission?.status || paymentStatus.status || 'unknown';
-            }
-            const statusConfig = getStatusConfig(badgeStatus);
-            
+
             return (
-              <Card key={gig.gigId} className="group hover:shadow-lg transition-all duration-300 border-0 overflow-hidden bg-gradient-to-br from-white to-gray-50">
-                {/* Color accent bar based on status */}
-                <div className={`h-1.5 ${
-                  badgeStatus === 'paid' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-                  badgeStatus === 'approved' ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
-                  badgeStatus === 'rejected' ? 'bg-gradient-to-r from-red-500 to-rose-500' :
-                  badgeStatus === 'needs_changes' ? 'bg-gradient-to-r from-orange-500 to-yellow-500' :
-                  'bg-gradient-to-r from-orange-500 to-red-500'
-                }`}></div>
-                
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      {/* Title and status badge */}
-                      <div className="flex items-start gap-3 mb-2">
-                        <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${
-                          badgeStatus === 'paid' ? 'bg-green-500' :
-                          badgeStatus === 'approved' ? 'bg-yellow-500' :
-                          badgeStatus === 'rejected' ? 'bg-red-500' :
-                          badgeStatus === 'needs_changes' ? 'bg-orange-500' :
-                          'bg-blue-500'
-                        }`}></div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-base font-bold line-clamp-2 text-gray-900 mb-1">{gig.gigTitle}</h3>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold rounded-full whitespace-nowrap ${statusConfig.bg} ${statusConfig.text} border-2 ${
-                            badgeStatus === 'paid' ? 'border-green-200' :
-                            badgeStatus === 'approved' ? 'border-yellow-200' :
-                            badgeStatus === 'rejected' ? 'border-red-200' :
-                            badgeStatus === 'needs_changes' ? 'border-orange-200' :
-                            'border-blue-200'
-                          }`}>
-                            {statusConfig.icon} {statusConfig.label}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Date */}
-                      <div className="flex items-center gap-2 text-xs mb-3 ml-5">
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-md">
-                          <span className="text-gray-500">📅</span>
-                          <span className="text-gray-700 font-medium">{gig.submission?.createdAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || gig.deadlineAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'N/A'}</span>
-                        </div>
-                      </div>
-
-                      {/* Payment status - only show if different from main badge or if paid */}
-                      {paymentStatus.status === 'paid' && (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ml-5 bg-green-100 text-green-800 border-2 border-green-200">
-                          ✓ Paid
-                        </div>
-                      )}
-                      {paymentStatus.status === 'approved' && badgeStatus !== 'paid' && (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ml-5 bg-yellow-100 text-yellow-800 border-2 border-yellow-200">
-                          ⏳ Processing Payment
-                        </div>
-                      )}
-
-                      {/* Submit button */}
-                      {!gig.submission && (
-                        <div className="mt-3 ml-5">
-                          <Link href={`/creator/gigs/${gig.gigId}/submit`}>
-                            <Button size="sm" className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white text-xs h-8 px-4 font-semibold shadow-md">
-                              Submit Content →
-                            </Button>
-                          </Link>
-                        </div>
-                      )}
+              <div key={gig.id} className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-xl ${statusConfig.bg} flex items-center justify-center flex-shrink-0`}>
+                      <StatusIcon className="w-5 h-5 text-white" />
                     </div>
 
-                    {/* Amount paid */}
-                    {amountPaid && (
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        <div className="text-right bg-green-50 px-3 py-2 rounded-lg border-2 border-green-200">
-                          <div className="text-2xl font-bold text-green-700">
-                            ${typeof amountPaid === 'number' ? amountPaid.toFixed(2) : amountPaid}
-                          </div>
-                          <div className="text-[10px] text-green-600 font-semibold">PAID</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-zinc-900 text-sm truncate">{gig.title}</h3>
+                          <p className="text-xs text-zinc-500 mt-0.5">{gig.brandName}</p>
                         </div>
+                        {(gig.status === 'paid' || gig.status === 'approved') && gig.payment?.creatorNet && (
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-lg font-bold text-emerald-600">${gig.payment.creatorNet.toFixed(2)}</p>
+                          </div>
+                        )}
                       </div>
-                    )}
+
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className={`text-xs font-medium ${statusConfig.color}`}>
+                          {statusConfig.text}
+                        </span>
+                        {qualityScore && (
+                          <span className="flex items-center gap-1 text-xs text-zinc-500">
+                            <Star className="w-3 h-3 text-amber-500" />
+                            {qualityScore}/100
+                          </span>
+                        )}
+                        <span className="text-xs text-zinc-400">
+                          {gig.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* AI Feedback Section */}
-                  {gig.submission?.aiEvaluation && (
-                    <div className="mt-4 pt-4 border-t-2 border-gray-200">
+                  <div className="flex items-center gap-2 mt-3">
+                    {gig.status === 'accepted' && (
+                      <Link href={`/creator/gigs/${gig.id}/submit`} className="flex-1">
+                        <Button size="sm" className="w-full h-9 text-xs rounded-xl bg-violet-600 hover:bg-violet-700">
+                          Submit Content
+                        </Button>
+                      </Link>
+                    )}
+                    {gig.status === 'needs_changes' && (
+                      <Link href={`/creator/gigs/${gig.id}/submit`} className="flex-1">
+                        <Button size="sm" className="w-full h-9 text-xs rounded-xl bg-amber-600 hover:bg-amber-700">
+                          Resubmit
+                        </Button>
+                      </Link>
+                    )}
+                    {hasAIFeedback && (
                       <button
-                        onClick={() => {
-                          setExpandedFeedback(prev => {
-                            const newSet = new Set(prev);
-                            if (newSet.has(gig.gigId)) {
-                              newSet.delete(gig.gigId);
-                            } else {
-                              newSet.add(gig.gigId);
-                            }
-                            return newSet;
-                          });
-                        }}
-                        className="w-full flex items-center justify-between text-left mb-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        onClick={() => setExpandedId(isExpanded ? null : gig.id)}
+                        className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-xl hover:bg-zinc-200 transition-colors"
                       >
-                        <span className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                          <span className="text-purple-600">🤖</span> AI Feedback
-                        </span>
-                        <span className={`text-sm font-bold transition-transform ${expandedFeedback.has(gig.gigId) ? 'rotate-90' : ''}`}>
-                          ▶
-                        </span>
+                        <Lightbulb className="w-3.5 h-3.5" />
+                        AI Feedback
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
-                      
-                      {expandedFeedback.has(gig.gigId) && (
-                        <div className={`mt-2 p-4 rounded-xl border-2 transition-all shadow-inner ${
-                          gig.submission.status === 'rejected' 
-                            ? 'bg-gradient-to-br from-red-50 to-rose-50 border-red-300' 
-                            : gig.submission.status === 'approved'
-                            ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300'
-                            : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300'
-                        }`}>
-                          {qualityScore !== undefined && (
-                            <div className="mb-3">
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs font-semibold text-gray-700">AI Quality Score</span>
-                                <span className={`text-sm font-bold ${
-                                  qualityScore >= 80 ? 'text-green-700' :
-                                  qualityScore >= 60 ? 'text-blue-700' :
-                                  qualityScore >= 40 ? 'text-yellow-700' :
-                                  'text-orange-700'
-                                }`}>{qualityScore}/100</span>
-                              </div>
-                              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div 
-                                  className={`h-full rounded-full transition-all ${
-                                    qualityScore >= 80 ? 'bg-green-500' :
-                                    qualityScore >= 60 ? 'bg-blue-500' :
-                                    qualityScore >= 40 ? 'bg-yellow-500' :
-                                    'bg-orange-500'
-                                  }`}
-                                  style={{ width: `${qualityScore}%` }}
-                                />
-                              </div>
-                            </div>
-                          )}
+                    )}
+                  </div>
+                </div>
 
-                          {gig.submission.aiEvaluation.compliancePassed !== undefined && (
-                            <div className="mb-3 flex items-center gap-2">
-                              <span className="text-xs font-semibold text-gray-700">Compliance:</span>
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                                gig.submission.aiEvaluation.compliancePassed 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-red-100 text-red-800'
-                              }`}>
-                                {gig.submission.aiEvaluation.compliancePassed ? '✅ Passed' : '❌ Failed'}
-                              </span>
-                            </div>
-                          )}
+                {isExpanded && hasAIFeedback && (
+                  <div className="px-4 pb-4">
+                    <div className={`p-4 rounded-xl ${
+                      gig.status === 'rejected' ? 'bg-red-50' :
+                      gig.status === 'approved' || gig.status === 'paid' ? 'bg-emerald-50' : 'bg-blue-50'
+                    }`}>
+                      {qualityScore !== undefined && (
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-semibold text-zinc-700">Quality Score</span>
+                            <span className={`text-sm font-bold ${
+                              qualityScore >= 80 ? 'text-emerald-600' :
+                              qualityScore >= 60 ? 'text-blue-600' :
+                              'text-amber-600'
+                            }`}>{qualityScore}/100</span>
+                          </div>
+                          <div className="w-full h-2 bg-zinc-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                qualityScore >= 80 ? 'bg-emerald-500' :
+                                qualityScore >= 60 ? 'bg-blue-500' :
+                                'bg-amber-500'
+                              }`}
+                              style={{ width: `${qualityScore}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
 
-                          {gig.submission.aiEvaluation.complianceIssues && 
-                           gig.submission.aiEvaluation.complianceIssues.length > 0 && (
-                            <div className="mb-3">
-                              <div className="text-xs font-semibold text-red-800 mb-1.5">Issues Found:</div>
-                              <ul className="list-disc list-inside space-y-1">
-                                {gig.submission.aiEvaluation.complianceIssues.map((issue, idx) => (
-                                  <li key={idx} className="text-xs text-red-700 leading-relaxed">{issue}</li>
-                                ))}
-                              </ul>
+                      {gig.submission.aiEvaluation.qualityBreakdown && (
+                        <div className="grid grid-cols-5 gap-2 mb-4">
+                          {Object.entries(gig.submission.aiEvaluation.qualityBreakdown).map(([key, value]) => (
+                            <div key={key} className="text-center">
+                              <div className="text-lg font-bold text-zinc-900">{value}</div>
+                              <div className="text-[10px] text-zinc-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
                             </div>
-                          )}
+                          ))}
+                        </div>
+                      )}
 
-                          {gig.submission.aiEvaluation.improvementTips && 
-                           gig.submission.aiEvaluation.improvementTips.length > 0 && (
-                            <div>
-                              <div className={`text-xs font-semibold mb-1.5 ${
-                                gig.submission.status === 'approved' ? 'text-green-800' : 'text-blue-800'
-                              }`}>
-                                {gig.submission.status === 'approved' ? 'Feedback & Tips:' : 'Improvement Tips:'}
-                              </div>
-                              <ul className="list-disc list-inside space-y-1">
-                                {gig.submission.aiEvaluation.improvementTips.map((tip, idx) => (
-                                  <li key={idx} className="text-xs text-gray-800 leading-relaxed">{tip}</li>
-                                ))}
-                              </ul>
-                            </div>
+                      {gig.submission.aiEvaluation.compliancePassed !== undefined && (
+                        <div className="flex items-center gap-2 mb-3">
+                          {gig.submission.aiEvaluation.compliancePassed ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-red-600" />
                           )}
+                          <span className="text-xs font-medium text-zinc-700">
+                            Compliance {gig.submission.aiEvaluation.compliancePassed ? 'Passed' : 'Failed'}
+                          </span>
+                        </div>
+                      )}
+
+                      {gig.submission.aiEvaluation.improvementTips?.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-zinc-700 mb-2">Tips for Improvement</p>
+                          <ul className="space-y-1.5">
+                            {gig.submission.aiEvaluation.improvementTips.map((tip, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-xs text-zinc-600">
+                                <TrendingUp className="w-3 h-3 text-zinc-400 mt-0.5 flex-shrink-0" />
+                                <span>{tip}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
       ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-gray-500 mb-4">
-              {filter === 'all' 
-                ? "No gig history yet. Accept and complete gigs to see them here."
-                : `No ${filter} gigs found.`}
-            </p>
-            <Link href="/creator/gigs">
-              <Button>Browse Available Gigs</Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl border border-zinc-200 p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-100 flex items-center justify-center">
+            <FileVideo className="w-8 h-8 text-zinc-400" />
+          </div>
+          <h3 className="font-semibold text-zinc-900 mb-1">No gigs yet</h3>
+          <p className="text-sm text-zinc-500 mb-4">
+            {filter === 'all'
+              ? "Accept gigs to see them here"
+              : `No ${filter} gigs found`}
+          </p>
+          <Link href="/creator/gigs">
+            <Button className="rounded-xl">Browse Gigs</Button>
+          </Link>
+        </div>
       )}
     </div>
   );
