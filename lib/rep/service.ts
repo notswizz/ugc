@@ -101,7 +101,7 @@ export async function deductFailedSubmissionRep(creatorId: string): Promise<void
 /**
  * Get rep level based on total rep points
  */
-export function getRepLevel(rep: number): { level: number; title: string; nextLevelRep: number } {
+export function getRepLevel(rep: number): { level: number; title: string; nextLevelRep: number; prevLevelRep: number } {
   const levels = [
     { level: 1, title: 'Rookie', minRep: 0 },
     { level: 2, title: 'Amateur', minRep: 100 },
@@ -111,7 +111,7 @@ export function getRepLevel(rep: number): { level: number; title: string; nextLe
     { level: 6, title: 'Master', minRep: 1500 },
     { level: 7, title: 'Legend', minRep: 2500 },
   ];
-  
+
   // Find current level
   let currentLevel = levels[0];
   for (const level of levels) {
@@ -121,16 +121,18 @@ export function getRepLevel(rep: number): { level: number; title: string; nextLe
       break;
     }
   }
-  
+
   // Find next level
   const currentIndex = levels.findIndex(l => l.level === currentLevel.level);
   const nextLevel = levels[currentIndex + 1];
   const nextLevelRep = nextLevel ? nextLevel.minRep : currentLevel.minRep;
-  
+  const prevLevelRep = currentLevel.minRep;
+
   return {
     level: currentLevel.level,
     title: currentLevel.title,
     nextLevelRep,
+    prevLevelRep,
   };
 }
 

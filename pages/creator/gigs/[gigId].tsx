@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -5,61 +7,46 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { useAuth } from '@/lib/auth/AuthContext';
 import { db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import VisibilityBadge from '@/components/gigs/VisibilityBadge';
 import { THINGS } from '@/lib/things/constants';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { calculatePayout, getCreatorFollowingCount, getCreatorNetPayout } from '@/lib/payments/calculate-payout';
 import {
-  Clock,
-  Play,
-  DollarSign,
-  Activity,
-  CheckCircle2,
-  ShoppingBag,
-  Upload,
-  Shield,
-  FileCheck,
-  Zap,
   ArrowLeft,
-  Share2,
-  MessageCircle,
-  Eye,
-  Edit,
-  CreditCard,
-  Star,
-  Package,
-  FileText,
+  Clock,
+  Video,
   Image as ImageIcon,
-  AlertCircle,
-  Lock,
-  XCircle,
+  CheckCircle2,
+  Circle,
+  Shield,
+  Sparkles,
+  Users,
+  Mail,
+  ChevronDown,
+  ChevronUp,
+  DollarSign,
+  Package,
+  Upload,
+  MessageCircle,
 } from 'lucide-react';
 
-// Utility functions
 function formatTimeLeft(deadline: Date): string {
   const now = new Date();
   const diff = deadline.getTime() - now.getTime();
   if (diff < 0) return 'Ended';
-  
+
   const minutes = Math.floor(diff / (1000 * 60));
   const hours = Math.floor(minutes / 60);
-  
-  if (minutes < 60) {
-    return minutes < 1 ? 'Ends soon' : `Ends in ${minutes}m`;
-  }
+
+  if (minutes < 60) return minutes < 1 ? 'Ends soon' : `${minutes}m left`;
   if (hours < 24) {
     const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `Ends in ${hours}h ${remainingMinutes}m` : `Ends in ${hours}h`;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m left` : `${hours}h left`;
   }
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
-  return remainingHours > 0 ? `Ends in ${days}d ${remainingHours}h` : `Ends in ${days}d`;
+  return remainingHours > 0 ? `${days}d ${remainingHours}h left` : `${days}d left`;
 }
 
 function formatMoney(dollars: number): string {
@@ -76,11 +63,12 @@ type GigStatus = 'open' | 'accepted' | 'submitted' | 'needs_changes' | 'approved
 export default function GigDetail() {
   const router = useRouter();
   const { gigId } = router.query;
-  const { user, appUser } = useAuth();
+  const { user } = useAuth();
   const [gig, setGig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<GigStatus>('open');
+  const [expandedSection, setExpandedSection] = useState<string | null>('brief');
 
   useEffect(() => {
     if (gigId && typeof gigId === 'string') {
@@ -103,7 +91,6 @@ export default function GigDetail() {
 
       const gigData = gigDoc.data();
 
-      // Fetch brand name
       let brandName = 'Unknown Brand';
       if (gigData.brandId) {
         try {
@@ -116,14 +103,12 @@ export default function GigDetail() {
         }
       }
 
-      // Calculate payout
       let creatorFollowingCount = 0;
       if (user && gigData.payoutType === 'dynamic') {
         try {
           const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
           if (creatorDoc.exists()) {
-            const creatorData = creatorDoc.data();
-            creatorFollowingCount = getCreatorFollowingCount(creatorData);
+            creatorFollowingCount = getCreatorFollowingCount(creatorDoc.data());
           }
         } catch (err) {
           console.error('Error fetching creator data:', err);
@@ -131,7 +116,6 @@ export default function GigDetail() {
       }
       const calculatedPayout = calculatePayout(gigData, creatorFollowingCount);
 
-      // Check submission status
       let hasCreatorSubmission = false;
       let submissionStatus: string | null = null;
       if (user) {
@@ -147,33 +131,29 @@ export default function GigDetail() {
         }
       }
 
-      // Determine current status
       let status: GigStatus = 'open';
       if (submissionStatus === 'approved') status = 'paid';
       else if (submissionStatus === 'needs_changes') status = 'needs_changes';
       else if (submissionStatus === 'submitted') status = 'submitted';
       else if (hasCreatorSubmission || gigData.acceptedBy === user?.uid) status = 'accepted';
       else if (gigData.status === 'closed') status = 'closed';
-      else status = 'open'; // Default to open for any other status or no status
 
       const basePayout = calculatedPayout || gigData.basePayout || 0;
       const creatorNetPayout = getCreatorNetPayout(basePayout);
 
-      const gig = {
+      setGig({
         id: gigDoc.id,
         ...gigData,
         status,
         deadlineAt: gigData.deadlineAt?.toDate ? gigData.deadlineAt.toDate() : new Date(gigData.deadlineAt),
         createdAt: gigData.createdAt?.toDate ? gigData.createdAt.toDate() : new Date(gigData.createdAt),
         brandName,
-        payout: creatorNetPayout, // Show creator's net payout (after 15% platform fee)
-        basePayout, // Keep original for reference
+        payout: creatorNetPayout,
+        basePayout,
         calculatedPayout,
         hasCreatorSubmission,
         submissionStatus,
-      };
-
-      setGig(gig);
+      });
       setCurrentStatus(status);
     } catch (error) {
       console.error('Error fetching gig:', error);
@@ -185,41 +165,20 @@ export default function GigDetail() {
   };
 
   const handleAcceptGig = async () => {
-    if (isEnded) {
-      toast.error('This gig has ended');
-      return;
-    }
-
-    if (!user?.uid) {
-      toast.error('Please sign in');
-      return;
-    }
-
-    if (!gigId || typeof gigId !== 'string') {
-      toast.error('Invalid gig');
-      return;
-    }
+    if (!user?.uid || !gigId || typeof gigId !== 'string') return;
 
     setAccepting(true);
     try {
-      const response = await fetch('/api/accept-gig', {
+      const response = await fetch('/api/gigs/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.uid,
-          gigId,
-        }),
+        body: JSON.stringify({ userId: user.uid, gigId }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        if (data.alreadyAccepted) {
-          toast.success('Gig already accepted');
-        } else {
-          toast.success('Gig accepted successfully!');
-        }
-        // Refresh gig data to update status
+        toast.success(data.alreadyAccepted ? 'Gig already accepted' : 'Gig accepted!');
         await fetchGig();
       } else {
         toast.error(data.message || data.error || 'Failed to accept gig');
@@ -232,26 +191,10 @@ export default function GigDetail() {
     }
   };
 
-  const handleStartSubmission = () => {
-    if (isEnded) {
-      toast.error('This gig has ended');
-      return;
-    }
-    router.push(`/creator/gigs/${gigId}/submit`);
-  };
-
-  const handleViewSubmission = () => {
-    router.push(`/creator/gigs/${gigId}/submit`);
-  };
-
-  const handleUploadRevision = () => {
-    router.push(`/creator/gigs/${gigId}/submit`);
-  };
-
   if (loading) {
     return (
       <Layout>
-        <LoadingSpinner text="Loading gig details..." />
+        <LoadingSpinner text="Loading gig..." />
       </Layout>
     );
   }
@@ -259,10 +202,10 @@ export default function GigDetail() {
   if (!gig) {
     return (
       <Layout>
-        <div className="max-w-[430px] mx-auto px-4 py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Gig Not Found</h1>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+          <p className="text-zinc-500 mb-4">Gig not found</p>
           <Link href="/creator/gigs">
-            <Button>Back to Gigs</Button>
+            <Button variant="outline">Back to Gigs</Button>
           </Link>
         </div>
       </Layout>
@@ -272,506 +215,350 @@ export default function GigDetail() {
   const primaryThing = THINGS.find((t) => t.id === gig.primaryThing);
   const deliverables = gig.deliverables || { videos: 0, photos: 0 };
   const deadlineDate = gig.deadlineAt instanceof Date ? gig.deadlineAt : new Date(gig.deadlineAt);
-  const timeLeftMinutes = Math.max(0, Math.floor((deadlineDate.getTime() - Date.now()) / (1000 * 60)));
   const isEnded = deadlineDate.getTime() < Date.now();
-  const isUrgent = !isEnded && timeLeftMinutes < 120;
+  const isUrgent = !isEnded && Math.floor((deadlineDate.getTime() - Date.now()) / (1000 * 60)) < 120;
   const brandInitial = gig.brandName?.charAt(0).toUpperCase() || 'B';
 
-  // Format deliverables text
-  const deliverableParts: string[] = [];
-  if (deliverables.videos > 0) {
-    deliverableParts.push(`${deliverables.videos} video${deliverables.videos > 1 ? 's' : ''}`);
-  }
-  if (deliverables.photos > 0) {
-    deliverableParts.push(`${deliverables.photos} photo${deliverables.photos > 1 ? 's' : ''}`);
-  }
-  const deliverablesText = deliverableParts.length > 0 ? deliverableParts.join(', ') : 'No deliverables specified';
+  const visibilityConfig = {
+    open: { icon: Sparkles, label: 'Open', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    squad: { icon: Users, label: 'Squad', color: 'text-violet-600', bg: 'bg-violet-50' },
+    invite: { icon: Mail, label: 'Invite', color: 'text-amber-600', bg: 'bg-amber-50' },
+  };
+  const vis = visibilityConfig[gig.visibility as keyof typeof visibilityConfig] || visibilityConfig.open;
+
+  const steps = [
+    { id: 'accept', label: 'Accept', done: currentStatus !== 'open' },
+    ...(gig.productInVideoRequired ? [{ id: 'product', label: 'Get Product', done: ['submitted', 'needs_changes', 'paid'].includes(currentStatus) }] : []),
+    { id: 'create', label: 'Create & Upload', done: ['submitted', 'needs_changes', 'paid'].includes(currentStatus) },
+    { id: 'review', label: 'Brand Review', done: currentStatus === 'paid' },
+    { id: 'paid', label: 'Get Paid', done: currentStatus === 'paid' },
+  ];
+
+  const currentStepIndex = steps.findIndex((s) => !s.done);
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section);
+  };
 
   return (
     <Layout>
-      <div className="max-w-[430px] mx-auto min-h-screen flex flex-col pb-32">
-        {/* Sticky Top Bar */}
-        <div className="sticky top-0 z-10 bg-white border-b border-zinc-200 px-4 py-3 flex items-center justify-between">
-          <Link href="/creator/gigs" className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            <span>Gigs</span>
-          </Link>
-          <h1 className="text-sm font-semibold text-zinc-900 truncate flex-1 mx-4 text-center">
-            {gig.title}
-          </h1>
-          <div className="w-4 h-4" /> {/* Spacer for alignment */}
+      <div className="min-h-screen bg-zinc-50 pb-28">
+        {/* Header */}
+        <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-zinc-200">
+          <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+            <Link href="/creator/gigs" className="p-2 -ml-2 rounded-full hover:bg-zinc-100 transition-colors">
+              <ArrowLeft className="w-5 h-5 text-zinc-600" />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-zinc-500 font-medium">{gig.brandName}</p>
+              <h1 className="text-sm font-semibold text-zinc-900 truncate">{gig.title}</h1>
+            </div>
+          </div>
         </div>
 
-        {/* Main Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {/* Hero Gig Summary Card */}
-          <Card className="border border-zinc-200 shadow-sm">
-            <CardContent className="p-4">
-              {/* Brand + Title + Payout Row */}
-              <div className="flex items-start justify-between gap-3 mb-4">
-                {/* Left: Brand + Title */}
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  {/* Brand Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-400 to-zinc-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <span className="text-white text-sm font-bold">{brandInitial}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-zinc-500 font-medium mb-0.5 truncate">{gig.brandName}</p>
-                    <h2 className="text-lg font-bold text-zinc-900 leading-tight">{gig.title}</h2>
-                  </div>
-                </div>
+        <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
+          {/* Hero Card */}
+          <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+            {/* Payout Hero */}
+            <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 px-5 py-6 text-center">
+              <p className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-1">Your Payout</p>
+              <p className="text-4xl font-bold text-white tracking-tight">{formatMoney(gig.payout)}</p>
+              <p className="text-emerald-400 text-xs font-medium mt-1">
+                {gig.payoutType === 'dynamic' ? 'Dynamic rate' : 'Instant payout on approval'}
+              </p>
+            </div>
 
-                {/* Right: Payout Module */}
-                <div className="flex-shrink-0 text-right">
-                  <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wide mb-0.5">Payout</p>
-                  <p className="text-2xl font-bold text-zinc-900 leading-none">{formatMoney(gig.payout)}</p>
-                  {gig.payoutType === 'dynamic' ? (
-                    <p className="text-[10px] text-zinc-500 mt-0.5">dynamic</p>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-1 h-4 border-zinc-300 text-zinc-600">
-                      Instant
-                    </Badge>
-                  )}
+            {/* Quick Info */}
+            <div className="p-4 space-y-3">
+              {/* Brand Row */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center shadow-sm">
+                  <span className="text-white text-sm font-bold">{brandInitial}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-zinc-900">{gig.title}</p>
+                  <p className="text-xs text-zinc-500">{gig.brandName}</p>
                 </div>
               </div>
 
-              {/* Badges Row */}
-              <div className="flex items-center gap-2 flex-wrap mb-3">
-                <VisibilityBadge visibility={gig.visibility || 'open'} className="text-[10px] px-2 py-0.5" />
+              {/* Tags */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg ${vis.bg} ${vis.color}`}>
+                  <vis.icon className="w-3 h-3" />
+                  {vis.label}
+                </span>
                 {primaryThing && (
-                  <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-zinc-200 text-zinc-700">
+                  <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-lg">
                     {primaryThing.name}
-                  </Badge>
+                  </span>
                 )}
-                <div className={`flex items-center gap-1 text-[10px] font-semibold ${isUrgent ? 'text-orange-600' : 'text-zinc-600'}`}>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg ${isUrgent ? 'bg-orange-50 text-orange-600' : 'bg-zinc-100 text-zinc-600'}`}>
                   <Clock className={`w-3 h-3 ${isUrgent ? 'animate-pulse' : ''}`} />
-                  <span>{formatTimeLeft(deadlineDate)}</span>
-                </div>
+                  {formatTimeLeft(deadlineDate)}
+                </span>
               </div>
 
-              {/* Quick Requirements Row */}
-              <div className="space-y-2 pt-3 border-t border-zinc-100">
-                <div className="flex items-center gap-2 text-xs text-zinc-600">
-                  <Play className="w-3.5 h-3.5" />
-                  <span className="font-medium">Deliver: {deliverablesText}</span>
-                </div>
-                {gig.productInVideoRequired && gig.reimbursementMode === 'reimbursement' && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-blue-200 text-blue-700 bg-blue-50">
-                      Reimburse up to {formatMoney(gig.reimbursementCap || 0)}
-                    </Badge>
-                    {gig.purchaseWindowHours && (
-                      <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-blue-200 text-blue-700 bg-blue-50">
-                        Buy within {gig.purchaseWindowHours}h
-                      </Badge>
-                    )}
+              {/* Deliverables */}
+              <div className="flex items-center gap-4 pt-3 border-t border-zinc-100">
+                {deliverables.videos > 0 && (
+                  <div className="flex items-center gap-1.5 text-zinc-600">
+                    <Video className="w-4 h-4" />
+                    <span className="text-sm font-medium">{deliverables.videos} video{deliverables.videos > 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                {deliverables.photos > 0 && (
+                  <div className="flex items-center gap-1.5 text-zinc-600">
+                    <ImageIcon className="w-4 h-4" />
+                    <span className="text-sm font-medium">{deliverables.photos} photo{deliverables.photos > 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                {gig.productInVideoRequired && gig.reimbursementCap && (
+                  <div className="flex items-center gap-1.5 text-blue-600">
+                    <Package className="w-4 h-4" />
+                    <span className="text-sm font-medium">+{formatMoney(gig.reimbursementCap)} reimburse</span>
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Step-by-Step Timeline */}
-          <Card className="border border-zinc-200 shadow-sm">
-            <CardContent className="p-4">
-              <h3 className="text-sm font-bold text-zinc-900 mb-4">Steps</h3>
-              <div className="space-y-3">
-                {/* Step 1: Accept */}
-                <div className={`flex items-start gap-3 ${currentStatus === 'open' ? 'opacity-100' : 'opacity-60'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    currentStatus === 'open' ? 'bg-brand-600 text-white' : 'bg-zinc-200 text-zinc-500'
-                  }`}>
-                    {currentStatus !== 'open' ? <CheckCircle2 className="w-4 h-4" /> : <span className="text-xs font-bold">1</span>}
+          {/* Progress Steps */}
+          <div className="bg-white rounded-2xl border border-zinc-200 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900 mb-4">Progress</h3>
+            <div className="flex items-center justify-between">
+              {steps.map((step, idx) => (
+                <div key={step.id} className="flex items-center">
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        step.done
+                          ? 'bg-emerald-500 text-white'
+                          : idx === currentStepIndex
+                          ? 'bg-zinc-900 text-white'
+                          : 'bg-zinc-200 text-zinc-500'
+                      }`}
+                    >
+                      {step.done ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                    </div>
+                    <span className={`text-[10px] font-medium mt-1.5 text-center max-w-[60px] ${step.done ? 'text-emerald-600' : idx === currentStepIndex ? 'text-zinc-900' : 'text-zinc-400'}`}>
+                      {step.label}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900">Accept gig</p>
-                    <p className="text-xs text-zinc-500">Locks your spot</p>
-                  </div>
+                  {idx < steps.length - 1 && (
+                    <div className={`w-6 h-0.5 mx-1 mt-[-16px] ${step.done ? 'bg-emerald-500' : 'bg-zinc-200'}`} />
+                  )}
                 </div>
+              ))}
+            </div>
+          </div>
 
-                {/* Step 2: Get Product (conditional) */}
-                {gig.productInVideoRequired && (
-                  <div className={`flex items-start gap-3 ${['accepted', 'submitted', 'needs_changes', 'paid'].includes(currentStatus) ? 'opacity-100' : 'opacity-60'}`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      ['accepted', 'submitted', 'needs_changes', 'paid'].includes(currentStatus) ? 'bg-brand-600 text-white' : 'bg-zinc-200 text-zinc-500'
-                    }`}>
-                      {!['accepted', 'submitted', 'needs_changes', 'paid'].includes(currentStatus) ? (
-                        <span className="text-xs font-bold">2</span>
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-zinc-900">Get product</p>
-                      <p className="text-xs text-zinc-500">Purchase & receive {gig.reimbursementMode === 'reimbursement' ? '(reimbursed)' : ''}</p>
-                    </div>
-                  </div>
+          {/* Accordion Sections */}
+          <div className="space-y-2">
+            {/* Brief Section */}
+            <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('brief')}
+                className="w-full flex items-center justify-between p-4 text-left"
+              >
+                <span className="text-sm font-semibold text-zinc-900">Brief</span>
+                {expandedSection === 'brief' ? (
+                  <ChevronUp className="w-4 h-4 text-zinc-400" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-zinc-400" />
                 )}
-
-                {/* Step 3: Create & Upload */}
-                <div className={`flex items-start gap-3 ${['submitted', 'needs_changes', 'paid'].includes(currentStatus) ? 'opacity-100' : 'opacity-60'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    ['submitted', 'needs_changes', 'paid'].includes(currentStatus) ? 'bg-brand-600 text-white' : 'bg-zinc-200 text-zinc-500'
-                  }`}>
-                    {!['submitted', 'needs_changes', 'paid'].includes(currentStatus) ? (
-                      <span className="text-xs font-bold">{gig.productInVideoRequired ? '3' : '2'}</span>
-                    ) : (
-                      <CheckCircle2 className="w-4 h-4" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900">Create & upload</p>
-                    <p className="text-xs text-zinc-500">{deliverablesText}</p>
-                  </div>
-                </div>
-
-                {/* Step 4: AI Compliance */}
-                <div className={`flex items-start gap-3 ${['submitted', 'needs_changes', 'paid'].includes(currentStatus) ? 'opacity-100' : 'opacity-60'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    ['submitted', 'needs_changes', 'paid'].includes(currentStatus) ? 'bg-zinc-200 text-zinc-500' : 'bg-zinc-200 text-zinc-500'
-                  }`}>
-                    <Shield className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900">AI compliance check</p>
-                    <p className="text-xs text-zinc-500">Instant</p>
-                  </div>
-                </div>
-
-                {/* Step 5: Brand Review */}
-                <div className={`flex items-start gap-3 ${currentStatus === 'paid' ? 'opacity-100' : 'opacity-60'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    currentStatus === 'paid' ? 'bg-zinc-200 text-zinc-500' : 'bg-zinc-200 text-zinc-500'
-                  }`}>
-                    <FileCheck className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900">Brand review</p>
-                    <p className="text-xs text-zinc-500">Max 2 change requests</p>
-                  </div>
-                </div>
-
-                {/* Step 6: Get Paid */}
-                <div className={`flex items-start gap-3 ${currentStatus === 'paid' ? 'opacity-100' : 'opacity-60'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    currentStatus === 'paid' ? 'bg-green-500 text-white' : 'bg-zinc-200 text-zinc-500'
-                  }`}>
-                    {currentStatus === 'paid' ? <CheckCircle2 className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900">Get paid</p>
-                    <p className="text-xs text-zinc-500">Instant payout</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tabs for Details */}
-          <Card className="border border-zinc-200 shadow-sm">
-            <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="w-full grid grid-cols-4 h-10 bg-zinc-100 rounded-lg p-1">
-                <TabsTrigger value="overview" className="text-[11px] px-2">Overview</TabsTrigger>
-                <TabsTrigger value="deliverables" className="text-[11px] px-2">Deliverables</TabsTrigger>
-                <TabsTrigger value="product" className="text-[11px] px-2">Product</TabsTrigger>
-                <TabsTrigger value="rules" className="text-[11px] px-2">Rules</TabsTrigger>
-              </TabsList>
-
-              {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-4 mt-4">
-                <div>
-                  <h4 className="text-xs font-semibold text-zinc-900 mb-2">Brief Summary</h4>
+              </button>
+              {expandedSection === 'brief' && (
+                <div className="px-4 pb-4 space-y-4">
                   <p className="text-sm text-zinc-600 leading-relaxed">{gig.description || 'No description provided.'}</p>
-                </div>
-                {gig.brief && (
-                  <>
-                    {gig.brief.hooks && gig.brief.hooks.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-zinc-900 mb-2">Hooks</h4>
-                        <ul className="space-y-1">
-                          {gig.brief.hooks.map((hook: string, idx: number) => (
-                            <li key={idx} className="text-sm text-zinc-600 flex items-start gap-2">
-                              <span className="text-zinc-400 mt-1">•</span>
-                              <span>{hook}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {gig.brief.talkingPoints && gig.brief.talkingPoints.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-zinc-900 mb-2">Talking Points</h4>
-                        <ul className="space-y-1">
-                          {gig.brief.talkingPoints.map((point: string, idx: number) => (
-                            <li key={idx} className="text-sm text-zinc-600 flex items-start gap-2">
-                              <span className="text-zinc-400 mt-1">•</span>
-                              <span>{point}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {gig.brief.do && gig.brief.do.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-green-700 mb-2 flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4" />
-                          Do
-                        </h4>
-                        <ul className="space-y-1">
-                          {gig.brief.do.map((item: string, idx: number) => (
-                            <li key={idx} className="text-sm text-zinc-600 flex items-start gap-2">
-                              <span className="text-green-500 mt-1">•</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {gig.brief.dont && gig.brief.dont.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-red-700 mb-2 flex items-center gap-2">
-                          <XCircle className="w-4 h-4" />
-                          Don't
-                        </h4>
-                        <ul className="space-y-1">
-                          {gig.brief.dont.map((item: string, idx: number) => (
-                            <li key={idx} className="text-sm text-zinc-600 flex items-start gap-2">
-                              <span className="text-red-500 mt-1">•</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </>
-                )}
-              </TabsContent>
 
-              {/* Deliverables Tab */}
-              <TabsContent value="deliverables" className="space-y-4 mt-4">
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="text-xs font-semibold text-zinc-900 mb-2">Required Deliverables</h4>
-                    <div className="space-y-2">
-                      {deliverables.videos > 0 && (
-                        <div className="flex items-center gap-2 p-2 bg-zinc-50 rounded-lg">
-                          <Play className="w-4 h-4 text-zinc-600" />
-                          <div>
-                            <p className="text-sm font-medium text-zinc-900">{deliverables.videos} video{deliverables.videos > 1 ? 's' : ''}</p>
-                            <p className="text-xs text-zinc-500">Format: MP4, 1080p minimum</p>
-                          </div>
-                        </div>
-                      )}
-                      {deliverables.photos > 0 && (
-                        <div className="flex items-center gap-2 p-2 bg-zinc-50 rounded-lg">
-                          <ImageIcon className="w-4 h-4 text-zinc-600" />
-                          <div>
-                            <p className="text-sm font-medium text-zinc-900">{deliverables.photos} photo{deliverables.photos > 1 ? 's' : ''}</p>
-                            <p className="text-xs text-zinc-500">Format: JPEG, 1080p minimum</p>
-                          </div>
-                        </div>
-                      )}
-                      {deliverables.raw && (
-                        <div className="flex items-center gap-2 p-2 bg-zinc-50 rounded-lg">
-                          <FileText className="w-4 h-4 text-zinc-600" />
-                          <div>
-                            <p className="text-sm font-medium text-zinc-900">Raw files required</p>
-                            <p className="text-xs text-zinc-500">Unedited original files</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {deliverables.notes && (
+                  {gig.brief?.hooks && gig.brief.hooks.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold text-zinc-900 mb-2">Additional Notes</h4>
-                      <p className="text-sm text-zinc-600">{deliverables.notes}</p>
+                      <p className="text-xs font-semibold text-zinc-700 mb-2">Suggested Hooks</p>
+                      <ul className="space-y-1.5">
+                        {gig.brief.hooks.map((hook: string, idx: number) => (
+                          <li key={idx} className="text-sm text-zinc-600 flex items-start gap-2">
+                            <span className="text-emerald-500 mt-0.5">•</span>
+                            <span>{hook}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {gig.brief?.talkingPoints && gig.brief.talkingPoints.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-zinc-700 mb-2">Talking Points</p>
+                      <ul className="space-y-1.5">
+                        {gig.brief.talkingPoints.map((point: string, idx: number) => (
+                          <li key={idx} className="text-sm text-zinc-600 flex items-start gap-2">
+                            <span className="text-zinc-400 mt-0.5">•</span>
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {(gig.brief?.do?.length > 0 || gig.brief?.dont?.length > 0) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {gig.brief?.do?.length > 0 && (
+                        <div className="bg-emerald-50 rounded-xl p-3">
+                          <p className="text-xs font-semibold text-emerald-700 mb-2">Do</p>
+                          <ul className="space-y-1">
+                            {gig.brief.do.map((item: string, idx: number) => (
+                              <li key={idx} className="text-xs text-emerald-700">{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {gig.brief?.dont?.length > 0 && (
+                        <div className="bg-red-50 rounded-xl p-3">
+                          <p className="text-xs font-semibold text-red-700 mb-2">Don't</p>
+                          <ul className="space-y-1">
+                            {gig.brief.dont.map((item: string, idx: number) => (
+                              <li key={idx} className="text-xs text-red-700">{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              </TabsContent>
+              )}
+            </div>
 
-              {/* Product Tab */}
-              <TabsContent value="product" className="space-y-4 mt-4">
-                {gig.productInVideoRequired ? (
-                  <>
-                    <div>
-                      <h4 className="text-xs font-semibold text-zinc-900 mb-2">Product Information</h4>
-                      <p className="text-sm text-zinc-600">{gig.productDescription || 'Product details will be provided after acceptance.'}</p>
-                    </div>
-                    {gig.brief?.brandAssets && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-zinc-900 mb-2">Brand Assets</h4>
-                        <div className="grid grid-cols-3 gap-2">
-                          {gig.brief.brandAssets?.logos?.map((url: string, idx: number) => (
-                            <div key={idx} className="aspect-square bg-zinc-100 rounded-lg flex items-center justify-center">
-                              <ImageIcon className="w-6 h-6 text-zinc-400" />
-                            </div>
-                          ))}
-                          {gig.brief.brandAssets?.productPhotos?.map((url: string, idx: number) => (
-                            <div key={idx} className="aspect-square bg-zinc-100 rounded-lg flex items-center justify-center">
-                              <ImageIcon className="w-6 h-6 text-zinc-400" />
-                            </div>
-                          ))}
+            {/* Product Section */}
+            {gig.productInVideoRequired && (
+              <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('product')}
+                  className="w-full flex items-center justify-between p-4 text-left"
+                >
+                  <span className="text-sm font-semibold text-zinc-900">Product</span>
+                  {expandedSection === 'product' ? (
+                    <ChevronUp className="w-4 h-4 text-zinc-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-zinc-400" />
+                  )}
+                </button>
+                {expandedSection === 'product' && (
+                  <div className="px-4 pb-4 space-y-3">
+                    <p className="text-sm text-zinc-600">{gig.productDescription || 'Product details will be provided.'}</p>
+                    {gig.reimbursementMode === 'reimbursement' && (
+                      <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                        <DollarSign className="w-5 h-5 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">Reimbursement up to {formatMoney(gig.reimbursementCap || 0)}</p>
+                          {gig.purchaseWindowHours && (
+                            <p className="text-xs text-blue-700">Purchase within {gig.purchaseWindowHours} hours of accepting</p>
+                          )}
                         </div>
                       </div>
                     )}
-                    {gig.reimbursementMode && (
-                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <h4 className="text-xs font-semibold text-blue-900 mb-1">Reimbursement</h4>
-                        <p className="text-xs text-blue-700">
-                          {gig.reimbursementMode === 'reimbursement'
-                            ? `We'll reimburse up to ${formatMoney(gig.reimbursementCap || 0)} for product purchase.`
-                            : 'Product will be shipped to you.'}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-zinc-500">No product required for this gig.</p>
+                  </div>
                 )}
-              </TabsContent>
-
-              {/* Rules Tab */}
-              <TabsContent value="rules" className="space-y-4 mt-4">
-                <div>
-                  <h4 className="text-xs font-semibold text-zinc-900 mb-2">Compliance Requirements</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2 text-sm text-zinc-600">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Content must comply with platform guidelines</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm text-zinc-600">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>AI compliance check required</span>
-                    </li>
-                    {gig.usageRightsSnapshot && (
-                      <li className="flex items-start gap-2 text-sm text-zinc-600">
-                        <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span>Usage rights: {gig.usageRightsSnapshot.licenseType || 'Standard'}</span>
-                      </li>
-                    )}
-                  </ul>
-                </div>
-                <Separator />
-                <div>
-                  <h4 className="text-xs font-semibold text-zinc-900 mb-2">Review Policy</h4>
-                  <p className="text-sm text-zinc-600">Brand may request up to 2 revisions. Changes must be requested within 48 hours of submission.</p>
-                </div>
-                <Separator />
-                <div>
-                  <h4 className="text-xs font-semibold text-zinc-900 mb-2">Payout Policy</h4>
-                  <p className="text-sm text-zinc-600">Funds are held until brand approval. Payment is released instantly upon approval.</p>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </Card>
-
-          {/* Trust & Safety Footer */}
-          <Card className="border border-zinc-200 shadow-sm bg-zinc-50">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-zinc-600 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1.5">
-                  <p className="text-xs font-semibold text-zinc-900">Giglet protects payouts</p>
-                  <p className="text-xs text-zinc-600">Payments held until approval • Disputes handled by admin</p>
-                </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
+
+            {/* Rules Section */}
+            <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('rules')}
+                className="w-full flex items-center justify-between p-4 text-left"
+              >
+                <span className="text-sm font-semibold text-zinc-900">Rules & Payout</span>
+                {expandedSection === 'rules' ? (
+                  <ChevronUp className="w-4 h-4 text-zinc-400" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-zinc-400" />
+                )}
+              </button>
+              {expandedSection === 'rules' && (
+                <div className="px-4 pb-4 space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-zinc-600">AI compliance check on upload</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-zinc-600">Brand may request up to 2 revisions</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-zinc-600">Instant payout on approval</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Trust Badge */}
+          <div className="flex items-center gap-3 px-4 py-3 bg-zinc-100 rounded-xl">
+            <Shield className="w-5 h-5 text-zinc-500" />
+            <p className="text-xs text-zinc-600">
+              <span className="font-medium">Payment protected.</span> Funds held until approval.
+            </p>
+          </div>
         </div>
 
-        {/* Sticky Bottom Action Bar - Above Menu */}
-        <div className="fixed bottom-[70px] left-0 right-0 bg-white border-t border-zinc-200 px-4 py-3 z-[60] shadow-lg">
-          <div className="max-w-[430px] mx-auto">
+        {/* Bottom Action Bar */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 p-4 z-30">
+          <div className="max-w-lg mx-auto flex gap-3">
             {currentStatus === 'open' && (
-              <div className="flex gap-3">
-                {isEnded ? (
-                  <Button
-                    disabled
-                    className="flex-1 h-11 text-base font-semibold bg-zinc-200 text-zinc-500 cursor-not-allowed"
-                    size="lg"
-                  >
-                    Gig ended
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleAcceptGig}
-                    disabled={accepting}
-                    className="w-full h-11 text-base font-semibold"
-                    size="lg"
-                  >
-                    {accepting ? 'Accepting...' : 'Accept Gig'}
-                  </Button>
-                )}
-              </div>
+              isEnded ? (
+                <Button disabled className="flex-1 h-12 text-base font-semibold bg-zinc-200 text-zinc-500">
+                  Gig Ended
+                </Button>
+              ) : (
+                <Button onClick={handleAcceptGig} disabled={accepting} className="flex-1 h-12 text-base font-semibold">
+                  {accepting ? 'Accepting...' : 'Accept Gig'}
+                </Button>
+              )
             )}
             {currentStatus === 'accepted' && (
-              <div className="flex gap-3">
-                {isEnded ? (
-                  <Button
-                    disabled
-                    className="flex-1 h-11 text-base font-semibold bg-zinc-200 text-zinc-500 cursor-not-allowed"
-                    size="lg"
-                  >
-                    Gig ended
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleStartSubmission}
-                    className="flex-1 h-11 text-base font-semibold"
-                    size="lg"
-                  >
-                    Start / Upload Submission
-                  </Button>
-                )}
-                <Button variant="outline" size="icon" className="h-11 w-11">
-                  <MessageCircle className="w-4 h-4" />
+              <>
+                <Button
+                  onClick={() => router.push(`/creator/gigs/${gigId}/submit`)}
+                  disabled={isEnded}
+                  className="flex-1 h-12 text-base font-semibold"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Submission
                 </Button>
-              </div>
+                <Button variant="outline" size="icon" className="h-12 w-12">
+                  <MessageCircle className="w-5 h-5" />
+                </Button>
+              </>
             )}
             {currentStatus === 'submitted' && (
-              <div className="flex gap-3">
+              <>
                 <Button
-                  onClick={handleViewSubmission}
-                  className="flex-1 h-11 text-base font-semibold"
-                  size="lg"
+                  onClick={() => router.push(`/creator/gigs/${gigId}/submit`)}
+                  variant="outline"
+                  className="flex-1 h-12 text-base font-semibold"
                 >
                   View Submission
                 </Button>
-                <Button variant="outline" size="icon" className="h-11 w-11">
-                  <MessageCircle className="w-4 h-4" />
+                <Button variant="outline" size="icon" className="h-12 w-12">
+                  <MessageCircle className="w-5 h-5" />
                 </Button>
-              </div>
+              </>
             )}
             {currentStatus === 'needs_changes' && (
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleUploadRevision}
-                  className="flex-1 h-11 text-base font-semibold"
-                  size="lg"
-                >
-                  Upload Revision
-                </Button>
-                <Button variant="outline" size="lg" className="h-11">
-                  View Feedback
-                </Button>
-              </div>
+              <Button
+                onClick={() => router.push(`/creator/gigs/${gigId}/submit`)}
+                className="flex-1 h-12 text-base font-semibold"
+              >
+                Upload Revision
+              </Button>
             )}
             {currentStatus === 'paid' && (
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => toast('View payout (placeholder)')}
-                  className="flex-1 h-11 text-base font-semibold"
-                  size="lg"
-                >
-                  View Payout
-                </Button>
-                <Button variant="outline" size="lg" className="h-11">
-                  <Star className="w-4 h-4 mr-2" />
-                  Rate Brand
-                </Button>
-              </div>
+              <Button variant="outline" className="flex-1 h-12 text-base font-semibold text-emerald-600 border-emerald-200 bg-emerald-50">
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Paid - {formatMoney(gig.payout)}
+              </Button>
             )}
           </div>
         </div>
