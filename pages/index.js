@@ -1,379 +1,237 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth/AuthContext";
-import AnimatedLogo from "@/components/branding/AnimatedLogo";
 import LoadingSpinner from "@/components/ui/loading-spinner";
-import ComparisonChart from "@/components/shared/ComparisonChart";
 import confetti from "canvas-confetti";
 
 export default function Home() {
   const { user, appUser, loading } = useAuth();
-  const [comparisonOpen, setComparisonOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const clickCountRef = useRef(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const triggerConfetti = (e) => {
-    // Get click position relative to viewport
-    const x = e.clientX / window.innerWidth;
-    const y = e.clientY / window.innerHeight;
-
-    // Random confetti configurations
-    const configs = [
-      {
-        particleCount: 50,
-        spread: 60,
-        origin: { x, y },
-        colors: ['#f97316', '#ef4444', '#fbbf24', '#10b981', '#3b82f6']
-      },
-      {
-        particleCount: 100,
-        angle: 60,
-        spread: 55,
-        origin: { x, y },
-        colors: ['#f97316', '#ef4444', '#fbbf24']
-      },
-      {
-        particleCount: 100,
-        angle: 120,
-        spread: 55,
-        origin: { x, y },
-        colors: ['#10b981', '#3b82f6', '#8b5cf6']
-      },
-      {
-        particleCount: 80,
-        spread: 70,
-        origin: { x, y },
-        startVelocity: 30,
-        colors: ['#f97316', '#ef4444', '#fbbf24', '#10b981']
-      }
-    ];
-
-    // Pick random config
-    const config = configs[Math.floor(Math.random() * configs.length)];
-    confetti(config);
-
-    // Occasionally trigger a second burst
-    if (Math.random() > 0.7) {
-      setTimeout(() => {
-        confetti({
-          ...config,
-          particleCount: Math.floor(config.particleCount * 0.6),
-          origin: { x: x + (Math.random() - 0.5) * 0.3, y: y + (Math.random() - 0.5) * 0.3 }
-        });
-      }, 200);
-    }
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 80,
+      spread: 60,
+      origin: { y: 0.7 },
+      colors: ['#f97316', '#ec4899', '#8b5cf6']
+    });
   };
 
   if (loading) {
-    return <LoadingSpinner fullScreen text="Loading Giglet..." size="lg" />;
+    return <LoadingSpinner fullScreen text="Loading..." size="lg" />;
   }
 
-  // If user is logged in, redirect to their dashboard
+  // Redirect logged-in users
   if (user && appUser) {
-    console.log('User logged in:', user.email, 'Role:', appUser.role);
-    if (appUser.role === 'creator') {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <p className="mb-4">Welcome back, {appUser.name}!</p>
-            <p className="mb-4">Redirecting to your creator dashboard...</p>
-            <Link href="/creator/dashboard">
-              <Button>Go to Creator Dashboard</Button>
-            </Link>
-          </div>
+    const dashboardUrl = appUser.role === 'creator' ? '/creator/dashboard' : '/brand/dashboard';
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black px-6">
+        <div className="text-center">
+          <p className="text-white text-lg mb-2">Welcome back!</p>
+          <p className="text-white/60 mb-6">Redirecting...</p>
+          <Link href={dashboardUrl}>
+            <Button className="bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-xl px-6 py-3">
+              Go to Dashboard
+            </Button>
+          </Link>
         </div>
-      );
-    } else if (appUser.role === 'brand') {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <p className="mb-4">Welcome back, {appUser.name}!</p>
-            <p className="mb-4">Redirecting to your brand dashboard...</p>
-            <Link href="/brand/dashboard">
-              <Button>Go to Brand Dashboard</Button>
-            </Link>
-          </div>
-        </div>
-      );
-    }
+      </div>
+    );
   }
-
-  console.log('No user logged in, showing landing page');
 
   return (
     <>
       <Head>
-        <title>Giglet - DoorDash for UGC</title>
-        <meta name="description" content="Get real-time UGC gigs. Create awesome content. Get paid fast. Join the gig economy for creators." />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-        <meta name="theme-color" content="#ea580c" />
+        <title>Giglet - Get Paid to Create</title>
+        <meta name="description" content="Grab gigs, post content, get paid instantly." />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div 
-        className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex justify-center cursor-pointer"
-        onClick={triggerConfetti}
-      >
-        <div className="w-full max-w-[428px] bg-white min-h-screen shadow-2xl">
-          {/* Header */}
-          <header className="bg-white sticky top-0 z-50 border-b border-gray-200/60">
-            <div className="px-4">
-              <div className="flex justify-between items-center h-14">
-                <div className="flex items-center gap-1.5">
-                  <img 
-                    src="/logo1.png" 
-                    alt="Giglet Logo" 
-                    className="h-6 w-auto"
-                  />
-                  <span className="text-lg font-semibold text-gray-900">
-                    Giglet
-                  </span>
-                </div>
-                <Link href="/auth/login">
-                  <Button variant="ghost" size="sm" className="h-8 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100">Sign In</Button>
-                </Link>
-              </div>
-            </div>
-          </header>
-
-          {/* Hero Section */}
-          <section className="px-6 pt-8 pb-8 relative">
-            <div className="text-center">
-              {/* Logo in Glass Card */}
-              <div 
-                className={`mb-6 flex justify-center transition-all duration-700 ${
-                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-              >
-                <div 
-                  className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50"
-                  style={{
-                    animation: mounted ? 'sparkle 0.6s ease-out 0.3s forwards' : 'none'
-                  }}
-                >
-                  <img 
-                    src="/logotext.png" 
-                    alt="Giglet" 
-                    className="h-16 w-auto"
-                  />
-                </div>
-              </div>
-
-              {/* Confidence Pill */}
-              <div 
-                className={`inline-block px-4 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium mb-5 transition-all duration-700 delay-100 ${
-                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-              >
-                ⚡ Paid gigs. No pitching.
-              </div>
-
-              {/* Headline */}
-              <h1 
-                className={`text-4xl font-black text-gray-900 mb-3 leading-tight transition-all duration-700 delay-200 ${
-                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-              >
-                Get Paid to Post
-              </h1>
-
-              {/* Subheadline */}
-              <p 
-                className={`text-base text-gray-600 mb-6 leading-snug transition-all duration-700 delay-300 ${
-                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-              >
-                Brands post gigs. You grab one,<br/>post naturally, and get paid.
-              </p>
-
-              {/* 3-Step Micro Flow */}
-              <div 
-                className={`flex items-center justify-center gap-2 mb-8 text-xs text-gray-500 transition-all duration-700 delay-400 ${
-                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-              >
-                <span className="flex items-center gap-1">
-                  <span className="text-gray-400">Grab a Gig</span>
-                </span>
-                <span className="text-gray-300">→</span>
-                <span className="flex items-center gap-1">
-                  <span className="text-gray-400">Post</span>
-                </span>
-                <span className="text-gray-300">→</span>
-                <span className="flex items-center gap-1">
-                  <span className="text-gray-400">Get Paid</span>
-                </span>
-              </div>
-
-              {/* Primary CTA */}
-              <div 
-                className={`mb-3 transition-all duration-700 delay-500 ${
-                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-              >
-                <Link href="/auth/signup">
-                  <Button 
-                    size="lg" 
-                    className="w-full bg-gray-900 hover:bg-gray-800 text-white h-14 text-base font-bold shadow-lg transition-all duration-200 active:scale-[0.98] pulse-after-idle"
-                  >
-                    💸 Start Earning
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Secondary CTA */}
-              <div 
-                className={`mb-6 transition-all duration-700 delay-600 ${
-                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-              >
-                <Link href="/auth/login">
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="w-full h-11 text-sm font-medium border-gray-300 text-gray-700 hover:bg-gray-50"
-                  >
-                    Sign In
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Social Proof Strip */}
-              <div 
-                className={`flex items-center justify-center gap-6 text-xs text-gray-500 transition-all duration-700 delay-700 ${
-                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400">👥</span>
-                  <span>2,100+ creators</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400">💰</span>
-                  <span>$18k paid out</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400">⚡</span>
-                  <span>Same-day payouts</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-
-          {/* Features Grid */}
-          <section className="px-6 py-10 bg-gray-50/50">
-            <div className="mb-6 text-center">
-              <Button
-                variant="outline"
-                onClick={() => setComparisonOpen(true)}
-                className="text-xs font-medium border-gray-300 text-gray-700 hover:bg-gray-100"
-              >
-                📊 See How We Compare
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Card className="p-4 text-center border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-default bg-white">
-                <div className="text-3xl mb-2">📱</div>
-                <h3 className="text-sm font-bold mb-1 text-gray-900">Real-Time Gigs</h3>
-                <p className="text-xs text-gray-600 leading-tight">Get notified instantly when brands post gigs</p>
-              </Card>
-              <Card className="p-4 text-center border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-default bg-white">
-                <div className="text-3xl mb-2">💰</div>
-                <h3 className="text-sm font-bold mb-1 text-gray-900">Instant Payments</h3>
-                <p className="text-xs text-gray-600 leading-tight">Get paid instantly upon approval</p>
-              </Card>
-              <Card className="p-4 text-center border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-default bg-white">
-                <div className="text-3xl mb-2">🎯</div>
-                <h3 className="text-sm font-bold mb-1 text-gray-900">Smart Matching</h3>
-                <p className="text-xs text-gray-600 leading-tight">AI matches you with perfect gigs</p>
-              </Card>
-              <Card className="p-4 text-center border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-default bg-white">
-                <div className="text-3xl mb-2">⚡</div>
-                <h3 className="text-sm font-bold mb-1 text-gray-900">Work Anywhere</h3>
-                <p className="text-xs text-gray-600 leading-tight">Accept gigs on your schedule</p>
-              </Card>
-            </div>
-          </section>
-
-          {/* How It Works */}
-          <section className="px-6 py-10">
-            <h2 className="text-xl font-bold text-center text-gray-900 mb-6">
-              How It Works
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                  1
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-1 text-sm">Browse Gigs</h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">See real-time gig offers from brands</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                  2
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-1 text-sm">Accept & Post</h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">Tap to accept, create content naturally</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                  3
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-1 text-sm">Get Paid</h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">Submit and get paid instantly</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* CTA Section */}
-          <section className="px-6 py-10 bg-gray-900 text-white mx-6 rounded-2xl mb-8 shadow-xl">
-            <div className="text-center">
-              <h2 className="text-2xl font-black mb-2">Ready to Start?</h2>
-              <p className="text-sm text-gray-300 mb-6 leading-relaxed">
-                Join thousands earning from<br/>UGC gigs on their schedule
-              </p>
-              <Link href="/auth/signup">
-                <Button size="lg" className="w-full bg-white text-gray-900 hover:bg-gray-100 h-12 text-sm font-bold shadow-lg transition-all active:scale-[0.98]">
-                  💸 Start Earning
-                </Button>
-              </Link>
-              <p className="text-xs text-gray-400 mt-3">No credit card required</p>
-            </div>
-          </section>
-
-          {/* Footer */}
-          <footer className="px-6 py-6 border-t border-gray-200 bg-white">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <img 
-                  src="/logo1.png" 
-                  alt="Giglet Logo" 
-                  className="h-5 w-auto"
-                />
-                <span className="font-semibold text-gray-900 text-sm">Giglet</span>
-              </div>
-              <p className="text-xs text-gray-400">© 2025 Giglet. All rights reserved.</p>
-            </div>
-          </footer>
+      <div className="min-h-screen bg-black text-white overflow-hidden flex flex-col">
+        {/* Background glow */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] h-[50%] bg-gradient-to-b from-purple-600/20 via-pink-500/10 to-transparent blur-3xl" />
         </div>
+
+        {/* Header */}
+        <header className="relative z-50 px-5 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <span className="text-lg">🎬</span>
+            </div>
+            <span className="text-xl font-black bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">
+              giglet
+            </span>
+          </div>
+          <Link href="/auth/login">
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white text-sm px-3">
+              Sign In
+            </Button>
+          </Link>
+        </header>
+
+        {/* Hero */}
+        <section className="relative z-10 flex-1 flex flex-col justify-center px-5 pb-8">
+          {/* Live badge */}
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full w-fit mb-6 transition-all duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span className="text-xs font-medium text-white/80">12 gigs live now</span>
+          </div>
+
+          {/* Headline */}
+          <h1 className={`text-[2.75rem] leading-[1.1] font-black mb-4 transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <span className="text-white">Get Paid to </span>
+            <span className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">Create</span>
+          </h1>
+
+          {/* Subheadline */}
+          <p className={`text-lg text-white/60 mb-8 leading-relaxed transition-all duration-500 delay-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+            Brands post gigs. You grab one, post content, get paid. <span className="text-orange-400 font-medium">No pitching.</span>
+          </p>
+
+          {/* Stats row */}
+          <div className={`flex gap-6 mb-10 transition-all duration-500 delay-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+            <div>
+              <div className="text-2xl font-black text-orange-400">2.1k+</div>
+              <div className="text-xs text-white/50">Creators</div>
+            </div>
+            <div>
+              <div className="text-2xl font-black text-pink-400">$18k</div>
+              <div className="text-xs text-white/50">Paid Out</div>
+            </div>
+            <div>
+              <div className="text-2xl font-black text-purple-400">24hr</div>
+              <div className="text-xs text-white/50">Avg Payout</div>
+            </div>
+          </div>
+
+          {/* CTA Buttons */}
+          <div className={`space-y-3 transition-all duration-500 delay-400 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <Link href="/auth/signup" className="block">
+              <Button 
+                onClick={triggerConfetti}
+                className="w-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white text-lg py-6 rounded-2xl font-bold shadow-lg shadow-pink-500/20 active:scale-[0.98] transition-transform"
+              >
+                Start Earning 💸
+              </Button>
+            </Link>
+            <Link href="/auth/login" className="block">
+              <Button 
+                variant="outline"
+                className="w-full border-white/20 bg-white/5 text-white py-6 rounded-2xl font-semibold active:scale-[0.98] transition-transform"
+              >
+                I'm a Brand
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        {/* How it works - scrollable cards */}
+        <section className="relative z-10 pb-8">
+          <h2 className="px-5 text-lg font-bold text-white/90 mb-4">How it works</h2>
+          <div className="flex gap-3 px-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+            <div className="flex-shrink-0 w-[75vw] snap-start bg-gradient-to-br from-orange-500/20 to-orange-500/5 border border-white/10 rounded-2xl p-5">
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center text-2xl mb-4">
+                🎯
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Grab a Gig</h3>
+              <p className="text-sm text-white/50 leading-relaxed">Browse gigs from brands. See pay, requirements, deadline upfront.</p>
+            </div>
+            <div className="flex-shrink-0 w-[75vw] snap-start bg-gradient-to-br from-pink-500/20 to-pink-500/5 border border-white/10 rounded-2xl p-5">
+              <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-500 rounded-xl flex items-center justify-center text-2xl mb-4">
+                📱
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Create & Post</h3>
+              <p className="text-sm text-white/50 leading-relaxed">Make authentic content your way. Post to your socials.</p>
+            </div>
+            <div className="flex-shrink-0 w-[75vw] snap-start bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-white/10 rounded-2xl p-5 mr-5">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-cyan-400 rounded-xl flex items-center justify-center text-2xl mb-4">
+                💰
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Get Paid</h3>
+              <p className="text-sm text-white/50 leading-relaxed">Submit your link, get approved, money hits your account.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Features grid */}
+        <section className="relative z-10 px-5 pb-8">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+              <div className="text-2xl mb-2">⚡</div>
+              <h3 className="text-sm font-bold text-white mb-1">Instant Alerts</h3>
+              <p className="text-xs text-white/50">Get pinged when gigs drop</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+              <div className="text-2xl mb-2">🎯</div>
+              <h3 className="text-sm font-bold text-white mb-1">Smart Match</h3>
+              <p className="text-xs text-white/50">AI finds your best gigs</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+              <div className="text-2xl mb-2">💳</div>
+              <h3 className="text-sm font-bold text-white mb-1">Same-Day Pay</h3>
+              <p className="text-xs text-white/50">No waiting weeks</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+              <div className="text-2xl mb-2">📈</div>
+              <h3 className="text-sm font-bold text-white mb-1">Level Up</h3>
+              <p className="text-xs text-white/50">Unlock better gigs</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Bottom CTA card */}
+        <section className="relative z-10 px-5 pb-6">
+          <div className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 rounded-2xl p-6 text-center">
+            <h2 className="text-xl font-bold text-white mb-2">Ready to earn?</h2>
+            <p className="text-sm text-white/80 mb-4">Join thousands getting paid for content.</p>
+            <Link href="/auth/signup">
+              <Button 
+                onClick={triggerConfetti}
+                className="bg-white text-purple-600 font-bold px-8 py-3 rounded-xl active:scale-[0.98] transition-transform"
+              >
+                Get Started 🚀
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="relative z-10 px-5 py-4 border-t border-white/10">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-xs">🎬</span>
+              </div>
+              <span className="text-sm font-bold text-white/60">giglet</span>
+            </div>
+            <p className="text-white/30 text-xs">© 2025</p>
+          </div>
+        </footer>
       </div>
-      
-      {/* Comparison Chart Modal */}
-      <ComparisonChart open={comparisonOpen} onOpenChange={setComparisonOpen} />
+
+      <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </>
   );
 }
