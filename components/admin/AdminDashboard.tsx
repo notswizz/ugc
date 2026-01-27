@@ -5,12 +5,13 @@ import { useRouter } from 'next/router';
 import { collection, query, getDocs, orderBy, doc, getDoc, where } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { db } from '@/lib/firebase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import CommunityForm from './CommunityForm';
 import GigsTable from './GigsTable';
 import GigDetailsModal from './GigDetailsModal';
+import toast from 'react-hot-toast';
+import { Shield, Wallet, Briefcase, FileVideo, CreditCard, Users, Plus } from 'lucide-react';
 
 const ADMIN_EMAIL = '7jackdsmith@gmail.com';
 
@@ -37,6 +38,7 @@ export default function AdminDashboard() {
     jobPayments: any[];
   } | null>(null);
   const [loadingGigDetails, setLoadingGigDetails] = useState(false);
+  const [showCommunityForm, setShowCommunityForm] = useState(false);
 
   // Check admin access
   useEffect(() => {
@@ -86,6 +88,38 @@ export default function AdminDashboard() {
       fetchGigDetails(selectedGig);
     }
   }, [selectedGig]);
+
+  const handleDeleteSubmission = async (submissionId: string) => {
+    if (!appUser?.email) return;
+
+    try {
+      const response = await fetch('/api/admin/delete-submission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId, adminEmail: appUser.email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete submission');
+      }
+
+      toast.success('Submission deleted');
+
+      // Refresh gig details to update the list
+      if (selectedGig) {
+        await fetchGigDetails(selectedGig);
+      }
+
+      // Update stats
+      setStats((prev) => ({ ...prev, totalSubmissions: prev.totalSubmissions - 1 }));
+    } catch (error: any) {
+      console.error('Error deleting submission:', error);
+      toast.error(error.message || 'Failed to delete submission');
+      throw error;
+    }
+  };
 
   const fetchGigDetails = async (gig: any) => {
     if (!gig) return;
@@ -299,60 +333,94 @@ export default function AdminDashboard() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto">
-        {/* Bank Balance - Small Text */}
-        <div className="mb-4 text-sm text-green-700">
-          <span className="font-medium">Platform Balance:</span> ${(bankBalance ?? 0).toFixed(2)}
+      <div className="space-y-4 -mt-2">
+        {/* Admin Header */}
+        <div className="bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 rounded-2xl p-5 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-white">Admin Dashboard</h1>
+            </div>
+            {/* Platform Balance */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
+              <Wallet className="w-5 h-5 text-emerald-400" />
+              <p className="text-lg font-bold text-emerald-400">${(bankBalance ?? 0).toFixed(2)}</p>
+            </div>
+          </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Gigs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.totalGigs}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Submissions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.totalSubmissions}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.totalPayments}</div>
-            </CardContent>
-          </Card>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-3">
+          {/* Gigs */}
+          <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                <Briefcase className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-medium text-zinc-500">Gigs</span>
+            </div>
+            <p className="text-2xl font-bold text-zinc-900">{stats.totalGigs}</p>
+          </div>
+
+          {/* Submissions */}
+          <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                <FileVideo className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-medium text-zinc-500">Submissions</span>
+            </div>
+            <p className="text-2xl font-bold text-zinc-900">{stats.totalSubmissions}</p>
+          </div>
+
+          {/* Payments */}
+          <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                <CreditCard className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-medium text-zinc-500">Payments</span>
+            </div>
+            <p className="text-2xl font-bold text-zinc-900">{stats.totalPayments}</p>
+          </div>
         </div>
 
-        {/* Community Management */}
-        <Card className="mb-6 border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
-          <CardHeader>
-            <CardTitle className="text-purple-900">Community Management</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CommunityForm />
-          </CardContent>
-        </Card>
+        {/* Community Management - Collapsible */}
+        <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+          <button
+            onClick={() => setShowCommunityForm(!showCommunityForm)}
+            className="w-full px-5 py-4 flex items-center justify-between hover:bg-zinc-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold text-zinc-900">Community Management</h3>
+                <p className="text-xs text-zinc-500">Create new communities</p>
+              </div>
+            </div>
+            <div className={`w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center transition-transform ${showCommunityForm ? 'rotate-45' : ''}`}>
+              <Plus className="w-4 h-4 text-zinc-600" />
+            </div>
+          </button>
+          {showCommunityForm && (
+            <div className="px-5 pb-5 border-t border-zinc-100">
+              <CommunityForm />
+            </div>
+          )}
+        </div>
 
         {/* Gigs Table */}
-        <div className="space-y-4">
-          <GigsTable
-            gigs={sortedGigs}
-            brandsList={brandsList}
-            selectedBrand={selectedBrand}
-            onBrandChange={setSelectedBrand}
-            onGigSelect={setSelectedGig}
-          />
-        </div>
+        <GigsTable
+          gigs={sortedGigs}
+          brandsList={brandsList}
+          selectedBrand={selectedBrand}
+          onBrandChange={setSelectedBrand}
+          onGigSelect={setSelectedGig}
+        />
 
         {/* Gig Details Modal */}
         <GigDetailsModal
@@ -363,6 +431,7 @@ export default function AdminDashboard() {
           }}
           loading={loadingGigDetails}
           details={gigDetails}
+          onDeleteSubmission={handleDeleteSubmission}
         />
       </div>
     </Layout>

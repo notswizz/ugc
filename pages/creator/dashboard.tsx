@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { useRouter } from 'next/router';
-import { getRepLevel } from '@/lib/rep/service';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +25,6 @@ import {
   Clock,
   Loader2,
   ShieldCheck,
-  Settings,
   Briefcase,
   TrendingUp,
   ChevronRight,
@@ -113,6 +111,10 @@ export default function CreatorDashboard() {
       toast.success('Identity verification submitted!');
       router.replace('/creator/dashboard', undefined, { shallow: true });
     }
+    if (router.query.settings === 'true') {
+      setSettingsModalOpen(true);
+      router.replace('/creator/dashboard', undefined, { shallow: true });
+    }
   }, [router.query, router, refetchCreatorData, user]);
 
   useEffect(() => {
@@ -134,14 +136,13 @@ export default function CreatorDashboard() {
   }
 
   const rep = creatorData?.rep || 0;
-  const { level, title: levelLabel, nextLevelRep, prevLevelRep } = getRepLevel(rep);
+  // Rep level is now shown in header
   const trustScore = creatorData ? calculateTrustScore(creatorData) : 20;
   const balanceCents = balance !== null ? Math.round(balance * 100) : 0;
   const balanceDollars = balance || 0;
   const canUseInstant = canUseInstantWithdrawal(trustScore);
 
-  const progressPercent = nextLevelRep > prevLevelRep ? ((rep - prevLevelRep) / (nextLevelRep - prevLevelRep)) * 100 : 100;
-
+  
   // Count linked socials
   const socials = creatorData?.socials || {};
   const linkedSocials = [socials.tiktok, socials.instagram, socials.youtube, socials.x].filter(Boolean).length;
@@ -197,43 +198,7 @@ export default function CreatorDashboard() {
       <div className="min-h-screen bg-gradient-to-b from-zinc-100 to-zinc-50 -mt-4">
         <div className="max-w-lg mx-auto px-4 pb-6 space-y-5">
 
-          {/* Profile Header */}
-          <div className="relative">
-            {/* Decorative background blur circles */}
-            <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-violet-400/20 to-purple-400/20 rounded-full blur-2xl" />
-            <div className="absolute -top-2 right-8 w-20 h-20 bg-gradient-to-br from-violet-400/15 to-purple-400/15 rounded-full blur-2xl" />
-
-            <div className="relative flex items-center gap-2">
-              {/* Level Badge */}
-              {creatorData && (
-                <div className="flex-1 relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl blur opacity-50 group-hover:opacity-70 transition-opacity" />
-                  <div className="relative flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-600 to-purple-600 rounded-xl border border-white/10">
-                    <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-xs font-bold">{level}</span>
-                    </div>
-                    <span className="text-white text-xs font-semibold flex-shrink-0">{levelLabel}</span>
-                    <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden mx-2">
-                      <div
-                        className="h-full bg-gradient-to-r from-amber-300 to-amber-400 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-violet-200 text-xs flex-shrink-0">{rep.toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Settings */}
-              <button
-                onClick={() => setSettingsModalOpen(true)}
-                className="w-10 h-10 rounded-xl bg-white border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-md transition-all shadow-sm"
-              >
-                <Settings className="w-5 h-5 text-zinc-500" />
-              </button>
-            </div>
-          </div>
-
+          
           {/* Balance Card - Premium Design */}
           <div className="relative overflow-hidden rounded-2xl">
             {/* Background with mesh gradient effect */}
@@ -335,8 +300,6 @@ export default function CreatorDashboard() {
 
           {/* Quick Actions - Enhanced Cards */}
           <div className="space-y-3">
-            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider px-1">Quick Actions</p>
-
             {/* Link Socials */}
             <button
               onClick={() => setProfileModalOpen(true)}

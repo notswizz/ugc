@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, X as XIcon, Save, AtSign, FileText, Heart } from 'lucide-react';
+import { useRouter } from 'next/router';
+import { Settings as SettingsIcon, X as XIcon, Save, AtSign, FileText, Heart, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/lib/auth/AuthContext';
 import {
   collection,
   doc,
@@ -32,6 +34,8 @@ export default function SettingsModal({
   userId,
   onRefresh,
 }: SettingsModalProps) {
+  const { signOut } = useAuth();
+  const router = useRouter();
   const [username, setUsername] = useState(creatorData?.username || '');
   const [usernameError, setUsernameError] = useState('');
   const [checkingUsername, setCheckingUsername] = useState(false);
@@ -328,6 +332,24 @@ export default function SettingsModal({
               </div>
             </div>
           </div>
+
+          {/* Logout */}
+          <button
+            type="button"
+            onClick={async () => {
+              await signOut();
+              router.push('/auth/login');
+            }}
+            disabled={saving}
+            className="w-full bg-white rounded-2xl border border-red-200 overflow-hidden hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            <div className="flex items-center gap-3 px-4 py-4">
+              <div className="w-9 h-9 rounded-lg bg-red-500 text-white flex items-center justify-center">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold text-red-600">Log Out</span>
+            </div>
+          </button>
         </div>
 
         {/* Footer */}
