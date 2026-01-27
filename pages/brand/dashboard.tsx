@@ -168,7 +168,10 @@ export default function BrandDashboard() {
     <Layout>
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{companyName || 'Brand Dashboard'}</h1>
+          <h1 className="text-3xl font-bold mb-2">{companyName || 'Giglet'}</h1>
+          {companyName && (
+            <p className="text-sm text-gray-500">Welcome back! Here's what's happening with your gigs.</p>
+          )}
         </div>
 
         {/* Balance Display */}
@@ -238,6 +241,67 @@ export default function BrandDashboard() {
             </Button>
           </Link>
         </div>
+
+        {/* Recent Gigs with Activity */}
+        {recentGigs.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+                <Link href="/brand/gigs" className="text-sm text-orange-600 hover:text-orange-700 font-medium">
+                  View All →
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {recentGigs.map((gig: any) => (
+                <Link key={gig.id} href={`/brand/gigs/${gig.id}`}>
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-orange-200 hover:bg-orange-50/50 transition-all cursor-pointer">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">{gig.title}</h4>
+                      <p className="text-xs text-gray-500">
+                        ${gig.basePayout || 0} • {gig.totalSubmissions || 0} submissions
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3">
+                      {gig.pendingSubmissions > 0 && (
+                        <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                          {gig.pendingSubmissions} pending
+                        </span>
+                      )}
+                      {gig.approvedSubmissions > 0 && (
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                          {gig.approvedSubmissions} approved
+                        </span>
+                      )}
+                      {gig.totalSubmissions === 0 && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">
+                          No submissions
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {recentGigs.length === 0 && (
+          <Card className="mb-6 border-dashed">
+            <CardContent className="py-8 text-center">
+              <div className="text-4xl mb-3">🎬</div>
+              <h3 className="font-medium mb-1">No gigs yet</h3>
+              <p className="text-sm text-gray-500 mb-4">Create your first gig to start getting content from creators</p>
+              <Link href="/brand/gigs/new">
+                <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+                  Create Your First Gig
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </Layout>
   );

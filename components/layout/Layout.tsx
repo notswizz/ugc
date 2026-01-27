@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useCreatorData } from '@/components/dashboard/useCreatorData';
 import { getRepLevel } from '@/lib/rep/service';
-import { Home, Briefcase, UsersRound, Shield, Star } from 'lucide-react';
+import { Home, Briefcase, UsersRound, Shield, Star, LogOut } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -72,12 +72,32 @@ export default function Layout({ children }: LayoutProps) {
                       </div>
                     </button>
                   )}
+                  {/* Logout Button for Creators */}
+                  {appUser?.role === 'creator' && (
+                    <button
+                      onClick={handleLogout}
+                      className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors"
+                      title="Logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  )}
                   {appUser?.email === '7jackdsmith@gmail.com' && (
                     <Link href="/admin/dashboard">
                       <button className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center hover:bg-violet-200 transition-colors">
                         <Shield className="w-4 h-4 text-violet-600" />
                       </button>
                     </Link>
+                  )}
+                  {/* Logout Button for Brands */}
+                  {appUser?.role === 'brand' && (
+                    <button
+                      onClick={handleLogout}
+                      className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors"
+                      title="Logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
               </div>
