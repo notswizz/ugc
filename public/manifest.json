@@ -1,7 +1,7 @@
 {
   "name": "Giglet",
   "short_name": "Giglet",
-  "description": "DoorDash for UGC - Real-time creator offers and fast payments",
+  "description": "Get paid to create content. Grab gigs from brands, post authentic content, get paid instantly.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -48,13 +48,42 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Giglet - Get Paid to Create</title>
-        <meta name="description" content="Grab gigs, post content, get paid instantly." />
+        {/* Primary Meta Tags */}
+        <title>Giglet - Get Paid to Create UGC Content</title>
+        <meta name="title" content="Giglet - Get Paid to Create UGC Content" />
+        <meta name="description" content="The UGC creator marketplace. Grab gigs from brands, post authentic content, get paid instantly. No pitching, no invoices — just money." />
+        <meta name="keywords" content="ugc creator, get paid to create content, ugc jobs, brand content creator, ugc marketplace, paid gigs for creators" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <meta name="theme-color" content="#fff7ed" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://gogiglet.vercel.app" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://gogiglet.vercel.app" />
+        <meta property="og:title" content="Giglet - Get Paid to Create UGC Content" />
+        <meta property="og:description" content="The UGC creator marketplace. Grab gigs, post content, get paid instantly. No pitching required." />
+        <meta property="og:image" content="https://gogiglet.vercel.app/og-image.png" />
+        <meta property="og:site_name" content="Giglet" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://gogiglet.vercel.app" />
+        <meta name="twitter:title" content="Giglet - Get Paid to Create UGC Content" />
+        <meta name="twitter:description" content="The UGC creator marketplace. Grab gigs, post content, get paid instantly." />
+        <meta name="twitter:image" content="https://gogiglet.vercel.app/og-image.png" />
+        
+        {/* Favicons */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        
+        {/* PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <link rel="icon" href="/favicon.ico" />
+        <meta name="apple-mobile-web-app-title" content="Giglet" />
+        <link rel="manifest" href="/manifest.json" />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-orange-50 text-gray-900 overflow-hidden flex flex-col">
