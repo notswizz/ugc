@@ -80,7 +80,7 @@ export default function Login() {
         </header>
 
         {/* Main content */}
-        <main className="relative z-10 flex-1 flex flex-col justify-center px-5 pb-12">
+        <main className="relative z-10 flex-1 flex flex-col pt-8 px-5 pb-12">
           {/* Title */}
           <div className={`mb-8 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <h1 className="text-3xl font-black text-gray-900 mb-2">Welcome back</h1>
@@ -92,7 +92,7 @@ export default function Login() {
             <Button
               onClick={handleGoogleLogin}
               disabled={isLoading}
-              className="w-full h-14 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-semibold text-base active:scale-[0.98] transition-all"
+              className="w-full h-14 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 hover:opacity-90 text-white rounded-xl font-semibold text-base active:scale-[0.98] transition-all shadow-lg shadow-orange-200"
             >
               {isLoading ? (
                 <div className="flex items-center gap-3">
