@@ -63,22 +63,17 @@ export default function Login() {
       <Head>
         <title>Sign In - Giglet</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <meta name="theme-color" content="#000000" />
+        <meta name="theme-color" content="#fff7ed" />
       </Head>
 
-      <div className="min-h-screen bg-black text-white flex flex-col">
-        {/* Background glow */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] h-[60%] bg-gradient-to-b from-purple-600/20 via-pink-500/10 to-transparent blur-3xl" />
-        </div>
-
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-orange-50 text-gray-900 flex flex-col">
         {/* Header */}
         <header className="relative z-50 px-5 py-4">
           <Link href="/" className="flex items-center gap-2 w-fit">
             <div className="w-9 h-9 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-xl flex items-center justify-center">
               <span className="text-lg">🎬</span>
             </div>
-            <span className="text-xl font-black bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">
+            <span className="text-xl font-black bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
               giglet
             </span>
           </Link>
@@ -88,20 +83,20 @@ export default function Login() {
         <main className="relative z-10 flex-1 flex flex-col justify-center px-5 pb-12">
           {/* Title */}
           <div className={`mb-8 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <h1 className="text-3xl font-black mb-2">Welcome back</h1>
-            <p className="text-white/50">Sign in to continue earning</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-2">Welcome back</h1>
+            <p className="text-gray-500">Sign in to continue earning</p>
           </div>
 
-          {/* Auth buttons */}
-          <div className={`space-y-4 transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          {/* Auth card */}
+          <div className={`bg-white border border-gray-100 rounded-2xl p-6 shadow-sm transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <Button
               onClick={handleGoogleLogin}
               disabled={isLoading}
-              className="w-full h-14 bg-white hover:bg-gray-100 text-gray-900 rounded-2xl font-semibold text-base active:scale-[0.98] transition-all"
+              className="w-full h-14 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-semibold text-base active:scale-[0.98] transition-all"
             >
               {isLoading ? (
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Signing in...</span>
                 </div>
               ) : (
@@ -117,32 +112,31 @@ export default function Login() {
               )}
             </Button>
 
+            {/* Legal */}
+            <p className="text-center mt-4 text-xs text-gray-400">
+              By continuing, you agree to our{' '}
+              <a href="#" className="underline">Terms</a> & <a href="#" className="underline">Privacy</a>
+            </p>
           </div>
 
           {/* Trust badges */}
-          <div className={`flex justify-center gap-6 mt-10 transition-all duration-500 delay-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`flex justify-center gap-6 mt-8 transition-all duration-500 delay-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
             <div className="flex items-center gap-2">
-              <span className="text-orange-400">⚡</span>
-              <span className="text-xs text-white/40">Fast payouts</span>
+              <span className="text-orange-500">⚡</span>
+              <span className="text-xs text-gray-400">Fast payouts</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-green-400">🛡️</span>
-              <span className="text-xs text-white/40">Secure</span>
+              <span className="text-green-500">🛡️</span>
+              <span className="text-xs text-gray-400">Secure</span>
             </div>
           </div>
 
           {/* Footer link */}
-          <p className={`text-center mt-8 text-sm text-white/40 transition-all duration-500 delay-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+          <p className={`text-center mt-8 text-sm text-gray-500 transition-all duration-500 delay-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
             Don't have an account?{' '}
-            <Link href="/auth/signup" className="text-orange-400 font-medium">
+            <Link href="/auth/signup" className="text-orange-500 font-medium">
               Sign up
             </Link>
-          </p>
-
-          {/* Legal */}
-          <p className="text-center mt-6 text-xs text-white/20">
-            By continuing, you agree to our{' '}
-            <a href="#" className="underline">Terms</a> & <a href="#" className="underline">Privacy</a>
           </p>
         </main>
       </div>

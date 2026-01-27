@@ -71,22 +71,17 @@ export default function Signup() {
       <Head>
         <title>Sign Up - Giglet</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <meta name="theme-color" content="#000000" />
+        <meta name="theme-color" content="#fff7ed" />
       </Head>
 
-      <div className="min-h-screen bg-black text-white flex flex-col">
-        {/* Background glow */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] h-[60%] bg-gradient-to-b from-orange-500/20 via-pink-500/15 to-transparent blur-3xl" />
-        </div>
-
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-orange-50 text-gray-900 flex flex-col">
         {/* Header */}
         <header className="relative z-50 px-5 py-4">
           <Link href="/" className="flex items-center gap-2 w-fit">
             <div className="w-9 h-9 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-xl flex items-center justify-center">
               <span className="text-lg">🎬</span>
             </div>
-            <span className="text-xl font-black bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">
+            <span className="text-xl font-black bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
               giglet
             </span>
           </Link>
@@ -95,37 +90,37 @@ export default function Signup() {
         {/* Main content */}
         <main className="relative z-10 flex-1 flex flex-col justify-center px-5 pb-12">
           {/* Title */}
-          <div className={`mb-8 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <h1 className="text-3xl font-black mb-2">
-              Start <span className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">earning</span>
+          <div className={`mb-6 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <h1 className="text-3xl font-black text-gray-900 mb-2">
+              Start <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">earning</span>
             </h1>
-            <p className="text-white/50">Create your free account</p>
+            <p className="text-gray-500">Create your free account</p>
           </div>
 
           {/* Benefits */}
-          <div className={`space-y-3 mb-8 transition-all duration-500 delay-75 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+          <div className={`space-y-3 mb-6 transition-all duration-500 delay-75 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl px-4 py-3 shadow-sm">
               <span className="text-xl">💸</span>
               <div>
-                <p className="text-sm font-medium">Get paid same day</p>
-                <p className="text-xs text-white/40">No waiting weeks for payments</p>
+                <p className="text-sm font-medium text-gray-900">Get paid same day</p>
+                <p className="text-xs text-gray-400">No waiting weeks for payments</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl px-4 py-3 shadow-sm">
               <span className="text-xl">🎯</span>
               <div>
-                <p className="text-sm font-medium">Grab gigs instantly</p>
-                <p className="text-xs text-white/40">No pitching or negotiating</p>
+                <p className="text-sm font-medium text-gray-900">Grab gigs instantly</p>
+                <p className="text-xs text-gray-400">No pitching or negotiating</p>
               </div>
             </div>
           </div>
 
-          {/* Auth button */}
-          <div className={`space-y-4 transition-all duration-500 delay-150 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          {/* Auth card */}
+          <div className={`bg-white border border-gray-100 rounded-2xl p-6 shadow-sm transition-all duration-500 delay-150 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <Button
               onClick={handleGoogleLogin}
               disabled={isLoading}
-              className="w-full h-14 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 hover:from-orange-600 hover:via-pink-600 hover:to-purple-700 text-white rounded-2xl font-bold text-base shadow-lg shadow-pink-500/20 active:scale-[0.98] transition-all"
+              className="w-full h-14 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 hover:from-orange-600 hover:via-pink-600 hover:to-purple-700 text-white rounded-xl font-bold text-base shadow-md shadow-orange-200 active:scale-[0.98] transition-all"
             >
               {isLoading ? (
                 <div className="flex items-center gap-3">
@@ -145,9 +140,15 @@ export default function Signup() {
               )}
             </Button>
 
+            <div className="relative flex items-center gap-4 py-4">
+              <div className="flex-1 h-px bg-gray-100" />
+              <span className="text-xs text-gray-300">or</span>
+              <div className="flex-1 h-px bg-gray-100" />
+            </div>
+
             <Button
               variant="outline"
-              className="w-full h-14 border-white/20 bg-white/5 text-white rounded-2xl font-semibold text-base active:scale-[0.98] transition-all"
+              className="w-full h-14 border-gray-200 bg-white text-gray-700 rounded-xl font-semibold text-base active:scale-[0.98] transition-all"
               onClick={handleGoogleLogin}
               disabled={isLoading}
             >
@@ -161,32 +162,32 @@ export default function Signup() {
                 <span>I'm a Brand</span>
               </div>
             </Button>
+
+            {/* Legal */}
+            <p className="text-center mt-4 text-xs text-gray-400">
+              By signing up, you agree to our{' '}
+              <a href="#" className="underline">Terms</a> & <a href="#" className="underline">Privacy</a>
+            </p>
           </div>
 
           {/* Stats */}
-          <div className={`flex justify-center gap-8 mt-10 transition-all duration-500 delay-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`flex justify-center gap-8 mt-8 transition-all duration-500 delay-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
             <div className="text-center">
-              <div className="text-xl font-bold text-orange-400">2.1k+</div>
-              <div className="text-xs text-white/40">Creators</div>
+              <div className="text-xl font-bold text-orange-500">2.1k+</div>
+              <div className="text-xs text-gray-400">Creators</div>
             </div>
             <div className="text-center">
-              <div className="text-xl font-bold text-pink-400">$18k</div>
-              <div className="text-xs text-white/40">Paid out</div>
+              <div className="text-xl font-bold text-pink-500">$18k</div>
+              <div className="text-xs text-gray-400">Paid out</div>
             </div>
           </div>
 
           {/* Footer link */}
-          <p className={`text-center mt-8 text-sm text-white/40 transition-all duration-500 delay-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+          <p className={`text-center mt-8 text-sm text-gray-500 transition-all duration-500 delay-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
             Already have an account?{' '}
-            <Link href="/auth/login" className="text-orange-400 font-medium">
+            <Link href="/auth/login" className="text-orange-500 font-medium">
               Sign in
             </Link>
-          </p>
-
-          {/* Legal */}
-          <p className="text-center mt-6 text-xs text-white/20">
-            By signing up, you agree to our{' '}
-            <a href="#" className="underline">Terms</a> & <a href="#" className="underline">Privacy</a>
           </p>
         </main>
       </div>
