@@ -234,8 +234,8 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="relative z-10 px-5 py-4 border-t border-gray-100">
-          <div className="flex justify-between items-center">
+        <footer className="relative z-10 px-5 py-6 border-t border-gray-100">
+          <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-xs">🎬</span>
@@ -243,6 +243,12 @@ export default function Home() {
               <span className="text-sm font-bold text-gray-400">giglet</span>
             </div>
             <p className="text-gray-300 text-xs">© 2025</p>
+          </div>
+          <div className="flex justify-center gap-4 text-xs text-gray-400">
+            <Link href="/about" className="hover:text-gray-600">About</Link>
+            <Link href="/terms" className="hover:text-gray-600">Terms</Link>
+            <Link href="/privacy" className="hover:text-gray-600">Privacy</Link>
+            <a href="mailto:support@gogiglet.com" className="hover:text-gray-600">Contact</a>
           </div>
         </footer>
       </div>
