@@ -11,17 +11,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BasicDetailsStep from './BasicDetailsStep';
 import PayoutStep from './PayoutStep';
 import BriefStep from './BriefStep';
+import GigTemplates, { GigTemplate } from './GigTemplates';
 import { DEFAULT_GIG_DATA, validateStep1, validateStep2 } from '@/lib/gigs/create-gig-schema';
 import type { GigFormData, GigBrief, FollowerRange } from '@/lib/gigs/create-gig-schema';
+import { logger } from '@/lib/utils/logger';
 
 export default function CreateGigWizard() {
   const router = useRouter();
   const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0); // Start at 0 for template selection
   const [gigData, setGigData] = useState<GigFormData>(DEFAULT_GIG_DATA);
   const [submitting, setSubmitting] = useState(false);
   const [availableCreatorsCount, setAvailableCreatorsCount] = useState<number | null>(null);
   const [loadingCreatorCount, setLoadingCreatorCount] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<GigTemplate | null>(null);
 
   // Count available creators based on filters
   useEffect(() => {
@@ -65,11 +68,42 @@ export default function CreateGigWizard() {
 
       setAvailableCreatorsCount(count);
     } catch (error) {
-      console.error('Error counting creators:', error);
+      logger.error('Error counting creators', error);
       setAvailableCreatorsCount(null);
     } finally {
       setLoadingCreatorCount(false);
     }
+  };
+
+  const handleTemplateSelect = (template: GigTemplate) => {
+    setSelectedTemplate(template);
+    // Apply template defaults to gig data
+    const templateDefaults = template.defaultValues;
+    setGigData(prev => ({
+      ...prev,
+      title: templateDefaults.title || prev.title,
+      contentType: templateDefaults.contentType,
+      platform: templateDefaults.platform,
+      deliverables: {
+        ...prev.deliverables,
+        videos: templateDefaults.deliverables.videos,
+        photos: templateDefaults.deliverables.photos,
+      },
+      payoutType: templateDefaults.payoutType,
+      basePayout: templateDefaults.basePayout ? templateDefaults.basePayout.toString() : prev.basePayout,
+      visibility: templateDefaults.visibility || prev.visibility,
+      trustScoreMin: templateDefaults.trustScoreMin ? templateDefaults.trustScoreMin.toString() : prev.trustScoreMin,
+      brief: {
+        ...prev.brief,
+        hooks: templateDefaults.brief?.hooks || prev.brief.hooks,
+        angles: templateDefaults.brief?.angles || prev.brief.angles,
+        talkingPoints: templateDefaults.brief?.talkingPoints || prev.brief.talkingPoints,
+        do: templateDefaults.brief?.dosList || prev.brief.do,
+        dont: templateDefaults.brief?.dontsList || prev.brief.dont,
+      }
+    }));
+    // Move to step 1
+    setCurrentStep(1);
   };
 
   const updateGigData = (updates: Partial<GigFormData>) => {
@@ -204,7 +238,7 @@ export default function CreateGigWizard() {
       toast.success('Gig created successfully!');
       router.push('/brand/gigs');
     } catch (error: any) {
-      console.error('Error creating gig:', error);
+      logger.error('Error creating gig', error);
       toast.error(error.message || 'Failed to create gig');
     } finally {
       setSubmitting(false);
@@ -225,41 +259,48 @@ export default function CreateGigWizard() {
             <span className="text-3xl">📝</span> Create New Gig
           </CardTitle>
 
-          {/* Progress Stepper */}
-          <div className="mt-6">
-            <div className="flex items-center justify-between">
-              {steps.map((step, idx) => (
-                <div key={step.number} className="flex items-center flex-1">
-                  <button
-                    type="button"
-                    onClick={() => goToStep(step.number)}
-                    className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm transition-all ${
-                      currentStep === step.number
-                        ? 'bg-orange-500 text-white scale-110 shadow-lg'
-                        : currentStep > step.number
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}
-                  >
-                    {currentStep > step.number ? '✓' : step.number}
-                  </button>
-                  <span className={`ml-2 text-sm font-medium hidden sm:block ${
-                    currentStep === step.number ? 'text-orange-600' : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </span>
-                  {idx < steps.length - 1 && (
-                    <div className={`flex-1 h-1 mx-3 rounded ${
-                      currentStep > step.number ? 'bg-green-500' : 'bg-gray-200'
-                    }`} />
-                  )}
-                </div>
-              ))}
+          {/* Progress Stepper - Only show when past template selection */}
+          {currentStep > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between">
+                {steps.map((step, idx) => (
+                  <div key={step.number} className="flex items-center flex-1">
+                    <button
+                      type="button"
+                      onClick={() => goToStep(step.number)}
+                      className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm transition-[background-color,color,transform,box-shadow] duration-200 ${
+                        currentStep === step.number
+                          ? 'bg-orange-500 text-white scale-110 shadow-lg'
+                          : currentStep > step.number
+                          ? 'bg-green-500 text-white'
+                          : 'bg-zinc-200 text-zinc-500'
+                      }`}
+                    >
+                      {currentStep > step.number ? '✓' : step.number}
+                    </button>
+                    <span className={`ml-2 text-sm font-medium hidden sm:block ${
+                      currentStep === step.number ? 'text-orange-600' : 'text-zinc-500'
+                    }`}>
+                      {step.title}
+                    </span>
+                    {idx < steps.length - 1 && (
+                      <div className={`flex-1 h-1 mx-3 rounded ${
+                        currentStep > step.number ? 'bg-green-500' : 'bg-zinc-200'
+                      }`} />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </CardHeader>
 
         <CardContent className="pt-6">
+          {/* Step 0: Template Selection */}
+          {currentStep === 0 && (
+            <GigTemplates onSelectTemplate={handleTemplateSelect} />
+          )}
+
           {/* Step Content */}
           {currentStep === 1 && (
             <BasicDetailsStep gigData={gigData} updateGigData={updateGigData} />

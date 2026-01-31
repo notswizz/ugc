@@ -51,10 +51,10 @@ export default function BasicDetailsStep({ gigData, updateGigData }: BasicDetail
           <button
             type="button"
             onClick={() => updateGigData({ platform: 'tiktok', contentType: 'video' })}
-            className={`p-4 rounded-lg border-2 text-center transition-all ${
+            className={`p-4 rounded-lg border-2 text-center transition-[border-color,background-color,box-shadow] duration-200 ${
               gigData.platform === 'tiktok'
                 ? 'bg-orange-50 border-orange-500 shadow-sm'
-                : 'bg-white border-gray-200 hover:border-gray-300'
+                : 'bg-white border-zinc-200 hover:border-zinc-300'
             }`}
           >
             <svg className="w-8 h-8 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
@@ -67,10 +67,10 @@ export default function BasicDetailsStep({ gigData, updateGigData }: BasicDetail
           <button
             type="button"
             onClick={() => updateGigData({ platform: 'instagram' })}
-            className={`p-4 rounded-lg border-2 text-center transition-all ${
+            className={`p-4 rounded-lg border-2 text-center transition-[border-color,background-color,box-shadow] duration-200 ${
               gigData.platform === 'instagram'
                 ? 'bg-orange-50 border-orange-500 shadow-sm'
-                : 'bg-white border-gray-200 hover:border-gray-300'
+                : 'bg-white border-zinc-200 hover:border-zinc-300'
             }`}
           >
             <svg className="w-8 h-8 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
@@ -83,10 +83,10 @@ export default function BasicDetailsStep({ gigData, updateGigData }: BasicDetail
           <button
             type="button"
             onClick={() => updateGigData({ platform: 'x' })}
-            className={`p-4 rounded-lg border-2 text-center transition-all ${
+            className={`p-4 rounded-lg border-2 text-center transition-[border-color,background-color,box-shadow] duration-200 ${
               gigData.platform === 'x'
                 ? 'bg-orange-50 border-orange-500 shadow-sm'
-                : 'bg-white border-gray-200 hover:border-gray-300'
+                : 'bg-white border-zinc-200 hover:border-zinc-300'
             }`}
           >
             <svg className="w-8 h-8 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor">
@@ -103,10 +103,10 @@ export default function BasicDetailsStep({ gigData, updateGigData }: BasicDetail
           <button
             type="button"
             onClick={() => updateGigData({ contentType: 'video' })}
-            className={`p-6 rounded-lg border-2 text-center transition-all ${
+            className={`p-6 rounded-lg border-2 text-center transition-[border-color,background-color,box-shadow] duration-200 ${
               gigData.contentType === 'video'
                 ? 'bg-blue-50 border-blue-500 shadow-sm'
-                : 'bg-white border-gray-200 hover:border-gray-300'
+                : 'bg-white border-zinc-200 hover:border-zinc-300'
             }`}
           >
             <div className="text-4xl mb-2">🎥</div>
@@ -116,18 +116,18 @@ export default function BasicDetailsStep({ gigData, updateGigData }: BasicDetail
             type="button"
             onClick={() => updateGigData({ contentType: 'photo' })}
             disabled={gigData.platform === 'tiktok'}
-            className={`p-6 rounded-lg border-2 text-center transition-all ${
+            className={`p-6 rounded-lg border-2 text-center transition-[border-color,background-color,box-shadow,opacity] duration-200 ${
               gigData.platform === 'tiktok'
-                ? 'bg-gray-100 border-gray-300 opacity-50 cursor-not-allowed'
+                ? 'bg-zinc-100 border-zinc-300 opacity-50 cursor-not-allowed'
                 : gigData.contentType === 'photo'
                 ? 'bg-purple-50 border-purple-500 shadow-sm'
-                : 'bg-white border-gray-200 hover:border-gray-300'
+                : 'bg-white border-zinc-200 hover:border-zinc-300'
             }`}
           >
             <div className="text-4xl mb-2">📷</div>
             <div className="text-base font-semibold">Photo</div>
             {gigData.platform === 'tiktok' && (
-              <div className="text-xs text-gray-500 mt-1">TikTok is video only</div>
+              <div className="text-xs text-zinc-500 mt-1">TikTok is video only</div>
             )}
           </button>
         </div>
@@ -141,10 +141,10 @@ export default function BasicDetailsStep({ gigData, updateGigData }: BasicDetail
             <button
               type="button"
               onClick={() => updateGigData({ instagramFormat: 'post' })}
-              className={`p-4 rounded-lg border-2 text-center transition-all ${
+              className={`p-4 rounded-lg border-2 text-center transition-[border-color,background-color,box-shadow] duration-200 ${
                 gigData.instagramFormat === 'post'
                   ? 'bg-pink-50 border-pink-500 shadow-sm'
-                  : 'bg-white border-gray-200 hover:border-gray-300'
+                  : 'bg-white border-zinc-200 hover:border-zinc-300'
               }`}
             >
               <div className="text-2xl mb-1">📱</div>
@@ -153,10 +153,10 @@ export default function BasicDetailsStep({ gigData, updateGigData }: BasicDetail
             <button
               type="button"
               onClick={() => updateGigData({ instagramFormat: 'story' })}
-              className={`p-4 rounded-lg border-2 text-center transition-all ${
+              className={`p-4 rounded-lg border-2 text-center transition-[border-color,background-color,box-shadow] duration-200 ${
                 gigData.instagramFormat === 'story'
                   ? 'bg-pink-50 border-pink-500 shadow-sm'
-                  : 'bg-white border-gray-200 hover:border-gray-300'
+                  : 'bg-white border-zinc-200 hover:border-zinc-300'
               }`}
             >
               <div className="text-2xl mb-1">⭕</div>
@@ -188,7 +188,8 @@ export default function BasicDetailsStep({ gigData, updateGigData }: BasicDetail
                   updateGigData({ primaryThing: '' });
                   setCategorySearch('');
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-zinc-400 hover:text-zinc-600 transition-colors duration-200"
+                aria-label="Clear category"
               >
                 ✕
               </button>

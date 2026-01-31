@@ -34,7 +34,7 @@ export default function Layout({ children }: LayoutProps) {
           <header className="flex-shrink-0 z-50 w-full bg-white">
             <div className="px-4 py-3">
               <div className="flex items-center justify-center gap-3">
-                <Link href={getDashboardPath()} className="hover:opacity-80 transition-opacity">
+                <Link href={getDashboardPath()} className="hover:opacity-80 transition-opacity duration-200">
                   <img
                     src="/logo1.png"
                     alt="Giglet Logo"
@@ -63,7 +63,8 @@ export default function Layout({ children }: LayoutProps) {
                   {appUser?.role === 'creator' && creatorData?.username && (
                     <button
                       onClick={() => router.push('/creator/dashboard?settings=true')}
-                      className="relative p-[2px] rounded-xl bg-gradient-to-r from-orange-400 via-pink-400 to-violet-400 hover:shadow-lg hover:shadow-orange-500/20 transition-shadow"
+                      className="relative p-[2px] rounded-xl bg-gradient-to-r from-orange-400 via-pink-400 to-violet-400 hover:shadow-lg hover:shadow-orange-500/20 transition-shadow duration-200"
+                      aria-label="Open settings"
                     >
                       <div className="px-3 py-1.5 bg-gradient-to-r from-orange-50 via-pink-50 to-violet-50 rounded-[10px]">
                         <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-pink-500 to-violet-500">
@@ -74,7 +75,7 @@ export default function Layout({ children }: LayoutProps) {
                   )}
                   {appUser?.email === '7jackdsmith@gmail.com' && (
                     <Link href="/admin/dashboard">
-                      <button className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center hover:bg-violet-200 transition-colors">
+                      <button className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center hover:bg-violet-200 transition-colors duration-200" aria-label="Admin dashboard">
                         <Shield className="w-4 h-4 text-violet-600" />
                       </button>
                     </Link>
@@ -92,84 +93,90 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Bottom Navigation (for creators) */}
       {user && appUser?.role === 'creator' && (
-        <div className="fixed bottom-0 left-0 right-0 max-w-[428px] mx-auto w-full bg-white/95 backdrop-blur-sm border-t border-gray-100 z-50 shadow-2xl" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <nav className="fixed bottom-0 left-0 right-0 max-w-[428px] mx-auto w-full bg-white/95 backdrop-blur-sm border-t border-zinc-100 z-50 shadow-2xl" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Main navigation">
           <div className="max-w-md mx-auto grid grid-cols-3">
-            <Link 
-              href="/creator/dashboard" 
-              className={`flex flex-col items-center justify-center py-3 px-2 transition-all duration-200 ${
-                router.pathname === '/creator/dashboard' 
-                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent' 
-                  : 'text-gray-600 hover:bg-gray-50 active:scale-95'
+            <Link
+              href="/creator/dashboard"
+              className={`flex flex-col items-center justify-center py-3 px-2 transition-[colors,transform,background-color] duration-200 ${
+                router.pathname === '/creator/dashboard'
+                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent'
+                  : 'text-zinc-600 hover:bg-zinc-50 active:scale-95'
               }`}
+              aria-label="Home"
             >
               <Home className={`w-5 h-5 mb-1 ${router.pathname === '/creator/dashboard' ? 'stroke-[2.5]' : ''}`} />
               <span className="text-xs font-semibold">Home</span>
             </Link>
-            <Link 
-              href="/creator/gigs" 
-              className={`flex flex-col items-center justify-center py-3 px-2 transition-all duration-200 ${
+            <Link
+              href="/creator/gigs"
+              className={`flex flex-col items-center justify-center py-3 px-2 transition-[colors,transform,background-color] duration-200 ${
                 router.pathname === '/creator/gigs' || router.pathname.startsWith('/creator/gigs/')
-                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent' 
-                  : 'text-gray-600 hover:bg-gray-50 active:scale-95'
+                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent'
+                  : 'text-zinc-600 hover:bg-zinc-50 active:scale-95'
               }`}
+              aria-label="Gigs"
             >
               <Briefcase className={`w-5 h-5 mb-1 ${(router.pathname === '/creator/gigs' || router.pathname.startsWith('/creator/gigs/')) ? 'stroke-[2.5]' : ''}`} />
               <span className="text-xs font-semibold">Gigs</span>
             </Link>
-            <Link 
-              href="/creator/squads" 
-              className={`flex flex-col items-center justify-center py-3 px-2 transition-all duration-200 ${
+            <Link
+              href="/creator/squads"
+              className={`flex flex-col items-center justify-center py-3 px-2 transition-[colors,transform,background-color] duration-200 ${
                 router.pathname === '/creator/squads' || router.pathname.startsWith('/creator/squads/')
-                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent' 
-                  : 'text-gray-600 hover:bg-gray-50 active:scale-95'
+                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent'
+                  : 'text-zinc-600 hover:bg-zinc-50 active:scale-95'
               }`}
+              aria-label="Squads"
             >
               <UsersRound className={`w-5 h-5 mb-1 ${(router.pathname === '/creator/squads' || router.pathname.startsWith('/creator/squads/')) ? 'stroke-[2.5]' : ''}`} />
               <span className="text-xs font-semibold">Squads</span>
             </Link>
           </div>
-        </div>
+        </nav>
       )}
 
       {/* Bottom Navigation (for brands) */}
       {user && appUser?.role === 'brand' && (
-        <div className="fixed bottom-0 left-0 right-0 max-w-[428px] mx-auto w-full bg-white/95 backdrop-blur-sm border-t border-gray-100 z-50 shadow-2xl" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <nav className="fixed bottom-0 left-0 right-0 max-w-[428px] mx-auto w-full bg-white/95 backdrop-blur-sm border-t border-zinc-100 z-50 shadow-2xl" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Main navigation">
           <div className="max-w-md mx-auto grid grid-cols-3">
-            <Link 
-              href="/brand/dashboard" 
-              className={`flex flex-col items-center justify-center py-3 px-2 transition-all duration-200 ${
-                router.pathname === '/brand/dashboard' 
-                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent' 
-                  : 'text-gray-600 hover:bg-gray-50 active:scale-95'
+            <Link
+              href="/brand/dashboard"
+              className={`flex flex-col items-center justify-center py-3 px-2 transition-[colors,transform,background-color] duration-200 ${
+                router.pathname === '/brand/dashboard'
+                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent'
+                  : 'text-zinc-600 hover:bg-zinc-50 active:scale-95'
               }`}
+              aria-label="Home"
             >
               <Home className={`w-5 h-5 mb-1 ${router.pathname === '/brand/dashboard' ? 'stroke-[2.5]' : ''}`} />
               <span className="text-xs font-semibold">Home</span>
             </Link>
-            <Link 
-              href="/brand/gigs" 
-              className={`flex flex-col items-center justify-center py-3 px-2 transition-all duration-200 ${
+            <Link
+              href="/brand/gigs"
+              className={`flex flex-col items-center justify-center py-3 px-2 transition-[colors,transform,background-color] duration-200 ${
                 router.pathname === '/brand/gigs' || (router.pathname.startsWith('/brand/gigs/') && router.pathname !== '/brand/gigs/new')
-                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent' 
-                  : 'text-gray-600 hover:bg-gray-50 active:scale-95'
+                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent'
+                  : 'text-zinc-600 hover:bg-zinc-50 active:scale-95'
               }`}
+              aria-label="Gigs"
             >
               <Briefcase className={`w-5 h-5 mb-1 ${(router.pathname === '/brand/gigs' || (router.pathname.startsWith('/brand/gigs/') && router.pathname !== '/brand/gigs/new')) ? 'stroke-[2.5]' : ''}`} />
               <span className="text-xs font-semibold">Gigs</span>
             </Link>
-            <Link 
-              href="/brand/squads" 
-              className={`flex flex-col items-center justify-center py-3 px-2 transition-all duration-200 ${
+            <Link
+              href="/brand/squads"
+              className={`flex flex-col items-center justify-center py-3 px-2 transition-[colors,transform,background-color] duration-200 ${
                 router.pathname === '/brand/squads' || router.pathname.startsWith('/brand/squads/')
-                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent' 
-                  : 'text-gray-600 hover:bg-gray-50 active:scale-95'
+                  ? 'text-brand-600 bg-gradient-to-b from-orange-50 to-transparent'
+                  : 'text-zinc-600 hover:bg-zinc-50 active:scale-95'
               }`}
+              aria-label="Squads"
             >
               <UsersRound className={`w-5 h-5 mb-1 ${(router.pathname === '/brand/squads' || router.pathname.startsWith('/brand/squads/')) ? 'stroke-[2.5]' : ''}`} />
               <span className="text-xs font-semibold">Squads</span>
             </Link>
           </div>
-        </div>
+        </nav>
       )}
       </div>
     </div>

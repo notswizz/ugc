@@ -45,7 +45,7 @@ export default function CreatorCard({ creator, isExpanded, onToggle, onInviteToS
   const pendingCount = creator.submissions.filter((s) => s.status === 'submitted').length;
 
   return (
-    <Card className="hover:shadow-md transition-all">
+    <Card className="hover:shadow-md transition-shadow duration-200">
       <CardContent className="p-4">
         {/* Creator Header */}
         <button onClick={onToggle} className="w-full text-left">
@@ -79,9 +79,9 @@ export default function CreatorCard({ creator, isExpanded, onToggle, onInviteToS
                 <Plus className="w-4 h-4" />
               </button>
               {isExpanded ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
+                <ChevronUp className="w-5 h-5 text-zinc-400" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-zinc-400" />
               )}
             </div>
           </div>
@@ -95,15 +95,15 @@ export default function CreatorCard({ creator, isExpanded, onToggle, onInviteToS
               <h4 className="text-xs font-semibold text-gray-700">Profile Information</h4>
 
               {creator.location && (
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <MapPin className="w-3 h-3 text-gray-400" />
+                <div className="flex items-center gap-2 text-xs text-zinc-600">
+                  <MapPin className="w-3 h-3 text-zinc-400" />
                   <span>{creator.location}</span>
                 </div>
               )}
 
               {creator.languages && creator.languages.length > 0 && (
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <Globe className="w-3 h-3 text-gray-400" />
+                <div className="flex items-center gap-2 text-xs text-zinc-600">
+                  <Globe className="w-3 h-3 text-zinc-400" />
                   <span>{creator.languages.join(', ')}</span>
                 </div>
               )}

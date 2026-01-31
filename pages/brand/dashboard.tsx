@@ -8,6 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
+import { formatCurrencyFromDollars } from '@/lib/utils/formatters';
+import { logger } from '@/lib/utils/logger';
+import { isValidAmount } from '@/lib/utils/validation';
+import { DollarSign, Users, Clock, TrendingUp, Briefcase, CheckCircle2 } from 'lucide-react';
 
 export default function BrandDashboard() {
   const { user, appUser } = useAuth();
@@ -19,6 +23,14 @@ export default function BrandDashboard() {
   const [addingBalance, setAddingBalance] = useState(false);
   const [recentGigs, setRecentGigs] = useState([]);
   const [companyName, setCompanyName] = useState<string>('');
+  const [analytics, setAnalytics] = useState({
+    totalSpent: 0,
+    totalCreators: 0,
+    avgApprovalTime: 0,
+    totalGigs: 0,
+    activeGigs: 0,
+    completionRate: 0,
+  });
 
   // Fetch brand balance and company name
   const fetchBalance = async () => {
@@ -36,7 +48,7 @@ export default function BrandDashboard() {
         setCompanyName('');
       }
     } catch (error) {
-      console.error('Error fetching balance:', error);
+      logger.error('Error fetching balance', error);
       setBalance(0);
       setCompanyName('');
     } finally {
@@ -52,12 +64,13 @@ export default function BrandDashboard() {
 
   const handleAddBalance = async () => {
     if (!user || !addAmount) return;
-    
-    const amount = parseFloat(addAmount);
-    if (isNaN(amount) || amount <= 0) {
+
+    if (!isValidAmount(addAmount)) {
       alert('Please enter a valid amount greater than 0');
       return;
     }
+
+    const amount = parseFloat(addAmount);
 
     try {
       setAddingBalance(true);
@@ -83,9 +96,9 @@ export default function BrandDashboard() {
       setBalance(data.newBalance);
       setAddAmount('');
       setShowAddBalance(false);
-      alert(`Successfully added $${amount.toFixed(2)} to your balance!`);
+      alert(`Successfully added ${formatCurrencyFromDollars(amount)} to your balance!`);
     } catch (error: any) {
-      console.error('Error adding balance:', error);
+      logger.error('Error adding balance', error);
       alert(error.message || 'Failed to add balance. Please try again.');
     } finally {
       setAddingBalance(false);
@@ -100,10 +113,10 @@ export default function BrandDashboard() {
 
   const fetchBrandGigs = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
-      
+
       // Fetch all gigs posted by this brand
       const gigsQuery = query(
         collection(db, 'gigs'),
@@ -113,40 +126,105 @@ export default function BrandDashboard() {
       );
 
       const gigsSnapshot = await getDocs(gigsQuery);
-      const gigsWithStats = await Promise.all(
-        gigsSnapshot.docs.map(async (doc) => {
-          const data = doc.data();
-          const gigId = doc.id;
-          
-          // Fetch submissions for this job
-          const submissionsQuery = query(
-            collection(db, 'submissions'),
-            where('gigId', '==', gigId)
-          );
-          const submissionsSnapshot = await getDocs(submissionsQuery);
-          const submissions = submissionsSnapshot.docs.map(subDoc => subDoc.data());
-          
-          const totalSubmissions = submissions.length;
-          const approvedSubmissions = submissions.filter((s: any) => s.status === 'approved').length;
-          const pendingSubmissions = submissions.filter((s: any) => s.status === 'submitted').length;
-          
-          return {
-            id: gigId,
-            ...data,
-            status: data.status || 'open',
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
-            deadlineAt: data.deadlineAt?.toDate ? data.deadlineAt.toDate() : new Date(data.deadlineAt),
-            totalSubmissions,
-            approvedSubmissions,
-            pendingSubmissions,
-          } as any;
-        })
-      );
+
+      // If no gigs, return early
+      if (gigsSnapshot.empty) {
+        setRecentGigs([]);
+        setLoading(false);
+        return;
+      }
+
+      // Extract gig IDs for batched query
+      const gigIds = gigsSnapshot.docs.map(doc => doc.id);
+
+      // ✅ FIX: Fetch ALL submissions in a single batched query (solves N+1 problem)
+      // Firestore 'in' operator supports up to 30 items, so we batch in chunks if needed
+      const submissionsByGigId = new Map();
+
+      // Process in chunks of 30 (Firestore 'in' limit)
+      for (let i = 0; i < gigIds.length; i += 30) {
+        const chunk = gigIds.slice(i, i + 30);
+        const submissionsQuery = query(
+          collection(db, 'submissions'),
+          where('gigId', 'in', chunk)
+        );
+        const submissionsSnapshot = await getDocs(submissionsQuery);
+
+        // Group submissions by gigId
+        submissionsSnapshot.docs.forEach(doc => {
+          const submission = doc.data();
+          const gigId = submission.gigId;
+          if (!submissionsByGigId.has(gigId)) {
+            submissionsByGigId.set(gigId, []);
+          }
+          submissionsByGigId.get(gigId).push(submission);
+        });
+      }
+
+      // Map gigs with their submission stats
+      const gigsWithStats = gigsSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        const gigId = doc.id;
+        const submissions = submissionsByGigId.get(gigId) || [];
+
+        const totalSubmissions = submissions.length;
+        const approvedSubmissions = submissions.filter((s: any) => s.status === 'approved').length;
+        const pendingSubmissions = submissions.filter((s: any) => s.status === 'submitted').length;
+
+        return {
+          id: gigId,
+          ...data,
+          status: data.status || 'open',
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+          deadlineAt: data.deadlineAt?.toDate ? data.deadlineAt.toDate() : new Date(data.deadlineAt),
+          totalSubmissions,
+          approvedSubmissions,
+          pendingSubmissions,
+        } as any;
+      });
 
       // Set recent gigs (last 5)
       setRecentGigs(gigsWithStats.slice(0, 5));
+      logger.debug('Fetched brand gigs with submissions', { count: gigsWithStats.length });
+
+      // Calculate analytics
+      const totalGigs = gigsWithStats.length;
+      const activeGigs = gigsWithStats.filter((g: any) => g.status === 'open' || g.status === 'accepted').length;
+      const totalSubmissions = gigsWithStats.reduce((sum: number, g: any) => sum + g.totalSubmissions, 0);
+      const approvedSubmissions = gigsWithStats.reduce((sum: number, g: any) => sum + g.approvedSubmissions, 0);
+      const completionRate = totalSubmissions > 0 ? (approvedSubmissions / totalSubmissions) * 100 : 0;
+
+      // Fetch unique creators who submitted
+      const uniqueCreators = new Set();
+      for (const gigId of gigIds) {
+        const subs = submissionsByGigId.get(gigId) || [];
+        subs.forEach((sub: any) => {
+          if (sub.creatorId) uniqueCreators.add(sub.creatorId);
+        });
+      }
+
+      // Fetch payments to calculate total spent
+      const paymentsQuery = query(
+        collection(db, 'payments'),
+        where('brandId', '==', user.uid),
+        where('status', 'in', ['transferred', 'balance_transferred'])
+      );
+      const paymentsSnapshot = await getDocs(paymentsQuery);
+      const totalSpent = paymentsSnapshot.docs.reduce((sum, doc) => {
+        const data = doc.data();
+        return sum + (data.amount || 0);
+      }, 0);
+
+      setAnalytics({
+        totalSpent,
+        totalCreators: uniqueCreators.size,
+        avgApprovalTime: 0, // TODO: Calculate from submission timestamps
+        totalGigs,
+        activeGigs,
+        completionRate,
+      });
     } catch (error) {
-      console.error('Error fetching brand gigs:', error);
+      logger.error('Error fetching brand gigs', error);
     } finally {
       setLoading(false);
     }
@@ -196,7 +274,7 @@ export default function BrandDashboard() {
             ) : (
               <div className="text-center">
                 <div className="text-4xl font-bold text-blue-700">
-                  ${(balance ?? 0).toFixed(2)}
+                  {formatCurrencyFromDollars(balance ?? 0)}
                 </div>
                 <p className="text-sm text-blue-600 mt-2">Available balance for payments</p>
                 
@@ -233,11 +311,74 @@ export default function BrandDashboard() {
           </CardContent>
         </Card>
 
+        {/* Analytics Cards */}
+        {recentGigs.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card className="border-zinc-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-500">Total Spent</p>
+                    <p className="text-lg font-bold text-zinc-900">
+                      {formatCurrencyFromDollars(analytics.totalSpent)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-zinc-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-500">Creators</p>
+                    <p className="text-lg font-bold text-zinc-900">{analytics.totalCreators}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-zinc-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Briefcase className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-500">Active Gigs</p>
+                    <p className="text-lg font-bold text-zinc-900">{analytics.activeGigs}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-zinc-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-500">Approval Rate</p>
+                    <p className="text-lg font-bold text-zinc-900">{analytics.completionRate.toFixed(0)}%</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Add Gig Button */}
         <div className="mb-8">
           <Link href="/brand/gigs/new">
             <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white py-6 text-lg font-medium">
-              + Add Gig
+              + Create New Gig
             </Button>
           </Link>
         </div>

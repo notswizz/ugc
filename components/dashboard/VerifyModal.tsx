@@ -149,56 +149,41 @@ export default function VerifyModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-end sm:items-center justify-center animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="bg-zinc-50 w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl max-h-[90vh] overflow-hidden shadow-2xl"
+        className="bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl max-h-[90vh] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-br from-emerald-500 to-teal-600 px-5 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5 text-white" />
+        <div className="sticky top-0 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/30">
+                <ShieldCheck className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">Verify Account</h2>
-                <p className="text-xs text-emerald-100">{completedSteps}/{totalSteps} completed</p>
+                <h2 className="text-xl font-bold text-white">Verify Your Account</h2>
+                <p className="text-sm text-white/80 mt-0.5">{completedSteps}/{totalSteps} steps completed</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+              className="p-2 hover:bg-white/20 rounded-xl transition-colors duration-200"
+              aria-label="Close"
             >
               <XIcon className="w-5 h-5 text-white" />
             </button>
           </div>
-
-          {/* Trust Score */}
-          <div className="bg-white/20 backdrop-blur rounded-xl p-3 flex items-center justify-between">
-            <div>
-              <p className="text-emerald-100 text-xs font-medium">Trust Score</p>
-              <p className="text-white text-2xl font-bold">{currentScore}/100</p>
-            </div>
-            <div className="text-right">
-              {availablePoints > 0 && (
-                <>
-                  <p className="text-emerald-100 text-xs">Available points</p>
-                  <p className="text-white text-lg font-semibold">+{availablePoints}</p>
-                </>
-              )}
-            </div>
-          </div>
         </div>
 
-        <div className="overflow-y-auto max-h-[calc(90vh-200px)] p-4 pb-24 space-y-3">
+        <div className="overflow-y-auto max-h-[calc(90vh-180px)] p-5 pb-32 space-y-4 bg-gradient-to-b from-zinc-50 to-white">
           {/* Refresh Button */}
           <button
             onClick={handleRefresh}
             disabled={loading === 'refresh'}
-            className="w-full flex items-center justify-center gap-2 py-2 text-sm text-zinc-500 hover:text-zinc-700 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-zinc-500 hover:text-zinc-700 transition-colors duration-200 rounded-xl hover:bg-zinc-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading === 'refresh' ? 'animate-spin' : ''}`} />
             {loading === 'refresh' ? 'Refreshing...' : 'Refresh status'}
@@ -212,64 +197,70 @@ export default function VerifyModal({
             return (
               <div
                 key={step.id}
-                className={`bg-white rounded-2xl border overflow-hidden transition-all ${
+                className={`bg-white rounded-2xl border-2 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 ${
                   step.completed
-                    ? 'border-emerald-200'
+                    ? 'border-emerald-300 shadow-emerald-100'
                     : step.disabled
-                    ? 'border-zinc-200 opacity-60'
-                    : 'border-zinc-200'
+                    ? 'border-zinc-200/60 opacity-60'
+                    : 'border-zinc-200/80 hover:border-violet-200'
                 }`}
               >
-                <div className="flex items-center gap-4 p-4">
+                <div className="flex items-center gap-4 p-5">
                   {/* Status Icon */}
                   <div className="relative">
-                    <div className={`w-12 h-12 rounded-xl ${step.completed ? 'bg-emerald-100' : step.iconBg} flex items-center justify-center`}>
+                    <div className={`w-14 h-14 rounded-xl ${step.completed ? 'bg-gradient-to-br from-emerald-100 to-teal-100 ring-2 ring-emerald-200/50' : step.iconBg} flex items-center justify-center shadow-md`}>
                       {step.completed ? (
-                        <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                        <CheckCircle2 className="w-7 h-7 text-emerald-600" />
                       ) : (
-                        <Icon className="w-6 h-6 text-white" />
+                        <Icon className="w-7 h-7 text-white" />
                       )}
                     </div>
                     {/* Step number */}
-                    <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${step.completed ? 'bg-emerald-500' : 'bg-zinc-300'} text-white text-xs font-bold flex items-center justify-center`}>
+                    <div className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full ${step.completed ? 'bg-gradient-to-br from-emerald-500 to-teal-500' : 'bg-zinc-400'} text-white text-xs font-bold flex items-center justify-center shadow-sm ring-2 ring-white`}>
                       {step.completed ? '✓' : index + 1}
                     </div>
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-sm font-semibold text-zinc-900">{step.title}</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-base font-bold text-zinc-900">{step.title}</h3>
                       {!step.completed && (
-                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] font-bold text-violet-600 bg-violet-50 px-2 py-1 rounded-full ring-1 ring-violet-200/50">
                           +{step.points} pts
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-zinc-500">{step.description}</p>
+                    <p className="text-sm text-zinc-600">{step.description}</p>
                     {step.disabled && step.disabledReason && (
-                      <p className="text-xs text-amber-600 mt-1">{step.disabledReason}</p>
+                      <p className="text-xs text-amber-600 font-medium mt-1.5 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-amber-500"></span>
+                        {step.disabledReason}
+                      </p>
                     )}
                   </div>
 
                   {/* Action */}
                   {step.completed ? (
-                    <div className="px-3 py-1.5 bg-emerald-100 rounded-lg">
-                      <span className="text-xs font-semibold text-emerald-700">Done</span>
+                    <div className="px-4 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl ring-2 ring-emerald-200/50">
+                      <span className="text-sm font-bold text-emerald-700 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Done
+                      </span>
                     </div>
                   ) : (
                     <Button
                       size="sm"
                       onClick={step.onClick}
                       disabled={step.disabled || isLoading}
-                      className="h-9 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800"
+                      className="h-10 px-5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold shadow-md shadow-violet-500/30 disabled:opacity-50 disabled:shadow-none transition-all duration-200"
                     >
                       {isLoading ? (
                         <RefreshCw className="w-4 h-4 animate-spin" />
                       ) : (
                         <>
-                          Go
-                          <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                          Start
+                          <ArrowRight className="w-4 h-4 ml-1.5" />
                         </>
                       )}
                     </Button>
@@ -280,23 +271,25 @@ export default function VerifyModal({
           })}
 
           {/* Benefits */}
-          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-4 mt-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Zap className="w-4 h-4 text-amber-600" />
-              <h3 className="text-sm font-semibold text-amber-900">Verification Benefits</h3>
+          <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-2xl border-2 border-amber-200/80 p-5 mt-2 shadow-sm">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-md">
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-base font-bold text-amber-900">Verification Benefits</h3>
             </div>
-            <ul className="space-y-2 text-xs text-amber-800">
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
-                <span><strong>50+ score:</strong> Instant withdrawals & reimbursement gigs</span>
+            <ul className="space-y-3 text-sm text-amber-900">
+              <li className="flex items-start gap-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0"></span>
+                <span><strong className="font-semibold">Complete all steps:</strong> Unlock instant withdrawals & premium gigs</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
-                <span><strong>70+ score:</strong> Access high-value gigs ($500+)</span>
+              <li className="flex items-start gap-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0"></span>
+                <span><strong className="font-semibold">Higher verification:</strong> Access high-value gigs ($500+)</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
-                <span>Better matching with premium brands</span>
+              <li className="flex items-start gap-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0"></span>
+                <span>Better matching with premium brands and exclusive opportunities</span>
               </li>
             </ul>
           </div>

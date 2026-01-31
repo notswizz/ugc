@@ -154,33 +154,36 @@ export default function ProfileModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-end sm:items-center justify-center animate-in fade-in duration-200"
       onClick={() => { if (!socialVerifyPlatform) onClose(); }}
     >
       <div
-        className="bg-zinc-50 w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl max-h-[90vh] overflow-hidden shadow-2xl"
+        className="bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl max-h-[90vh] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-zinc-900 px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-              <Link2 className="w-5 h-5 text-white" />
+        <div className="sticky top-0 bg-gradient-to-br from-orange-500 via-pink-500 to-red-500 px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/30">
+                <Link2 className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Link Your Socials</h2>
+                <p className="text-sm text-white/80 mt-0.5">Connect to unlock more gigs</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">Social Links</h2>
-              <p className="text-xs text-zinc-400">Connect your profiles</p>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-xl transition-colors duration-200"
+              aria-label="Close"
+            >
+              <XIcon className="w-5 h-5 text-white" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-          >
-            <XIcon className="w-5 h-5 text-white" />
-          </button>
         </div>
 
-        <div className="overflow-y-auto max-h-[calc(90vh-140px)] p-4 pb-32 space-y-3">
+        <div className="overflow-y-auto max-h-[calc(90vh-180px)] p-5 pb-32 space-y-4 bg-gradient-to-b from-zinc-50 to-white">
           {platforms.map((platform) => {
             const value = socialValues[platform.id];
             const followers = followerCounts[platform.id];
@@ -188,17 +191,17 @@ export default function ProfileModal({
             const savedValue = creatorData.socials?.[platform.id];
 
             return (
-              <div key={platform.id} className={`bg-white rounded-2xl border overflow-hidden ${isVerified ? 'border-emerald-200' : 'border-zinc-200'}`}>
+              <div key={platform.id} className={`bg-white rounded-2xl border-2 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 ${isVerified ? 'border-emerald-300 shadow-emerald-100' : 'border-zinc-200/80'}`}>
                 {/* Platform Header */}
-                <div className={`flex items-center gap-3 px-4 py-3 ${isVerified ? 'bg-emerald-50' : ''}`}>
-                  <div className={`w-9 h-9 rounded-lg ${platform.bgColor} text-white flex items-center justify-center`}>
+                <div className={`flex items-center gap-3 px-5 py-4 ${isVerified ? 'bg-gradient-to-r from-emerald-50 to-teal-50' : 'bg-zinc-50/50'}`}>
+                  <div className={`w-11 h-11 rounded-xl ${platform.bgColor} text-white flex items-center justify-center shadow-md`}>
                     {platform.icon}
                   </div>
-                  <span className="text-sm font-semibold text-zinc-900 flex-1">{platform.name}</span>
+                  <span className="text-base font-bold text-zinc-900 flex-1">{platform.name}</span>
                   {isVerified ? (
                     <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-100 px-2 py-1 rounded-full">
-                        <CheckCircle className="w-3.5 h-3.5" />
+                      <span className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold bg-emerald-100 px-3 py-1.5 rounded-full ring-2 ring-emerald-200/50">
+                        <CheckCircle className="w-4 h-4" />
                         Verified
                       </span>
                       <a
@@ -214,9 +217,8 @@ export default function ProfileModal({
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
-                        variant="ghost"
                         onClick={() => setSocialVerifyPlatform(platform.id)}
-                        className="text-xs h-7 text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                        className="text-xs h-8 px-4 bg-violet-600 hover:bg-violet-700 text-white rounded-lg shadow-sm"
                       >
                         Verify
                       </Button>
@@ -234,34 +236,34 @@ export default function ProfileModal({
 
                 {/* Verified - show read-only info */}
                 {isVerified ? (
-                  <div className="px-4 py-3 bg-emerald-50/50 flex items-center justify-between">
-                    <span className="text-sm font-medium text-zinc-900">@{savedValue}</span>
+                  <div className="px-5 py-4 bg-gradient-to-r from-emerald-50/80 to-teal-50/80 flex items-center justify-between border-t border-emerald-100">
+                    <span className="text-base font-semibold text-zinc-900">@{savedValue}</span>
                     {creatorData.followingCount?.[platform.id] && (
-                      <span className="text-xs text-zinc-500">{creatorData.followingCount[platform.id].toLocaleString()} {platform.followerLabel.toLowerCase()}</span>
+                      <span className="text-sm text-zinc-600 font-medium">{creatorData.followingCount[platform.id].toLocaleString()} {platform.followerLabel.toLowerCase()}</span>
                     )}
                   </div>
                 ) : (
                   /* Inputs for non-verified */
-                  <div className="p-4 grid grid-cols-[1fr_100px] gap-3">
+                  <div className="p-5 grid grid-cols-[1fr_110px] gap-3 bg-white">
                     <div>
-                      <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide mb-1 block">Username</label>
+                      <label className="text-xs font-semibold text-zinc-500 mb-2 block">Username</label>
                       <Input
                         type="text"
                         placeholder={platform.placeholder}
                         value={value}
                         onChange={(e) => setSocialValues({ ...socialValues, [platform.id]: e.target.value })}
-                        className="h-10 text-sm bg-zinc-50 border-zinc-200"
+                        className="h-11 text-sm bg-zinc-50 border-2 border-zinc-200 focus:border-orange-400 focus:ring-orange-100 rounded-xl"
                         disabled={saving}
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide mb-1 block">{platform.followerLabel}</label>
+                      <label className="text-xs font-semibold text-zinc-500 mb-2 block">{platform.followerLabel}</label>
                       <Input
                         type="text"
                         placeholder="0"
                         value={followers}
                         onChange={(e) => setFollowerCounts({ ...followerCounts, [platform.id]: e.target.value })}
-                        className="h-10 text-sm bg-zinc-50 border-zinc-200"
+                        className="h-11 text-sm bg-zinc-50 border-2 border-zinc-200 focus:border-orange-400 focus:ring-orange-100 rounded-xl"
                         disabled={saving}
                       />
                     </div>
@@ -273,15 +275,15 @@ export default function ProfileModal({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-zinc-200 p-4 pb-24 flex gap-3">
-          <Button variant="outline" onClick={onClose} disabled={saving} className="flex-1 h-12 rounded-xl">
+        <div className="sticky bottom-0 bg-gradient-to-t from-white via-white to-white/80 backdrop-blur-sm border-t border-zinc-200 p-5 pb-24 flex gap-3 shadow-lg">
+          <Button variant="outline" onClick={onClose} disabled={saving} className="flex-1 h-12 rounded-xl border-2 border-zinc-200 hover:bg-zinc-50 font-semibold">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="flex-1 h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800">
+          <Button onClick={handleSave} disabled={saving} className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold shadow-lg shadow-orange-500/30">
             {saving ? 'Saving…' : (
               <>
                 <Save className="w-4 h-4 mr-2" />
-                Save
+                Save Changes
               </>
             )}
           </Button>

@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { calculatePayout, getCreatorFollowingCount, getCreatorNetPayout } from '@/lib/payments/calculate-payout';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import {
   ArrowLeft,
   Clock,
@@ -31,32 +32,11 @@ import {
   MessageCircle,
   XCircle,
 } from 'lucide-react';
-
-function formatTimeLeft(deadline: Date): string {
-  const now = new Date();
-  const diff = deadline.getTime() - now.getTime();
-  if (diff < 0) return 'Ended';
-
-  const minutes = Math.floor(diff / (1000 * 60));
-  const hours = Math.floor(minutes / 60);
-
-  if (minutes < 60) return minutes < 1 ? 'Ends soon' : `${minutes}m left`;
-  if (hours < 24) {
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m left` : `${hours}h left`;
-  }
-  const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
-  return remainingHours > 0 ? `${days}d ${remainingHours}h left` : `${days}d left`;
-}
+import { formatTimeLeft, formatCurrencyFromDollars, calculateCreatorNet } from '@/lib/utils/formatters';
+import { logger } from '@/lib/utils/logger';
 
 function formatMoney(dollars: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(dollars);
+  return formatCurrencyFromDollars(dollars);
 }
 
 type GigStatus = 'open' | 'accepted' | 'submitted' | 'needs_changes' | 'approved' | 'paid' | 'closed' | 'rejected';
@@ -70,6 +50,7 @@ export default function GigDetail() {
   const [accepting, setAccepting] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<GigStatus>('open');
   const [expandedSection, setExpandedSection] = useState<string | null>('brief');
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
 
   useEffect(() => {
     if (gigId && typeof gigId === 'string') {
@@ -100,7 +81,7 @@ export default function GigDetail() {
             brandName = brandDoc.data().name || brandDoc.data().companyName || 'Unknown Brand';
           }
         } catch (err) {
-          console.error('Error fetching brand name:', err);
+          logger.error('Error fetching brand name', err);
         }
       }
 
@@ -112,7 +93,7 @@ export default function GigDetail() {
             creatorFollowingCount = getCreatorFollowingCount(creatorDoc.data());
           }
         } catch (err) {
-          console.error('Error fetching creator data:', err);
+          logger.error('Error fetching creator data', err);
         }
       }
       const calculatedPayout = calculatePayout(gigData, creatorFollowingCount);
@@ -158,7 +139,7 @@ export default function GigDetail() {
       });
       setCurrentStatus(status);
     } catch (error) {
-      console.error('Error fetching gig:', error);
+      logger.error('Error fetching gig', error);
       toast.error('Failed to load gig details');
       router.push('/creator/gigs');
     } finally {
@@ -186,7 +167,7 @@ export default function GigDetail() {
         toast.error(data.message || data.error || 'Failed to accept gig');
       }
     } catch (error: any) {
-      console.error('Error accepting gig:', error);
+      logger.error('Error accepting gig', error);
       toast.error(error.message || 'Failed to accept gig');
     } finally {
       setAccepting(false);
@@ -528,8 +509,8 @@ export default function GigDetail() {
                   Gig Ended
                 </Button>
               ) : (
-                <Button onClick={handleAcceptGig} disabled={accepting} className="flex-1 h-14 text-base font-semibold rounded-xl">
-                  {accepting ? 'Accepting...' : 'Accept Gig'}
+                <Button onClick={() => setShowAcceptConfirm(true)} disabled={accepting} className="flex-1 h-14 text-base font-semibold rounded-xl">
+                  Accept Gig
                 </Button>
               )
             ) : currentStatus === 'accepted' ? (
@@ -584,6 +565,47 @@ export default function GigDetail() {
           </div>
         </div>
       </div>
+
+      {/* Accept Gig Confirmation Dialog */}
+      <ConfirmationDialog
+        open={showAcceptConfirm}
+        onOpenChange={setShowAcceptConfirm}
+        title="Accept This Gig?"
+        description="By accepting, you commit to delivering the content by the deadline. Make sure you understand the requirements."
+        confirmText="Accept Gig"
+        cancelText="Cancel"
+        onConfirm={handleAcceptGig}
+        variant="default"
+        icon="info"
+        details={
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-600">Payout:</span>
+              <span className="font-semibold text-zinc-900">{formatMoney(gig.payout)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-600">Deadline:</span>
+              <span className="font-semibold text-zinc-900">{formatTimeLeft(deadlineDate)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-600">Deliverables:</span>
+              <span className="font-semibold text-zinc-900">
+                {deliverables.videos > 0 && `${deliverables.videos} video${deliverables.videos > 1 ? 's' : ''}`}
+                {deliverables.videos > 0 && deliverables.photos > 0 && ', '}
+                {deliverables.photos > 0 && `${deliverables.photos} photo${deliverables.photos > 1 ? 's' : ''}`}
+              </span>
+            </div>
+            {gig.productInVideoRequired && (
+              <div className="pt-2 mt-2 border-t border-zinc-200">
+                <div className="flex items-start gap-2 text-xs text-amber-700">
+                  <Package className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>Product purchase required (up to {formatMoney(gig.reimbursementCap || 0)} reimbursement)</span>
+                </div>
+              </div>
+            )}
+          </div>
+        }
+      />
     </Layout>
   );
 }

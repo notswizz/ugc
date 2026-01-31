@@ -3,6 +3,7 @@ import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from '
 import { db } from '@/lib/firebase/client';
 import { canAccessGig } from '@/lib/rep/service';
 import { calculateTrustScore } from '@/lib/trustScore/calculator';
+import { logger } from '@/lib/utils/logger';
 
 export function useDashboardData(user: any, appUser: any, creatorData: any) {
   const [balance, setBalance] = useState<number | null>(null);
@@ -16,6 +17,7 @@ export function useDashboardData(user: any, appUser: any, creatorData: any) {
     pendingSubmissions: 0,
     completedGigs: 0,
     submittedGigs: 0,
+    pendingEarnings: 0,
   });
 
   // Fetch balance from creator data
@@ -59,23 +61,42 @@ export function useDashboardData(user: any, appUser: any, creatorData: any) {
       const acceptedGigs = submissions.filter(
         (sub: any) => sub.status === 'approved'
       ).length;
-      const pendingSubmissions = submissions.filter(
-        (sub: any) => sub.status === 'submitted' || sub.status === 'needs_changes'
-      ).length;
       const completedGigs = submissions.filter(
         (sub: any) => sub.status === 'approved'
       ).length;
       const submittedGigs = submissions.length;
 
+      // Calculate pending earnings from submitted gigs
+      const pendingSubmissionsList = submissions.filter(
+        (sub: any) => sub.status === 'submitted' || sub.status === 'needs_changes'
+      );
+
+      // Fetch gig details for pending submissions to calculate potential earnings
+      let pendingEarnings = 0;
+      for (const submission of pendingSubmissionsList) {
+        try {
+          const gigDoc = await getDoc(doc(db, 'gigs', submission.gigId));
+          if (gigDoc.exists()) {
+            const gigData = gigDoc.data();
+            // Use the payout amount (already net of platform fee if dynamic)
+            const payout = gigData.payout || 0;
+            pendingEarnings += payout;
+          }
+        } catch (error) {
+          logger.error('Error fetching gig for pending earnings', error);
+        }
+      }
+
       setStats({
         totalEarnings,
         acceptedGigs,
-        pendingSubmissions,
+        pendingSubmissions: pendingSubmissionsList.length,
         completedGigs,
         submittedGigs,
+        pendingEarnings,
       });
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      logger.error('Error fetching stats', error);
     } finally {
       setLoadingStats(false);
     }
@@ -130,7 +151,7 @@ export function useDashboardData(user: any, appUser: any, creatorData: any) {
 
       setHotJobs(eligibleGigs);
     } catch (error) {
-      console.error('Error fetching hot jobs:', error);
+      logger.error('Error fetching hot jobs', error);
     } finally {
       setLoadingHotJobs(false);
     }

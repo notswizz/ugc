@@ -12,6 +12,7 @@ import LoadingSpinner from '@/components/ui/loading-spinner';
 import { calculatePayout, getCreatorFollowingCount, getCreatorNetPayout } from '@/lib/payments/calculate-payout';
 import HistoryTab from './_history-tab';
 import { canAccessGig, getRepLevel } from '@/lib/rep/service';
+import { logger } from '@/lib/utils/logger';
 
 export default function CreatorGigs() {
   const { user, appUser } = useAuth();
@@ -28,22 +29,22 @@ export default function CreatorGigs() {
 
   const fetchCreatorData = async () => {
     if (!user || !appUser || appUser.role !== 'creator') {
-      console.log('Not fetching creator data:', { hasUser: !!user, hasAppUser: !!appUser, role: appUser?.role });
+      logger.debug('Not fetching creator data', { hasUser: !!user, hasAppUser: !!appUser, role: appUser?.role });
       return;
     }
-    
+
     try {
-      console.log('Fetching creator data for:', user.uid);
+      logger.debug('Fetching creator data for user', { userId: user.uid });
       const creatorDoc = await getDoc(doc(db, 'creators', user.uid));
       if (creatorDoc.exists()) {
         const data = { ...creatorDoc.data(), uid: user.uid };
-        console.log('Creator profile found:', { trustScore: calculateTrustScore(data), hardNos: data.hardNos });
+        logger.debug('Creator profile found', { trustScore: calculateTrustScore(data), hardNos: data.hardNos });
         setCreatorData(data);
       } else {
         // If creator profile doesn't exist yet, use empty defaults
         // Give new users a minimum trust score so they can see gigs without trustScoreMin requirements
         // This matches the initial trust score calculation from onboarding (20 base + socials)
-        console.log('No creator profile found, using defaults with trustScore: 20');
+        logger.debug('No creator profile found, using defaults with trustScore: 20');
         setCreatorData({
           hardNos: [],
           interests: [],
@@ -51,9 +52,8 @@ export default function CreatorGigs() {
         });
       }
     } catch (error) {
-      console.error('Error fetching creator data:', error);
+      logger.error('Error fetching creator data', error);
       // Use empty defaults on error with minimum trust score
-      console.log('Error occurred, using defaults with trustScore: 20');
       setCreatorData({
         hardNos: [],
         interests: [],
@@ -71,14 +71,14 @@ export default function CreatorGigs() {
 
   const fetchGigs = async () => {
     if (!user || !appUser || creatorData === null) {
-      console.log('Not fetching gigs:', { hasUser: !!user, hasAppUser: !!appUser, creatorData: creatorData });
+      logger.debug('Not fetching gigs', { hasUser: !!user, hasAppUser: !!appUser, creatorData: creatorData });
       return;
     }
-    
+
     try {
       setLoading(true);
-      console.log('Fetching gigs for creator:', user.uid);
-      
+      logger.debug('Fetching gigs for creator', { userId: user.uid });
+
       // Fetch gigs from Firestore
       // Fetch all gigs and filter client-side by status (can't use 'in' with multiple statuses in Firestore efficiently)
       const q = query(
@@ -88,31 +88,18 @@ export default function CreatorGigs() {
       );
 
       const querySnapshot = await getDocs(q);
-      console.log(`Found ${querySnapshot.size} total gigs in database`);
-      
-      // Log the statuses we found
-      const statusCounts = {};
-      querySnapshot.docs.forEach(doc => {
-        const status = doc.data().status || 'undefined';
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
-      });
-      console.log('Gig statuses found:', statusCounts);
-      
+      logger.debug(`Found ${querySnapshot.size} total gigs in database`);
+
       // Filter to only include gigs that should be visible (open, accepted, or no status set)
       // Gigs with status 'closed', 'cancelled', 'expired', 'paid' should not show in browse
-      const visibleStatuses = ['open', 'accepted', undefined, null];
       const visibleDocs = querySnapshot.docs.filter(doc => {
         const status = doc.data().status;
-        const shouldShow = !status || status === 'open' || status === 'accepted';
-        if (!shouldShow) {
-          console.log(`Gig ${doc.id} filtered out due to status: ${status}`);
-        }
-        return shouldShow;
+        return !status || status === 'open' || status === 'accepted';
       });
-      
-      console.log(`After status filtering, ${visibleDocs.length} gigs are potentially visible`);
-      
-      // Fetch submissions for all gigs to check submission caps
+
+      logger.debug(`After status filtering, ${visibleDocs.length} gigs are potentially visible`);
+
+      // Map gigs data
       const gigsData = visibleDocs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -120,64 +107,81 @@ export default function CreatorGigs() {
         createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt),
       }));
 
-      // Check submission counts and creator submissions for each job
-      const gigsWithSubmissionCounts = await Promise.all(
-        gigsData.map(async (gig) => {
-          // Count approved submissions for this job
-          const approvedSubmissionsQuery = query(
-            collection(db, 'submissions'),
-            where('gigId', '==', gig.id),
-            where('status', '==', 'approved')
-          );
-          const approvedSubmissionsSnapshot = await getDocs(approvedSubmissionsQuery);
-          const approvedCount = approvedSubmissionsSnapshot.size;
-          
-          // Check if creator already has an APPROVED or REJECTED submission for this job
-          // Approved = already done, Rejected = can't resubmit (one shot per gig)
-          const creatorApprovedSubmissionsQuery = query(
-            collection(db, 'submissions'),
-            where('gigId', '==', gig.id),
-            where('creatorId', '==', user?.uid || ''),
-            where('status', '==', 'approved')
-          );
-          const creatorApprovedSubmissionsSnapshot = await getDocs(creatorApprovedSubmissionsQuery);
-          const hasCreatorApprovedSubmission = creatorApprovedSubmissionsSnapshot.size > 0;
-          
-          // Also check for rejected submissions - no resubmissions allowed
-          const creatorRejectedSubmissionsQuery = query(
-            collection(db, 'submissions'),
-            where('gigId', '==', gig.id),
-            where('creatorId', '==', user?.uid || ''),
-            where('status', '==', 'rejected')
-          );
-          const creatorRejectedSubmissionsSnapshot = await getDocs(creatorRejectedSubmissionsQuery);
-          const hasCreatorRejectedSubmission = creatorRejectedSubmissionsSnapshot.size > 0;
-          
-          return {
-            ...gig,
-            approvedSubmissionsCount: approvedCount,
-            hasCreatorApprovedSubmission,
-            hasCreatorRejectedSubmission,
-          };
-        })
-      );
+      // ✅ FIX N+1: Batch fetch all submissions in one query instead of 3 queries per gig
+      const gigIds = gigsData.map(gig => gig.id);
+      const submissionsByGigId = new Map();
+      const creatorSubmissionsByGigId = new Map();
+
+      // Fetch all submissions for these gigs in batches (Firestore 'in' limit is 30)
+      for (let i = 0; i < gigIds.length; i += 30) {
+        const chunk = gigIds.slice(i, i + 30);
+
+        // Fetch all approved submissions
+        const approvedQuery = query(
+          collection(db, 'submissions'),
+          where('gigId', 'in', chunk),
+          where('status', '==', 'approved')
+        );
+        const approvedSnapshot = await getDocs(approvedQuery);
+
+        approvedSnapshot.docs.forEach(doc => {
+          const submission = doc.data();
+          const gigId = submission.gigId;
+
+          // Count approved submissions per gig
+          if (!submissionsByGigId.has(gigId)) {
+            submissionsByGigId.set(gigId, { approved: 0 });
+          }
+          submissionsByGigId.get(gigId).approved += 1;
+
+          // Track creator's approved submissions
+          if (submission.creatorId === user.uid) {
+            creatorSubmissionsByGigId.set(gigId, {
+              ...creatorSubmissionsByGigId.get(gigId),
+              hasApproved: true,
+            });
+          }
+        });
+
+        // Fetch creator's rejected submissions
+        const rejectedQuery = query(
+          collection(db, 'submissions'),
+          where('gigId', 'in', chunk),
+          where('creatorId', '==', user.uid),
+          where('status', '==', 'rejected')
+        );
+        const rejectedSnapshot = await getDocs(rejectedQuery);
+
+        rejectedSnapshot.docs.forEach(doc => {
+          const submission = doc.data();
+          const gigId = submission.gigId;
+          creatorSubmissionsByGigId.set(gigId, {
+            ...creatorSubmissionsByGigId.get(gigId),
+            hasRejected: true,
+          });
+        });
+      }
+
+      // Map submission data to gigs
+      const gigsWithSubmissionCounts = gigsData.map(gig => {
+        const submissions = submissionsByGigId.get(gig.id) || { approved: 0 };
+        const creatorSubmissions = creatorSubmissionsByGigId.get(gig.id) || {};
+
+        return {
+          ...gig,
+          approvedSubmissionsCount: submissions.approved,
+          hasCreatorApprovedSubmission: creatorSubmissions.hasApproved || false,
+          hasCreatorRejectedSubmission: creatorSubmissions.hasRejected || false,
+        };
+      });
 
       // Filter out gigs that have reached their submission cap or creator already has approved/rejected submission
       const fetchedGigs = gigsWithSubmissionCounts.filter(gig => {
         const submissionCap = gig.acceptedSubmissionsLimit || 1;
         const isFull = gig.approvedSubmissionsCount >= submissionCap;
-        if (isFull) {
-          console.log(`Gig ${gig.id} filtered: Gig is full (${gig.approvedSubmissionsCount}/${submissionCap})`);
-          return false;
-        }
-        if (gig.hasCreatorApprovedSubmission) {
-          console.log(`Gig ${gig.id} filtered: Creator already has approved submission`);
-          return false;
-        }
-        if (gig.hasCreatorRejectedSubmission) {
-          console.log(`Gig ${gig.id} filtered: Creator has rejected submission (no resubmit)`);
-          return false;
-        }
+        if (isFull) return false;
+        if (gig.hasCreatorApprovedSubmission) return false;
+        if (gig.hasCreatorRejectedSubmission) return false;
         return true;
       });
 
@@ -195,9 +199,9 @@ export default function CreatorGigs() {
           );
           const invitationsSnapshot = await getDocs(invitationsQuery);
           pendingSquadIds = invitationsSnapshot.docs.map(doc => doc.data().squadId).filter(Boolean);
-          console.log('Pending squad invitations:', pendingSquadIds);
+          logger.debug('Pending squad invitations', { count: pendingSquadIds.length });
         } catch (error) {
-          console.error('Error fetching squad invitations:', error);
+          logger.error('Error fetching squad invitations', error);
         }
       }
       
@@ -231,7 +235,7 @@ export default function CreatorGigs() {
                 }
               }
             } catch (error) {
-              console.error('Error checking squad membership:', error);
+              logger.error('Error checking squad membership', error);
             }
           }
           return { gigId: gig.id, isInSquad: isInSelectedSquad, squadNames };
@@ -257,7 +261,7 @@ export default function CreatorGigs() {
                 }
               }
             } catch (error) {
-              console.error('Error fetching squad name:', error);
+              logger.error('Error fetching squad name', error);
             }
           }
           if (squadNames.length > 0) {
@@ -274,20 +278,20 @@ export default function CreatorGigs() {
         // Check if gig is already accepted by someone else (for single-creator gigs)
         const isSingleCreatorGig = (gig.acceptedSubmissionsLimit || 1) === 1;
         if (isSingleCreatorGig && gig.status === 'accepted' && gig.acceptedBy && gig.acceptedBy !== user?.uid) {
-          console.log(`Gig ${gig.id} filtered: Already accepted by another creator (single-creator gig)`);
+          logger.debug(`Gig ${gig.id} filtered: Already accepted by another creator (single-creator gig)`);
           return false;
         }
         
         // Filter out gigs that are closed/cancelled/expired
         if (gig.status === 'closed' || gig.status === 'cancelled' || gig.status === 'expired' || gig.status === 'paid') {
-          console.log(`Gig ${gig.id} filtered: Status is ${gig.status}`);
+          logger.debug(`Gig ${gig.id} filtered: Status is ${gig.status}`);
           return false;
         }
 
         // Filter out ended gigs (deadline passed) — inactive, no sign-up or accept
         const deadlineMs = gig.deadlineAt ? new Date(gig.deadlineAt).getTime() : null;
         if (deadlineMs != null && deadlineMs < Date.now()) {
-          console.log(`Gig ${gig.id} filtered: Deadline passed (ended)`);
+          logger.debug(`Gig ${gig.id} filtered: Deadline passed (ended)`);
           return false;
         }
         
@@ -297,7 +301,7 @@ export default function CreatorGigs() {
           const creatorRep = creatorData?.rep || 0;
           const gigAccess = canAccessGig(creatorRep, gig.createdAt);
           if (!gigAccess.canAccess) {
-            console.log(`Gig ${gig.id} locked: Rep-based early access locked for ${gigAccess.minutesUntilUnlock} more minutes`);
+            logger.debug(`Gig ${gig.id} locked: Rep-based early access locked for ${gigAccess.minutesUntilUnlock} more minutes`);
             // Mark it on the gig object so we can show a locked state
             gig.repLocked = true;
             gig.unlockAt = gigAccess.unlockAt;
@@ -312,11 +316,11 @@ export default function CreatorGigs() {
         
         // Hard No filter - creators should never see gigs that violate their hard no's
         if (creatorHardNos.includes(gig.primaryThing)) {
-          console.log(`Gig ${gig.id} filtered: Hard No match (${gig.primaryThing})`);
+          logger.debug(`Gig ${gig.id} filtered: Hard No match (${gig.primaryThing})`);
           return false;
         }
         if (gig.secondaryTags?.some(tag => creatorHardNos.includes(tag))) {
-          console.log(`Gig ${gig.id} filtered: Hard No match in secondary tags`);
+          logger.debug(`Gig ${gig.id} filtered: Hard No match in secondary tags`);
           return false;
         }
         
@@ -327,7 +331,7 @@ export default function CreatorGigs() {
             ? calculateTrustScore(creatorData)
             : (creatorData?.trustScore ?? 20);
           if (creatorTrustScore < gig.trustScoreMin) {
-            console.log(`Gig ${gig.id} filtered: Trust score ${creatorTrustScore} < ${gig.trustScoreMin}`);
+            logger.debug(`Gig ${gig.id} filtered: Trust score ${creatorTrustScore} < ${gig.trustScoreMin}`);
             return false;
           }
         }
@@ -339,7 +343,7 @@ export default function CreatorGigs() {
           const creatorFollowers = creatorData?.followingCount?.[platform] || 0;
           
           if (creatorFollowers < gig.minFollowers) {
-            console.log(`Gig ${gig.id} filtered: ${platform} followers ${creatorFollowers} < ${gig.minFollowers}`);
+            logger.debug(`Gig ${gig.id} filtered: ${platform} followers ${creatorFollowers} < ${gig.minFollowers}`);
             return false;
           }
         }
@@ -352,7 +356,7 @@ export default function CreatorGigs() {
             creatorExperience.includes(req)
           );
           if (!hasMatchingExperience) {
-            console.log(`Gig ${gig.id} filtered: Creator doesn't meet experience requirements (needs: ${gig.experienceRequirements.join(', ')}, has: ${creatorExperience.join(', ')})`);
+            logger.debug(`Gig ${gig.id} filtered: Creator doesn't meet experience requirements (needs: ${gig.experienceRequirements.join(', ')}, has: ${creatorExperience.join(', ')})`);
             return false;
           }
         }
@@ -360,7 +364,7 @@ export default function CreatorGigs() {
         // Visibility filter
         if (visibility === 'invite') {
           if (!gig.invitedCreatorIds?.includes(user?.uid || '')) {
-            console.log(`Gig ${gig.id} filtered: Not invited (invite-only gig)`);
+            logger.debug(`Gig ${gig.id} filtered: Not invited (invite-only gig)`);
             return false;
           }
         }
@@ -369,12 +373,12 @@ export default function CreatorGigs() {
         if (visibility === 'squad') {
           if (!gig.squadIds || gig.squadIds.length === 0) {
             // Squad visibility but no squads selected - exclude
-            console.log(`Gig ${gig.id} filtered: Squad visibility but no squads`);
+            logger.debug(`Gig ${gig.id} filtered: Squad visibility but no squads`);
             return false;
           }
           const squadInfo = squadMembershipMap.get(gig.id);
           if (!squadInfo || !squadInfo.isInSquad) {
-            console.log(`Gig ${gig.id} filtered: Not in required squad`);
+            logger.debug(`Gig ${gig.id} filtered: Not in required squad`);
             return false;
           }
         }

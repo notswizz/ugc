@@ -58,7 +58,7 @@ export default function PayoutStep({
           <button
             type="button"
             onClick={() => updateGigData({ payoutType: 'fixed' })}
-            className={`flex-1 px-6 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
+            className={`flex-1 px-6 py-3 rounded-lg border-2 text-sm font-medium transition-[border-color,background-color,color,box-shadow] duration-200 ${
               gigData.payoutType === 'fixed'
                 ? 'bg-orange-50 border-orange-500 text-orange-900 shadow-sm'
                 : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
@@ -69,7 +69,7 @@ export default function PayoutStep({
           <button
             type="button"
             onClick={() => updateGigData({ payoutType: 'dynamic' })}
-            className={`flex-1 px-6 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
+            className={`flex-1 px-6 py-3 rounded-lg border-2 text-sm font-medium transition-[border-color,background-color,color,box-shadow] duration-200 ${
               gigData.payoutType === 'dynamic'
                 ? 'bg-orange-50 border-orange-500 text-orange-900 shadow-sm'
                 : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
@@ -102,7 +102,7 @@ export default function PayoutStep({
                 const prevRange = index > 0 ? gigData.followerRanges[index - 1] : null;
 
                 return (
-                  <div key={index} className="p-3 border-2 rounded-lg bg-white hover:border-gray-300 transition-all">
+                  <div key={index} className="p-3 border-2 rounded-lg bg-white hover:border-gray-300 transition-[border-color,background-color,color,box-shadow] duration-200">
                     <div className="flex items-end gap-2 mb-2">
                       <div className="flex-1">
                         <label className="text-xs font-medium text-gray-700 mb-1 block">Min</label>
@@ -164,7 +164,7 @@ export default function PayoutStep({
               <button
                 type="button"
                 onClick={addFollowerRange}
-                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-orange-400 hover:text-orange-600 hover:bg-orange-50 transition-all"
+                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-orange-400 hover:text-orange-600 hover:bg-orange-50 transition-[border-color,background-color,color,box-shadow] duration-200"
               >
                 + Add Range
               </button>
@@ -282,7 +282,7 @@ export default function PayoutStep({
       </div>
 
       <div>
-        <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all">
+        <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-[border-color,background-color,color,box-shadow] duration-200">
           <input
             type="checkbox"
             checked={gigData.productInVideoRequired}

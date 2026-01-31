@@ -9,18 +9,24 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({ level, isTrusted, hasInstantPayout }: DashboardHeaderProps) {
   return (
-    <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 -mx-4 px-4 pb-3 mb-4">
+    <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-zinc-200 -mx-4 px-4 pb-3 mb-4">
       <div className="flex items-center justify-between mb-2">
         <Link href="/creator/dashboard" className="flex items-center gap-2">
           <img src="/logo1.png" alt="Giglet" className="h-8 w-auto" />
           <span className="text-lg font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Giglet</span>
         </Link>
         <div className="flex items-center gap-2">
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <Bell className="w-5 h-5 text-gray-600" />
+          <button
+            className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
+            aria-label="Notifications"
+          >
+            <Bell className="w-5 h-5 text-zinc-600" />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <Settings className="w-5 h-5 text-gray-600" />
+          <button
+            className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
+            aria-label="Settings"
+          >
+            <Settings className="w-5 h-5 text-zinc-600" />
           </button>
         </div>
       </div>

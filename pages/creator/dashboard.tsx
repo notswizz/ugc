@@ -32,6 +32,7 @@ import {
   Star,
   Link2,
   CheckCircle2,
+  DollarSign,
 } from 'lucide-react';
 import { useCreatorData } from '@/components/dashboard/useCreatorData';
 import { useDashboardData } from '@/components/dashboard/useDashboardData';
@@ -42,14 +43,11 @@ import SettingsModal from '@/components/dashboard/SettingsModal';
 import CommunityModal from '@/components/dashboard/CommunityModal';
 import { calculateTrustScore } from '@/lib/trustScore/calculator';
 import { canUseInstantWithdrawal, INSTANT_WITHDRAWAL_TRUST_SCORE_THRESHOLD } from '@/lib/payments/withdrawal';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/formatters';
+import { logger } from '@/lib/utils/logger';
 
 const formatCurrency = (cents: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(cents / 100);
+  return formatCurrencyUtil(cents);
 };
 
 export default function CreatorDashboard() {
@@ -93,7 +91,7 @@ export default function CreatorDashboard() {
           }
         }
       } catch (error) {
-        console.error('Error checking Stripe status:', error);
+        logger.error('Error checking Stripe status', error);
       }
     };
 
@@ -142,7 +140,7 @@ export default function CreatorDashboard() {
   const balanceDollars = balance || 0;
   const canUseInstant = canUseInstantWithdrawal(trustScore);
 
-  
+
   // Count linked socials
   const socials = creatorData?.socials || {};
   const linkedSocials = [socials.tiktok, socials.instagram, socials.youtube, socials.x].filter(Boolean).length;
@@ -153,6 +151,9 @@ export default function CreatorDashboard() {
     creatorData?.stripe?.identityVerified,
     creatorData?.phoneVerified,
   ].filter(Boolean).length;
+
+  // Calculate pending earnings (from submitted gigs not yet approved)
+  const pendingEarnings = stats?.pendingEarnings || 0;
 
   const handleWithdraw = async () => {
     if (!user) return;
@@ -297,6 +298,30 @@ export default function CreatorDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Pending Earnings Card */}
+          {pendingEarnings > 0 && (
+            <div className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-5 shadow-sm">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-amber-100 to-transparent rounded-bl-full" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                    <Clock className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-0.5">Pending</p>
+                    <p className="text-2xl font-black text-amber-900">
+                      {formatCurrency(Math.round(pendingEarnings * 100))}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-amber-700">Under Review</p>
+                  <p className="text-[10px] text-amber-600/70">Waiting for brand approval</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions - Enhanced Cards */}
           <div className="space-y-3">

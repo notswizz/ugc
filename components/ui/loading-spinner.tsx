@@ -42,7 +42,7 @@ export default function LoadingSpinner({
           </div>
         </div>
         {text && (
-          <p className="text-sm text-gray-600 font-medium">{text}</p>
+          <p className="text-sm text-zinc-600 font-medium">{text}</p>
         )}
       </div>
     </div>

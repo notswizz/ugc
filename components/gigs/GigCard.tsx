@@ -115,7 +115,7 @@ export default function GigCard({
         group relative overflow-hidden rounded-2xl
         bg-white border border-zinc-200/80
         ${isLocked ? 'opacity-60' : 'hover:border-zinc-300 hover:shadow-lg hover:shadow-zinc-200/50'}
-        transition-all duration-300 ease-out
+        transition-[border-color,box-shadow,opacity] duration-300 ease-out
       `}
       onClick={isLocked ? undefined : onClick}
     >
@@ -156,7 +156,7 @@ export default function GigCard({
             </div>
             <div className="min-w-0">
               <p className="text-xs text-zinc-500 font-medium truncate">{brandName}</p>
-              <h3 className="text-[15px] font-semibold text-zinc-900 leading-snug line-clamp-1 group-hover:text-zinc-700 transition-colors">
+              <h3 className="text-[15px] font-semibold text-zinc-900 leading-snug line-clamp-1 group-hover:text-zinc-700 transition-colors duration-200">
                 {title}
               </h3>
             </div>
