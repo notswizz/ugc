@@ -29,6 +29,7 @@ import {
   Package,
   Upload,
   MessageCircle,
+  XCircle,
 } from 'lucide-react';
 
 function formatTimeLeft(deadline: Date): string {
@@ -58,7 +59,7 @@ function formatMoney(dollars: number): string {
   }).format(dollars);
 }
 
-type GigStatus = 'open' | 'accepted' | 'submitted' | 'needs_changes' | 'approved' | 'paid' | 'closed';
+type GigStatus = 'open' | 'accepted' | 'submitted' | 'needs_changes' | 'approved' | 'paid' | 'closed' | 'rejected';
 
 export default function GigDetail() {
   const router = useRouter();
@@ -132,7 +133,8 @@ export default function GigDetail() {
       }
 
       let status: GigStatus = 'open';
-      if (submissionStatus === 'approved') status = 'paid';
+      if (submissionStatus === 'rejected') status = 'rejected';
+      else if (submissionStatus === 'approved') status = 'paid';
       else if (submissionStatus === 'needs_changes') status = 'needs_changes';
       else if (submissionStatus === 'submitted') status = 'submitted';
       else if (hasCreatorSubmission || gigData.acceptedBy === user?.uid) status = 'accepted';
@@ -323,34 +325,48 @@ export default function GigDetail() {
           </div>
 
           {/* Progress Steps */}
-          <div className="bg-white rounded-2xl border border-zinc-200 p-4">
-            <h3 className="text-sm font-semibold text-zinc-900 mb-4">Progress</h3>
-            <div className="flex items-center justify-between">
-              {steps.map((step, idx) => (
-                <div key={step.id} className="flex items-center">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        step.done
-                          ? 'bg-emerald-500 text-white'
-                          : idx === currentStepIndex
-                          ? 'bg-zinc-900 text-white'
-                          : 'bg-zinc-200 text-zinc-500'
-                      }`}
-                    >
-                      {step.done ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
-                    </div>
-                    <span className={`text-[10px] font-medium mt-1.5 text-center max-w-[60px] ${step.done ? 'text-emerald-600' : idx === currentStepIndex ? 'text-zinc-900' : 'text-zinc-400'}`}>
-                      {step.label}
-                    </span>
-                  </div>
-                  {idx < steps.length - 1 && (
-                    <div className={`w-6 h-0.5 mx-1 mt-[-16px] ${step.done ? 'bg-emerald-500' : 'bg-zinc-200'}`} />
-                  )}
+          {currentStatus === 'rejected' ? (
+            <div className="bg-red-50 rounded-2xl border border-red-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <XCircle className="w-5 h-5 text-red-600" />
                 </div>
-              ))}
+                <div>
+                  <h3 className="text-sm font-semibold text-red-900">Submission Rejected</h3>
+                  <p className="text-xs text-red-700">This gig is no longer available to you.</p>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-zinc-200 p-4">
+              <h3 className="text-sm font-semibold text-zinc-900 mb-4">Progress</h3>
+              <div className="flex items-center justify-between">
+                {steps.map((step, idx) => (
+                  <div key={step.id} className="flex items-center">
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          step.done
+                            ? 'bg-emerald-500 text-white'
+                            : idx === currentStepIndex
+                            ? 'bg-zinc-900 text-white'
+                            : 'bg-zinc-200 text-zinc-500'
+                        }`}
+                      >
+                        {step.done ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                      </div>
+                      <span className={`text-[10px] font-medium mt-1.5 text-center max-w-[60px] ${step.done ? 'text-emerald-600' : idx === currentStepIndex ? 'text-zinc-900' : 'text-zinc-400'}`}>
+                        {step.label}
+                      </span>
+                    </div>
+                    {idx < steps.length - 1 && (
+                      <div className={`w-6 h-0.5 mx-1 mt-[-16px] ${step.done ? 'bg-emerald-500' : 'bg-zinc-200'}`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Accordion Sections */}
           <div className="space-y-2">
@@ -558,6 +574,11 @@ export default function GigDetail() {
             ) : currentStatus === 'closed' ? (
               <Button disabled className="flex-1 h-14 text-base font-semibold bg-zinc-200 text-zinc-500 rounded-xl">
                 Gig Closed
+              </Button>
+            ) : currentStatus === 'rejected' ? (
+              <Button disabled className="flex-1 h-14 text-base font-semibold bg-red-100 text-red-600 rounded-xl">
+                <XCircle className="w-5 h-5 mr-2" />
+                Submission Rejected
               </Button>
             ) : null}
           </div>

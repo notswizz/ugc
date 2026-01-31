@@ -76,6 +76,29 @@ export default function CreatorOnboarding() {
   const [checkingCommunity, setCheckingCommunity] = useState(false);
   const [communityName, setCommunityName] = useState<string>('');
 
+  // Helper to format follower count for display
+  const formatFollowerCount = (count: number | undefined): string => {
+    if (!count) return '';
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
+  };
+
+  // Helper to parse follower input (handles K, M suffixes)
+  const parseFollowerInput = (value: string): number | undefined => {
+    if (!value) return undefined;
+    const cleaned = value.replace(/,/g, '').trim().toUpperCase();
+    const match = cleaned.match(/^(\d+(?:\.\d+)?)\s*(K|M)?$/);
+    if (!match) {
+      const num = parseInt(cleaned);
+      return isNaN(num) ? undefined : num;
+    }
+    const num = parseFloat(match[1]);
+    if (match[2] === 'K') return Math.round(num * 1000);
+    if (match[2] === 'M') return Math.round(num * 1000000);
+    return Math.round(num);
+  };
+
   const checkUsernameAvailability = async (username: string): Promise<boolean> => {
     if (!username.trim()) return false;
     
@@ -378,15 +401,30 @@ export default function CreatorOnboarding() {
         return (
           <div className="space-y-4">
             <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-semibold text-gray-900">Pick Your Niches</label>
+                <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                  formData.interests.length === 0 
+                    ? 'bg-gray-100 text-gray-500' 
+                    : formData.interests.length < 3 
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : formData.interests.length <= 8
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {formData.interests.length} selected
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">Select 3-8 niches that match your content style</p>
               <div className="flex flex-wrap gap-2 max-h-[400px] overflow-y-auto p-2 border rounded-lg bg-gray-50">
                 {THINGS.map(thing => (
                   <button
                     key={thing.id}
                     type="button"
                     onClick={() => toggleInterest(thing.id)}
-                    className={`px-3 py-2 rounded-full text-sm border flex items-center gap-1.5 ${
+                    className={`px-3 py-2 rounded-full text-sm border flex items-center gap-1.5 transition-all ${
                       formData.interests.includes(thing.id)
-                        ? 'bg-green-100 text-green-800 border-green-300'
+                        ? 'bg-green-100 text-green-800 border-green-300 shadow-sm'
                         : 'bg-white hover:bg-gray-100 border-gray-200'
                     }`}
                   >
@@ -395,22 +433,42 @@ export default function CreatorOnboarding() {
                   </button>
                 ))}
               </div>
+              {formData.interests.length > 0 && formData.interests.length < 3 && (
+                <p className="text-xs text-yellow-600 mt-2">⚠️ Select at least 3 niches for better gig matches</p>
+              )}
             </div>
           </div>
         );
 
       case 3:
+        const connectedCount = [formData.socials.tiktok, formData.socials.instagram, formData.socials.x].filter(Boolean).length;
         return (
           <div className="space-y-6">
             <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-semibold text-gray-900">Connect Your Socials</label>
+                <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                  connectedCount === 0 
+                    ? 'bg-gray-100 text-gray-500' 
+                    : connectedCount >= 2
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {connectedCount}/3 connected
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">Link at least one account. Type followers like "5K" or "1.2M"</p>
               <div className="space-y-4">
                 {/* TikTok */}
-                <div className="p-4 border-2 rounded-lg bg-white hover:border-orange-300 transition-all">
+                <div className={`p-4 border-2 rounded-lg transition-all ${
+                  formData.socials.tiktok ? 'border-green-300 bg-green-50' : 'bg-white hover:border-orange-300'
+                }`}>
                   <div className="flex items-center gap-3 mb-3">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
                     </svg>
                     <span className="font-semibold text-gray-900">TikTok</span>
+                    {formData.socials.tiktok && <span className="text-green-600 text-sm">✓</span>}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Input
@@ -421,28 +479,37 @@ export default function CreatorOnboarding() {
                       })}
                       className="h-11"
                     />
-                    <Input
-                      type="number"
-                      placeholder="Followers"
-                      value={formData.followingCount.tiktok || ''}
-                      onChange={(e) => updateFormData({
-                        followingCount: { 
-                          ...formData.followingCount, 
-                          tiktok: e.target.value ? parseInt(e.target.value) : undefined 
-                        }
-                      })}
-                      className="h-11"
-                    />
+                    <div className="relative">
+                      <Input
+                        placeholder="e.g. 10K, 1.5M"
+                        defaultValue={formatFollowerCount(formData.followingCount.tiktok)}
+                        onBlur={(e) => updateFormData({
+                          followingCount: { 
+                            ...formData.followingCount, 
+                            tiktok: parseFollowerInput(e.target.value)
+                          }
+                        })}
+                        className="h-11"
+                      />
+                      {formData.followingCount.tiktok && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                          {formData.followingCount.tiktok.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {/* Instagram */}
-                <div className="p-4 border-2 rounded-lg bg-white hover:border-orange-300 transition-all">
+                <div className={`p-4 border-2 rounded-lg transition-all ${
+                  formData.socials.instagram ? 'border-green-300 bg-green-50' : 'bg-white hover:border-orange-300'
+                }`}>
                   <div className="flex items-center gap-3 mb-3">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/>
                     </svg>
                     <span className="font-semibold text-gray-900">Instagram</span>
+                    {formData.socials.instagram && <span className="text-green-600 text-sm">✓</span>}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Input
@@ -453,28 +520,37 @@ export default function CreatorOnboarding() {
                       })}
                       className="h-11"
                     />
-                    <Input
-                      type="number"
-                      placeholder="Followers"
-                      value={formData.followingCount.instagram || ''}
-                      onChange={(e) => updateFormData({
-                        followingCount: { 
-                          ...formData.followingCount, 
-                          instagram: e.target.value ? parseInt(e.target.value) : undefined 
-                        }
-                      })}
-                      className="h-11"
-                    />
+                    <div className="relative">
+                      <Input
+                        placeholder="e.g. 10K, 1.5M"
+                        defaultValue={formatFollowerCount(formData.followingCount.instagram)}
+                        onBlur={(e) => updateFormData({
+                          followingCount: { 
+                            ...formData.followingCount, 
+                            instagram: parseFollowerInput(e.target.value)
+                          }
+                        })}
+                        className="h-11"
+                      />
+                      {formData.followingCount.instagram && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                          {formData.followingCount.instagram.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {/* X (Twitter) */}
-                <div className="p-4 border-2 rounded-lg bg-white hover:border-orange-300 transition-all">
+                <div className={`p-4 border-2 rounded-lg transition-all ${
+                  formData.socials.x ? 'border-green-300 bg-green-50' : 'bg-white hover:border-orange-300'
+                }`}>
                   <div className="flex items-center gap-3 mb-3">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                     </svg>
                     <span className="font-semibold text-gray-900">X</span>
+                    {formData.socials.x && <span className="text-green-600 text-sm">✓</span>}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Input
@@ -485,18 +561,24 @@ export default function CreatorOnboarding() {
                       })}
                       className="h-11"
                     />
-                    <Input
-                      type="number"
-                      placeholder="Followers"
-                      value={formData.followingCount.x || ''}
-                      onChange={(e) => updateFormData({
-                        followingCount: { 
-                          ...formData.followingCount, 
-                          x: e.target.value ? parseInt(e.target.value) : undefined 
-                        }
-                      })}
-                      className="h-11"
-                    />
+                    <div className="relative">
+                      <Input
+                        placeholder="e.g. 10K, 1.5M"
+                        defaultValue={formatFollowerCount(formData.followingCount.x)}
+                        onBlur={(e) => updateFormData({
+                          followingCount: { 
+                            ...formData.followingCount, 
+                            x: parseFollowerInput(e.target.value)
+                          }
+                        })}
+                        className="h-11"
+                      />
+                      {formData.followingCount.x && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                          {formData.followingCount.x.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -562,20 +644,84 @@ export default function CreatorOnboarding() {
         );
 
       case 5:
+        const socialsList = [];
+        if (formData.socials.tiktok) socialsList.push({ name: 'TikTok', handle: formData.socials.tiktok, followers: formData.followingCount.tiktok });
+        if (formData.socials.instagram) socialsList.push({ name: 'Instagram', handle: formData.socials.instagram, followers: formData.followingCount.instagram });
+        if (formData.socials.x) socialsList.push({ name: 'X', handle: formData.socials.x, followers: formData.followingCount.x });
+        const selectedNiches = THINGS.filter(t => formData.interests.includes(t.id));
+        
         return (
-          <div className="text-center py-8">
-            <div className="mb-6">
-              <div className="text-6xl mb-4">🎉</div>
-              <h3 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
-                You're All Set!
+          <div className="space-y-6">
+            <div className="text-center mb-4">
+              <div className="text-5xl mb-3">🎉</div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-1">
+                Review Your Profile
               </h3>
-              <p className="text-gray-600 text-lg">
-                Welcome to Giglet, {formData.username}
-              </p>
+              <p className="text-gray-500 text-sm">Make sure everything looks good</p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Basic Info */}
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase">Profile</span>
+                  <button onClick={() => setCurrentStep(1)} className="text-xs text-orange-600 hover:underline">Edit</button>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-semibold text-gray-900">@{formData.username}</p>
+                  {formData.intro && <p className="text-sm text-gray-600 line-clamp-2">{formData.intro}</p>}
+                  {formData.location && <p className="text-xs text-gray-500">📍 {formData.location}</p>}
+                </div>
+              </div>
+
+              {/* Niches */}
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase">Niches ({selectedNiches.length})</span>
+                  <button onClick={() => setCurrentStep(2)} className="text-xs text-orange-600 hover:underline">Edit</button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedNiches.length > 0 ? selectedNiches.map(niche => (
+                    <span key={niche.id} className="px-2 py-1 bg-white border rounded-full text-xs">
+                      {niche.icon} {niche.name}
+                    </span>
+                  )) : (
+                    <span className="text-xs text-gray-400">No niches selected</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Socials */}
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase">Socials ({socialsList.length})</span>
+                  <button onClick={() => setCurrentStep(3)} className="text-xs text-orange-600 hover:underline">Edit</button>
+                </div>
+                {socialsList.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {socialsList.map(s => (
+                      <div key={s.name} className="flex items-center justify-between text-sm">
+                        <span className="text-gray-700">{s.name}: <span className="font-medium">{s.handle}</span></span>
+                        {s.followers && <span className="text-gray-500">{formatFollowerCount(s.followers)} followers</span>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-400">No socials connected</span>
+                )}
+              </div>
+
+              {/* Community */}
               {communityName && (
-                <p className="text-sm text-green-600 font-semibold mt-2">
-                  🏆 Community: {communityName}
-                </p>
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🏆</span>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase">Community</p>
+                      <p className="font-semibold text-green-700">{communityName}</p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>

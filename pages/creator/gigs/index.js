@@ -132,8 +132,8 @@ export default function CreatorGigs() {
           const approvedSubmissionsSnapshot = await getDocs(approvedSubmissionsQuery);
           const approvedCount = approvedSubmissionsSnapshot.size;
           
-          // Check if creator already has an APPROVED submission for this job
-          // (rejected or pending submissions should not hide the gig)
+          // Check if creator already has an APPROVED or REJECTED submission for this job
+          // Approved = already done, Rejected = can't resubmit (one shot per gig)
           const creatorApprovedSubmissionsQuery = query(
             collection(db, 'submissions'),
             where('gigId', '==', gig.id),
@@ -143,15 +143,26 @@ export default function CreatorGigs() {
           const creatorApprovedSubmissionsSnapshot = await getDocs(creatorApprovedSubmissionsQuery);
           const hasCreatorApprovedSubmission = creatorApprovedSubmissionsSnapshot.size > 0;
           
+          // Also check for rejected submissions - no resubmissions allowed
+          const creatorRejectedSubmissionsQuery = query(
+            collection(db, 'submissions'),
+            where('gigId', '==', gig.id),
+            where('creatorId', '==', user?.uid || ''),
+            where('status', '==', 'rejected')
+          );
+          const creatorRejectedSubmissionsSnapshot = await getDocs(creatorRejectedSubmissionsQuery);
+          const hasCreatorRejectedSubmission = creatorRejectedSubmissionsSnapshot.size > 0;
+          
           return {
             ...gig,
             approvedSubmissionsCount: approvedCount,
             hasCreatorApprovedSubmission,
+            hasCreatorRejectedSubmission,
           };
         })
       );
 
-      // Filter out gigs that have reached their submission cap or creator already has approved submission
+      // Filter out gigs that have reached their submission cap or creator already has approved/rejected submission
       const fetchedGigs = gigsWithSubmissionCounts.filter(gig => {
         const submissionCap = gig.acceptedSubmissionsLimit || 1;
         const isFull = gig.approvedSubmissionsCount >= submissionCap;
@@ -161,6 +172,10 @@ export default function CreatorGigs() {
         }
         if (gig.hasCreatorApprovedSubmission) {
           console.log(`Gig ${gig.id} filtered: Creator already has approved submission`);
+          return false;
+        }
+        if (gig.hasCreatorRejectedSubmission) {
+          console.log(`Gig ${gig.id} filtered: Creator has rejected submission (no resubmit)`);
           return false;
         }
         return true;

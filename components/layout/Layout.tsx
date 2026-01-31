@@ -72,16 +72,6 @@ export default function Layout({ children }: LayoutProps) {
                       </div>
                     </button>
                   )}
-                  {/* Logout Button for Creators */}
-                  {appUser?.role === 'creator' && (
-                    <button
-                      onClick={handleLogout}
-                      className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors"
-                      title="Logout"
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </button>
-                  )}
                   {appUser?.email === '7jackdsmith@gmail.com' && (
                     <Link href="/admin/dashboard">
                       <button className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center hover:bg-violet-200 transition-colors">
@@ -89,16 +79,7 @@ export default function Layout({ children }: LayoutProps) {
                       </button>
                     </Link>
                   )}
-                  {/* Logout Button for Brands */}
-                  {appUser?.role === 'brand' && (
-                    <button
-                      onClick={handleLogout}
-                      className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors"
-                      title="Logout"
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </button>
-                  )}
+                  {/* Brands can logout from their settings */}
                 </div>
               </div>
             </div>
