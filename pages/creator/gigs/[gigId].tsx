@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { formatTimeLeft, formatCurrencyFromDollars, calculateCreatorNet } from '@/lib/utils/formatters';
 import { logger } from '@/lib/utils/logger';
+import { useCreatorData } from '@/components/dashboard/useCreatorData';
 
 function formatMoney(dollars: number): string {
   return formatCurrencyFromDollars(dollars);
@@ -44,10 +45,17 @@ type GigStatus = 'open' | 'accepted' | 'submitted' | 'needs_changes' | 'approved
 export default function GigDetail() {
   const router = useRouter();
   const { gigId } = router.query;
-  const { user } = useAuth();
+  const { user, appUser } = useAuth();
+  const { creatorData } = useCreatorData(user, appUser);
   const [gig, setGig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
+  
+  // Profile completion checks
+  const socials = creatorData?.socials || {};
+  const linkedSocials = [socials.tiktok, socials.instagram, socials.youtube, socials.x].filter(Boolean).length;
+  const hasPayment = !!creatorData?.stripe?.onboardingComplete;
+  const profileComplete = linkedSocials >= 1 && hasPayment;
   const [currentStatus, setCurrentStatus] = useState<GigStatus>('open');
   const [expandedSection, setExpandedSection] = useState<string | null>('brief');
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
@@ -507,6 +515,14 @@ export default function GigDetail() {
               isEnded ? (
                 <Button disabled className="flex-1 h-14 text-base font-semibold bg-zinc-200 text-zinc-500 rounded-xl">
                   Gig Ended
+                </Button>
+              ) : !profileComplete ? (
+                <Button 
+                  onClick={() => router.push('/creator/dashboard')} 
+                  className="flex-1 h-14 text-base font-semibold rounded-xl bg-amber-500 hover:bg-amber-600"
+                >
+                  <Shield className="w-5 h-5 mr-2" />
+                  {!hasPayment ? 'Link Payment to Accept' : 'Link Socials to Accept'}
                 </Button>
               ) : (
                 <Button onClick={() => setShowAcceptConfirm(true)} disabled={accepting} className="flex-1 h-14 text-base font-semibold rounded-xl">
