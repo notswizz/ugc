@@ -20,6 +20,14 @@ export interface Creator {
     instagram?: string;
     youtube?: string;
     linkedin?: string;
+    x?: string;
+  };
+  socialVerification?: {
+    tiktok?: { verified?: boolean };
+    instagram?: { verified?: boolean };
+    youtube?: { verified?: boolean };
+    linkedin?: { verified?: boolean };
+    x?: { verified?: boolean };
   };
   portfolioLinks?: string[];
   trustScore?: number;
@@ -28,6 +36,7 @@ export interface Creator {
     instagram?: number;
     youtube?: number;
     linkedin?: number;
+    x?: number;
   };
   metrics?: {
     gigsCompleted?: number;
