@@ -257,81 +257,49 @@ export default function CreatorDashboard() {
             </div>
           </div>
 
-          {/* Profile Completion Card */}
-          {!profileComplete && (
-            <div className="bg-white rounded-2xl border border-zinc-200 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-zinc-900">Complete Your Profile</h3>
-                <span className="text-xs font-semibold text-zinc-500">{completedSteps}/{profileSteps.length}</span>
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setProfileModalOpen(true)}
+              className={`rounded-xl border p-3 flex items-center gap-3 transition-all ${
+                linkedSocials >= 1 
+                  ? 'bg-white border-zinc-200 hover:border-zinc-300' 
+                  : 'bg-orange-50 border-orange-200 hover:border-orange-300'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                linkedSocials >= 1 ? 'bg-orange-100' : 'bg-orange-200'
+              }`}>
+                <Link2 className="w-5 h-5 text-orange-600" />
               </div>
-              
-              {/* Progress bar */}
-              <div className="w-full h-2 bg-zinc-100 rounded-full mb-4 overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                  style={{ width: `${(completedSteps / profileSteps.length) * 100}%` }}
-                />
+              <div className="text-left">
+                <p className="font-semibold text-zinc-900 text-sm">Socials</p>
+                <p className={`text-[10px] ${linkedSocials >= 1 ? 'text-zinc-500' : 'text-orange-600 font-medium'}`}>
+                  {linkedSocials >= 1 ? `${linkedSocials}/4 linked` : 'Link now'}
+                </p>
               </div>
-
-              {/* Steps */}
-              <div className="space-y-2">
-                {profileSteps.map((step) => (
-                  <button
-                    key={step.id}
-                    onClick={step.action}
-                    disabled={step.done}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-                      step.done 
-                        ? 'bg-emerald-50 cursor-default' 
-                        : 'bg-zinc-50 hover:bg-zinc-100 cursor-pointer'
-                    }`}
-                  >
-                    {step.done ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-zinc-300" />
-                    )}
-                    <span className={`text-sm font-medium ${step.done ? 'text-emerald-700' : 'text-zinc-700'}`}>
-                      {step.label}
-                    </span>
-                    {!step.done && (
-                      <ChevronRight className="w-4 h-4 text-zinc-400 ml-auto" />
-                    )}
-                  </button>
-                ))}
+            </button>
+            <button
+              onClick={() => setVerifyModalOpen(true)}
+              className={`rounded-xl border p-3 flex items-center gap-3 transition-all ${
+                hasPayment 
+                  ? 'bg-white border-zinc-200 hover:border-zinc-300' 
+                  : 'bg-violet-50 border-violet-200 hover:border-violet-300'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                hasPayment ? 'bg-violet-100' : 'bg-violet-200'
+              }`}>
+                <ShieldCheck className="w-5 h-5 text-violet-600" />
               </div>
-            </div>
-          )}
-
-          {/* Quick Actions (shown when profile is complete) */}
-          {profileComplete && (
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setProfileModalOpen(true)}
-                className="bg-white rounded-xl border border-zinc-200 p-3 flex items-center gap-3 hover:border-zinc-300 transition-all"
-              >
-                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                  <Link2 className="w-5 h-5 text-orange-600" />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-zinc-900 text-sm">Socials</p>
-                  <p className="text-[10px] text-zinc-500">{linkedSocials}/4 linked</p>
-                </div>
-              </button>
-              <button
-                onClick={() => setVerifyModalOpen(true)}
-                className="bg-white rounded-xl border border-zinc-200 p-3 flex items-center gap-3 hover:border-zinc-300 transition-all"
-              >
-                <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-violet-600" />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-zinc-900 text-sm">Verified</p>
-                  <p className="text-[10px] text-violet-600">Complete ✓</p>
-                </div>
-              </button>
-            </div>
-          )}
+              <div className="text-left">
+                <p className="font-semibold text-zinc-900 text-sm">Payment</p>
+                <p className={`text-[10px] ${hasPayment ? 'text-violet-600' : 'text-violet-600 font-medium'}`}>
+                  {hasPayment ? 'Complete ✓' : 'Set up now'}
+                </p>
+              </div>
+            </button>
+          </div>
 
           {/* Community (if enrolled) */}
           {creatorData?.communityId && (
