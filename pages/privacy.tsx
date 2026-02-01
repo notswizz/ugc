@@ -173,7 +173,7 @@ export default function Privacy() {
             <Link href="/terms" className="hover:text-gray-900">Terms of Service</Link>
             <Link href="/privacy" className="hover:text-gray-900">Privacy Policy</Link>
           </div>
-          <p className="text-center text-gray-400 text-xs mt-4">© 2025 Giglet. All rights reserved.</p>
+          <p className="text-center text-gray-400 text-xs mt-4">© 2025 Giglet. All rights reserved<Link href="/auth/login" className="text-gray-300 hover:text-gray-500">.</Link></p>
         </footer>
       </div>
     </>

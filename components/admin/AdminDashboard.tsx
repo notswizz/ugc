@@ -10,8 +10,10 @@ import LoadingSpinner from '@/components/ui/loading-spinner';
 import CommunityForm from './CommunityForm';
 import GigsTable from './GigsTable';
 import GigDetailsModal from './GigDetailsModal';
+import WaitlistTable from './WaitlistTable';
 import toast from 'react-hot-toast';
-import { Shield, Wallet, Briefcase, FileVideo, CreditCard, Users, Plus } from 'lucide-react';
+import { Shield, Wallet, Briefcase, FileVideo, CreditCard, Users, Plus, Mail } from 'lucide-react';
+import type { WaitlistEntry } from '@/lib/models/waitlist';
 
 const ADMIN_EMAIL = '7jackdsmith@gmail.com';
 
@@ -39,6 +41,7 @@ export default function AdminDashboard() {
   } | null>(null);
   const [loadingGigDetails, setLoadingGigDetails] = useState(false);
   const [showCommunityForm, setShowCommunityForm] = useState(false);
+  const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([]);
 
   // Check admin access
   useEffect(() => {
@@ -297,6 +300,19 @@ export default function AdminDashboard() {
         };
       });
 
+      // Fetch waitlist entries
+      const waitlistQuery = query(collection(db, 'waitlist'), orderBy('createdAt', 'desc'));
+      const waitlistSnapshot = await getDocs(waitlistQuery);
+      const waitlistData = waitlistSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+        } as WaitlistEntry;
+      });
+      setWaitlistEntries(waitlistData);
+
       // Calculate stats
       const totalPlatformFees = paymentsData.reduce((sum, p: any) => sum + (p.platformFee || 0), 0);
       setStats({
@@ -352,7 +368,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           {/* Gigs */}
           <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 mb-2">
@@ -385,6 +401,17 @@ export default function AdminDashboard() {
             </div>
             <p className="text-2xl font-bold text-zinc-900">{stats.totalPayments}</p>
           </div>
+
+          {/* Waitlist */}
+          <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center">
+                <Mail className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-medium text-zinc-500">Waitlist</span>
+            </div>
+            <p className="text-2xl font-bold text-zinc-900">{waitlistEntries.length}</p>
+          </div>
         </div>
 
         {/* Community Management - Collapsible */}
@@ -412,6 +439,9 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        {/* Waitlist Table */}
+        <WaitlistTable entries={waitlistEntries} />
 
         {/* Gigs Table */}
         <GigsTable

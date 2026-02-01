@@ -127,9 +127,15 @@ service cloud.firestore {
     // Submissions collection
     match /submissions/{submissionId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (request.auth.uid == resource.data.creatorId || 
+      allow write: if isAuthenticated() && (request.auth.uid == resource.data.creatorId ||
                                             get(/databases/$(database)/documents/jobs/$(resource.data.jobId)).data.brandId == request.auth.uid);
       allow create: if isAuthenticated();
+    }
+
+    // Waitlist collection - public create for pre-launch signups
+    match /waitlist/{entryId} {
+      allow create: if true;
+      allow read: if isAuthenticated();
     }
   }
 }
