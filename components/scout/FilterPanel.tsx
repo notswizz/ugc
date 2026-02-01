@@ -1,13 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { THINGS } from '@/lib/things/constants';
 import type { CreatorFilters } from '@/lib/scout/filters';
 
 interface FilterPanelProps {
   isOpen: boolean;
-  onToggle: () => void;
   filters: CreatorFilters;
   onFiltersChange: (filters: Partial<CreatorFilters>) => void;
   uniqueLocations: string[];
@@ -16,7 +14,6 @@ interface FilterPanelProps {
 
 export default function FilterPanel({
   isOpen,
-  onToggle,
   filters,
   onFiltersChange,
   uniqueLocations,
@@ -39,18 +36,11 @@ export default function FilterPanel({
     });
   };
 
+  if (!isOpen) return null;
+
   return (
     <Card className="mb-4">
-      <button onClick={onToggle} className="w-full">
-        <CardHeader className="py-3 px-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold">Filters</CardTitle>
-            {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </div>
-        </CardHeader>
-      </button>
-      {isOpen && (
-        <CardContent className="pt-0 px-4 pb-4 space-y-3">
+      <CardContent className="p-4 space-y-3">
           {/* Location Filter */}
           <div>
             <label className="text-xs font-medium text-gray-700 mb-1 block">Location</label>
@@ -186,7 +176,6 @@ export default function FilterPanel({
             </Button>
           )}
         </CardContent>
-      )}
     </Card>
   );
 }

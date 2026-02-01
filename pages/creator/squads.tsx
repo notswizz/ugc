@@ -513,7 +513,8 @@ function SquadCard({ squad, onInviteCreator, onAssignRole, currentUserId, curren
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
 
-  const handleInvite = async () => {
+  const handleInvite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     setInviting(true);
     await onInviteCreator(squad.id, inviteUsername);
     setInviteUsername('');
@@ -538,7 +539,8 @@ function SquadCard({ squad, onInviteCreator, onAssignRole, currentUserId, curren
     };
   }) || []);
 
-  const handleMemberClick = (member: any) => {
+  const handleMemberClick = (e: React.MouseEvent, member: any) => {
+    e.stopPropagation();
     if (canAssignRoles && member.uid !== squad.creatorId) {
       setSelectedMember(member);
       setShowRoleModal(true);
@@ -557,7 +559,7 @@ function SquadCard({ squad, onInviteCreator, onAssignRole, currentUserId, curren
     if (role === 'creator') return '👑';
     if (role === 'president') return '⭐';
     if (role === 'vp') return '💼';
-    return '👍';
+    return '';
   };
 
   const getRoleName = (role: string) => {
@@ -569,72 +571,72 @@ function SquadCard({ squad, onInviteCreator, onAssignRole, currentUserId, curren
 
   return (
     <>
-      <Card className="border border-gray-200 hover:shadow-sm transition-shadow">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-2">
-                <CardTitle className="text-base font-bold">{squad.name}</CardTitle>
-                {canInvite && (
-                  <button
-                    onClick={() => setShowInviteForm(!showInviteForm)}
-                    className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-100 transition-colors"
-                    title="Add member"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mb-2">{squad.memberIds?.length || 0} members</p>
-              
-              {showInviteForm && (
-                <div className="mb-3 p-2 bg-gray-50 rounded border border-gray-200">
-                  <div className="flex gap-2">
-                    <Input
-                      type="text"
-                      value={inviteUsername}
-                      onChange={(e) => setInviteUsername(e.target.value)}
-                      placeholder="@username"
-                      className="flex-1 text-xs h-8"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={handleInvite}
-                      disabled={inviting || !inviteUsername.trim()}
-                      className="bg-orange-600 hover:bg-orange-700 h-8 text-xs px-2"
-                    >
-                      {inviting ? 'Sending...' : 'Send'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex flex-wrap gap-1.5">
-                {memberData.map((member: any, index: number) => {
-                  const isCreatorRole = member.uid === squad.creatorId;
-                  const canClick = canAssignRoles && !isCreatorRole;
-                  return (
+      <Link href={`/creator/squads/${squad.id}`}>
+        <Card className="border border-gray-200 hover:shadow-md hover:border-violet-200 transition-all cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-2">
+                  <CardTitle className="text-base font-bold">{squad.name}</CardTitle>
+                  {canInvite && (
                     <button
-                      key={member.uid || index}
-                      type="button"
-                      onClick={() => canClick && handleMemberClick(member)}
-                      disabled={!canClick}
-                      className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
-                        canClick
-                          ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer'
-                          : 'bg-blue-100 text-blue-800 cursor-default'
-                      }`}
-                      title={canClick ? `Click to change role (Current: ${getRoleName(member.role)})` : `${getRoleName(member.role)}`}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowInviteForm(!showInviteForm); }}
+                      className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-100 transition-colors"
+                      title="Add member"
                     >
-                      {getRoleBadge(member.role)} @{member.username}
+                      <UserPlus className="w-4 h-4" />
                     </button>
-                  );
-                })}
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mb-2">{squad.memberIds?.length || 0} members</p>
+                
+                {showInviteForm && (
+                  <div className="mb-3 p-2 bg-gray-50 rounded border border-gray-200" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={inviteUsername}
+                        onChange={(e) => setInviteUsername(e.target.value)}
+                        placeholder="@username"
+                        className="flex-1 text-xs h-8"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleInvite}
+                        disabled={inviting || !inviteUsername.trim()}
+                        className="bg-orange-600 hover:bg-orange-700 h-8 text-xs px-2"
+                      >
+                        {inviting ? '...' : 'Send'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex flex-wrap gap-1.5">
+                  {memberData.slice(0, 5).map((member: any, index: number) => {
+                    const isCreatorRole = member.uid === squad.creatorId;
+                    const canClick = canAssignRoles && !isCreatorRole;
+                    return (
+                      <button
+                        key={member.uid || index}
+                        type="button"
+                        onClick={(e) => canClick && handleMemberClick(e, member)}
+                        className={`px-2 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-800`}
+                      >
+                        {getRoleBadge(member.role)} @{member.username}
+                      </button>
+                    );
+                  })}
+                  {memberData.length > 5 && (
+                    <span className="px-2 py-1 text-xs text-zinc-500">+{memberData.length - 5} more</span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Role Assignment Modal */}
       {showRoleModal && selectedMember && (

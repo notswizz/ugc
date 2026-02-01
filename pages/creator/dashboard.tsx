@@ -282,20 +282,22 @@ export default function CreatorDashboard() {
             <button
               onClick={() => setVerifyModalOpen(true)}
               className={`rounded-xl border p-3 flex items-center gap-3 transition-all ${
-                hasPayment 
+                hasPayment && hasIdentity && hasPhone
                   ? 'bg-white border-zinc-200 hover:border-zinc-300' 
                   : 'bg-violet-50 border-violet-200 hover:border-violet-300'
               }`}
             >
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                hasPayment ? 'bg-violet-100' : 'bg-violet-200'
+                hasPayment && hasIdentity && hasPhone ? 'bg-violet-100' : 'bg-violet-200'
               }`}>
                 <ShieldCheck className="w-5 h-5 text-violet-600" />
               </div>
               <div className="text-left">
-                <p className="font-semibold text-zinc-900 text-sm">Payment</p>
-                <p className={`text-[10px] ${hasPayment ? 'text-violet-600' : 'text-violet-600 font-medium'}`}>
-                  {hasPayment ? 'Complete ✓' : 'Set up now'}
+                <p className="font-semibold text-zinc-900 text-sm">Verify</p>
+                <p className={`text-[10px] ${hasPayment && hasIdentity && hasPhone ? 'text-emerald-600' : 'text-violet-600 font-medium'}`}>
+                  {hasPayment && hasIdentity && hasPhone 
+                    ? 'Complete ✓' 
+                    : `${[hasPayment, hasIdentity, hasPhone].filter(Boolean).length}/3 done`}
                 </p>
               </div>
             </button>

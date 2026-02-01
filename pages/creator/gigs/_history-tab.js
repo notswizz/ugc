@@ -347,9 +347,7 @@ export default function HistoryTab({ user }) {
           </div>
           <h3 className="font-semibold text-zinc-900 mb-1">No gigs yet</h3>
           <p className="text-sm text-zinc-500 mb-4">
-            {filter === 'all'
-              ? "Accept gigs to see them here"
-              : `No ${filter} gigs found`}
+            Accept gigs to see them here
           </p>
           <Link href="/creator/gigs">
             <Button className="rounded-xl">Browse Gigs</Button>

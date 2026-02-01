@@ -305,7 +305,6 @@ export default function CreatorScout() {
         {/* Filters - Collapsible */}
         <FilterPanel
           isOpen={filtersOpen}
-          onToggle={() => setFiltersOpen(!filtersOpen)}
           filters={filters}
           onFiltersChange={updateFilters}
           uniqueLocations={uniqueLocations}
