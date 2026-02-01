@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Instagram, CheckCircle, X as XIcon, Save, Link2 } from 'lucide-react';
+import { Instagram, CheckCircle, X as XIcon, Link2, Sparkles } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import toast from 'react-hot-toast';
@@ -130,31 +130,49 @@ export default function ProfileModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={() => { if (!socialVerifyPlatform) onClose(); }}
     >
       <div
-        className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+        className="relative bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Decorative top gradient line */}
+        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-orange-500 via-pink-500 to-rose-500" />
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-pink-500 px-5 py-4">
+        <div className="px-6 pt-7 pb-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link2 className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center shadow-lg shadow-orange-200">
+                <Link2 className="w-5 h-5 text-white" />
+              </div>
               <div>
-                <h2 className="text-lg font-bold text-white">Socials</h2>
-                <p className="text-xs text-white/70">{linkedCount}/4 linked</p>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Socials</h2>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex gap-1">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className={`w-2 h-2 rounded-full ${i < linkedCount ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-slate-400">{linkedCount}/4</span>
+                </div>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg">
-              <XIcon className="w-5 h-5 text-white" />
+            <button
+              onClick={onClose}
+              className="p-2.5 hover:bg-slate-100 rounded-xl transition-all duration-200 group"
+            >
+              <XIcon className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-3">
+        <div className="px-6 pb-5 space-y-3">
           {platforms.map((platform) => {
             const value = socialValues[platform.id];
             const followerVal = followers[platform.id];
@@ -164,21 +182,31 @@ export default function ProfileModal({
             return (
               <div
                 key={platform.id}
-                className={`flex items-center gap-2 p-2 rounded-xl ${
-                  isVerified ? 'bg-emerald-50 border border-emerald-200' : 'bg-zinc-50'
+                className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all duration-200 ${
+                  isVerified
+                    ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50'
+                    : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl ${platform.bg} text-white flex items-center justify-center flex-shrink-0`}>
+                <div className={`w-11 h-11 rounded-xl ${platform.bg} text-white flex items-center justify-center flex-shrink-0 shadow-lg ${
+                  platform.id === 'tiktok' ? 'shadow-slate-300' :
+                  platform.id === 'instagram' ? 'shadow-pink-200' :
+                  platform.id === 'youtube' ? 'shadow-red-200' : 'shadow-slate-300'
+                }`}>
                   {platform.icon}
                 </div>
 
                 {isVerified ? (
                   <>
-                    <span className="flex-1 font-semibold text-zinc-900 text-sm">@{savedValue}</span>
+                    <span className="flex-1 font-semibold text-slate-900 text-sm">@{savedValue}</span>
                     {creatorData.followingCount?.[platform.id] && (
-                      <span className="text-xs text-zinc-500">{creatorData.followingCount[platform.id].toLocaleString()}</span>
+                      <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
+                        {creatorData.followingCount[platform.id].toLocaleString()}
+                      </span>
                     )}
-                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
+                      <CheckCircle className="w-4 h-4 text-white" />
+                    </div>
                   </>
                 ) : (
                   <>
@@ -187,7 +215,7 @@ export default function ProfileModal({
                       placeholder="@username"
                       value={value}
                       onChange={(e) => setSocialValues({ ...socialValues, [platform.id]: e.target.value })}
-                      className="flex-1 min-w-0 h-10 px-3 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:border-orange-400"
+                      className="flex-1 min-w-0 h-10 px-3 text-sm text-slate-900 placeholder-slate-300 bg-white border-2 border-slate-100 rounded-xl focus:outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-50 transition-all duration-200"
                       disabled={saving}
                     />
                     <input
@@ -195,13 +223,13 @@ export default function ProfileModal({
                       placeholder="0"
                       value={followerVal}
                       onChange={(e) => setFollowers({ ...followers, [platform.id]: e.target.value })}
-                      className="w-16 h-10 px-2 text-sm bg-white border border-zinc-200 rounded-lg text-center focus:outline-none focus:border-orange-400"
+                      className="w-16 h-10 px-2 text-sm text-slate-900 placeholder-slate-300 bg-white border-2 border-slate-100 rounded-xl text-center focus:outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-50 transition-all duration-200"
                       disabled={saving}
                     />
                     {value && savedValue === value && (
                       <button
                         onClick={() => setSocialVerifyPlatform(platform.id)}
-                        className="px-3 h-10 text-xs font-semibold bg-violet-100 text-violet-600 rounded-lg hover:bg-violet-200 flex-shrink-0"
+                        className="px-3 h-10 text-xs font-semibold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl hover:from-violet-600 hover:to-purple-700 shadow-md shadow-violet-200 transition-all duration-200 flex-shrink-0"
                       >
                         Verify
                       </button>
@@ -214,16 +242,31 @@ export default function ProfileModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 pt-2 flex gap-2">
-          <Button variant="outline" onClick={onClose} disabled={saving} className="flex-1 h-12 rounded-xl">
+        <div className="px-6 pb-6 pt-1 flex gap-3">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 h-12 rounded-xl bg-slate-50 border-2 border-slate-200 text-slate-600 font-medium hover:bg-slate-100 hover:border-slate-300 transition-all duration-200"
+          >
             Cancel
           </Button>
-          <Button 
-            onClick={handleSave} 
-            disabled={saving} 
-            className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold"
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="relative flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-400 hover:to-pink-400 text-white font-semibold shadow-lg shadow-orange-200 hover:shadow-orange-300 transition-all duration-200 overflow-hidden group"
           >
-            {saving ? 'Saving…' : <><Save className="w-4 h-4 mr-2" /> Save</>}
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+            {saving ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Saving
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4" /> Save
+              </span>
+            )}
           </Button>
         </div>
       </div>
