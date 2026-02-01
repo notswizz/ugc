@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, getDocs, orderBy, where, addDoc, getDoc, doc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { db } from '@/lib/firebase/client';
 import toast from 'react-hot-toast';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import Layout from '@/components/layout/Layout';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import FilterPanel from './FilterPanel';
@@ -13,11 +14,13 @@ import CreatorCard from './CreatorCard';
 import SquadInviteModal from './SquadInviteModal';
 import { filterCreators, getUniqueLocations, getAllInterests, DEFAULT_FILTERS } from '@/lib/scout/filters';
 import type { CreatorFilters, Creator } from '@/lib/scout/filters';
+import { Search, Users, Filter } from 'lucide-react';
 
 interface Submission {
   id: string;
   gigId: string;
   jobTitle?: string;
+  companyName?: string;
   status: string;
   aiEvaluation?: {
     qualityScore?: number;
@@ -35,8 +38,9 @@ export default function CreatorScout() {
   const [creators, setCreators] = useState<CreatorWithSubmissions[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCreator, setExpandedCreator] = useState<string | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<CreatorFilters>(DEFAULT_FILTERS);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Squad invitation modal
   const [showSquadModal, setShowSquadModal] = useState(false);
@@ -69,13 +73,30 @@ export default function CreatorScout() {
         ...doc.data(),
       })) as Creator[];
 
-      // Fetch all gigs to get gig titles
+      // Fetch all gigs to get gig titles and brand info
       const gigsQuery = query(collection(db, 'gigs'));
       const gigsSnapshot = await getDocs(gigsQuery);
       const gigsMap = new Map();
+      const brandIds = new Set<string>();
       gigsSnapshot.docs.forEach((doc) => {
-        gigsMap.set(doc.id, doc.data().title);
+        const data = doc.data();
+        gigsMap.set(doc.id, { title: data.title, brandId: data.brandId });
+        if (data.brandId) brandIds.add(data.brandId);
       });
+
+      // Fetch brand names
+      const brandsMap = new Map();
+      if (brandIds.size > 0) {
+        const brandIdsArray = Array.from(brandIds);
+        for (let i = 0; i < brandIdsArray.length; i += 30) {
+          const chunk = brandIdsArray.slice(i, i + 30);
+          const brandsQuery = query(collection(db, 'brands'), where('__name__', 'in', chunk));
+          const brandsSnapshot = await getDocs(brandsQuery);
+          brandsSnapshot.docs.forEach((doc) => {
+            brandsMap.set(doc.id, doc.data().companyName || 'Unknown Brand');
+          });
+        }
+      }
 
       // Fetch all submissions
       const submissionsQuery = query(collection(db, 'submissions'), orderBy('createdAt', 'desc'));
@@ -89,10 +110,13 @@ export default function CreatorScout() {
         const creatorId = data.creatorId;
 
         if (creatorId) {
+          const gigInfo = gigsMap.get(data.gigId);
+          const brandName = gigInfo?.brandId ? brandsMap.get(gigInfo.brandId) : null;
           const submission: Submission = {
             id: doc.id,
             gigId: data.gigId,
-            jobTitle: gigsMap.get(data.gigId),
+            jobTitle: gigInfo?.title,
+            companyName: brandName,
             status: data.status,
             aiEvaluation: data.aiEvaluation,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
@@ -211,8 +235,30 @@ export default function CreatorScout() {
   const uniqueLocations = getUniqueLocations(creators);
   const allInterests = getAllInterests(creators);
 
-  // Filter and sort creators
-  const filteredCreators = filterCreators(creators as any, filters) as CreatorWithSubmissions[];
+  // Filter creators by search and other filters
+  const filteredCreators = useMemo(() => {
+    let result = filterCreators(creators as any, filters) as CreatorWithSubmissions[];
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter((creator) => 
+        creator.username?.toLowerCase().includes(query) ||
+        creator.bio?.toLowerCase().includes(query) ||
+        creator.location?.toLowerCase().includes(query)
+      );
+    }
+    
+    return result;
+  }, [creators, filters, searchQuery]);
+
+  const hasActiveFilters = 
+    filters.locationFilter ||
+    filters.interestFilter.length > 0 ||
+    filters.socialFilter ||
+    filters.followingCountFilter.platform ||
+    filters.sortBy !== 'username' ||
+    searchQuery.trim();
 
   if (loading) {
     return (
@@ -224,10 +270,36 @@ export default function CreatorScout() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto py-4">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold mb-2">Scout Creators</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Scout Creators</h1>
+
+        {/* Search & Filter Bar */}
+        <div className="flex gap-3 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search by username, bio, or location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-white"
+            />
+          </div>
+          <button
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+              filtersOpen || hasActiveFilters
+                ? 'bg-orange-50 border-orange-300 text-orange-700'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            <span className="text-sm font-medium">Filters</span>
+            {hasActiveFilters && (
+              <span className="w-2 h-2 rounded-full bg-orange-500" />
+            )}
+          </button>
         </div>
 
         {/* Filters - Collapsible */}
@@ -239,6 +311,28 @@ export default function CreatorScout() {
           uniqueLocations={uniqueLocations}
           allInterests={allInterests}
         />
+
+        {/* Results count */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-500">
+            {hasActiveFilters ? (
+              <>Showing <span className="font-semibold text-gray-900">{filteredCreators.length}</span> of {creators.length} creators</>
+            ) : (
+              <><span className="font-semibold text-gray-900">{creators.length}</span> creators</>
+            )}
+          </p>
+          {hasActiveFilters && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setFilters(DEFAULT_FILTERS);
+              }}
+              className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
 
         {/* Creators List */}
         {filteredCreators.length > 0 ? (
@@ -254,9 +348,28 @@ export default function CreatorScout() {
             ))}
           </div>
         ) : (
-          <Card>
+          <Card className="border-dashed">
             <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">No creators found.</p>
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                <Users className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-1">No creators found</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                {hasActiveFilters 
+                  ? "Try adjusting your filters or search query"
+                  : "No creators have signed up yet"}
+              </p>
+              {hasActiveFilters && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setFilters(DEFAULT_FILTERS);
+                  }}
+                  className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                >
+                  Clear all filters
+                </button>
+              )}
             </CardContent>
           </Card>
         )}

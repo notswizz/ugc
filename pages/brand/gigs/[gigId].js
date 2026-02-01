@@ -329,71 +329,56 @@ export default function BrandGigDetail() {
           </CardHeader>
           <CardContent>
             {submissions.length > 0 ? (
-              <div className="space-y-3">
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {submissions.map((submission) => (
-                  <div key={submission.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium text-sm">{submission.creatorName}</h4>
-                          <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
-                            submission.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            submission.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            submission.status === 'submitted' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {submission.status === 'submitted' ? 'Pending' : 
-                             submission.status === 'approved' ? 'Accepted' :
-                             submission.status === 'rejected' ? 'Rejected' : submission.status}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          {submission.createdAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Recently'}
-                        </p>
-                      </div>
+                  <div key={submission.id} className="flex-shrink-0 w-56 border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
+                        submission.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        submission.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        submission.status === 'submitted' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {submission.status === 'submitted' ? 'Pending' : 
+                         submission.status === 'approved' ? 'Accepted' :
+                         submission.status === 'rejected' ? 'Rejected' : submission.status}
+                      </span>
                     </div>
+                    <h4 className="font-medium text-sm truncate">{submission.creatorName}</h4>
+                    <p className="text-xs text-gray-500 mb-2">
+                      {submission.createdAt?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) || 'Recently'}
+                    </p>
                     
                     {submission.contentLink && (
-                      <div className="mb-2">
-                        <a
-                          href={submission.contentLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-orange-600 hover:underline text-xs inline-flex items-center gap-1"
-                        >
-                          <span>View Content</span>
-                          <span>→</span>
-                        </a>
-                      </div>
+                      <a
+                        href={submission.contentLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-orange-600 hover:underline text-xs inline-flex items-center gap-1 mb-2"
+                      >
+                        <span>View Content →</span>
+                      </a>
                     )}
 
                     {/* AI Evaluation Section - Compact */}
                     {submission.aiEvaluation ? (
-                      <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-100">
-                        <div className="flex items-center justify-between mb-1">
+                      <div className="p-2 bg-blue-50 rounded border border-blue-100">
+                        <div className="flex items-center justify-between">
                           <span className="text-xs font-medium text-blue-900">AI Score</span>
                           <span className="text-sm font-bold text-blue-600">
                             {submission.aiEvaluation.qualityScore || 0}/100
                           </span>
                         </div>
-                        {submission.aiEvaluation.compliancePassed !== undefined && (
-                          <div className="text-[10px] text-gray-600">
-                            {submission.aiEvaluation.compliancePassed ? '✅ Passed' : '❌ Failed'}
-                          </div>
-                        )}
                       </div>
                     ) : (
-                      <div className="mt-2 flex items-center justify-between">
-                        <div className="text-xs text-gray-500">
-                          AI evaluation pending...
-                        </div>
+                      <div className="flex items-center justify-between">
                         {(submission.status === 'submitted' || !submission.status) && (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleEvaluateSubmission(submission.id)}
                             disabled={evaluatingSubmissions.has(submission.id)}
-                            className="text-xs h-6 px-2"
+                            className="text-xs h-6 px-2 w-full"
                           >
                             {evaluatingSubmissions.has(submission.id) ? 'Evaluating...' : '🤖 Run AI'}
                           </Button>

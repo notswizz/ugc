@@ -18,6 +18,7 @@ export function useDashboardData(user: any, appUser: any, creatorData: any) {
     completedGigs: 0,
     submittedGigs: 0,
     pendingEarnings: 0,
+    avgScore: 0,
   });
 
   // Fetch balance from creator data
@@ -66,6 +67,14 @@ export function useDashboardData(user: any, appUser: any, creatorData: any) {
       ).length;
       const submittedGigs = submissions.length;
 
+      // Calculate average AI quality score
+      const scores = submissions
+        .filter((sub: any) => sub.aiEvaluation?.qualityScore)
+        .map((sub: any) => sub.aiEvaluation.qualityScore);
+      const avgScore = scores.length > 0 
+        ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) 
+        : 0;
+
       // Calculate pending earnings from submitted gigs
       const pendingSubmissionsList = submissions.filter(
         (sub: any) => sub.status === 'submitted' || sub.status === 'needs_changes'
@@ -94,6 +103,7 @@ export function useDashboardData(user: any, appUser: any, creatorData: any) {
         completedGigs,
         submittedGigs,
         pendingEarnings,
+        avgScore,
       });
     } catch (error) {
       logger.error('Error fetching stats', error);

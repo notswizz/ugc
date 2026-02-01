@@ -26,13 +26,11 @@ import {
   Loader2,
   ShieldCheck,
   Briefcase,
-  TrendingUp,
   ChevronRight,
-  Sparkles,
   Star,
   Link2,
   CheckCircle2,
-  DollarSign,
+  Circle,
 } from 'lucide-react';
 import { useCreatorData } from '@/components/dashboard/useCreatorData';
 import { useDashboardData } from '@/components/dashboard/useDashboardData';
@@ -42,13 +40,11 @@ import VerifyModal from '@/components/dashboard/VerifyModal';
 import SettingsModal from '@/components/dashboard/SettingsModal';
 import CommunityModal from '@/components/dashboard/CommunityModal';
 import { calculateTrustScore } from '@/lib/trustScore/calculator';
-import { canUseInstantWithdrawal, INSTANT_WITHDRAWAL_TRUST_SCORE_THRESHOLD } from '@/lib/payments/withdrawal';
+import { canUseInstantWithdrawal } from '@/lib/payments/withdrawal';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/formatters';
 import { logger } from '@/lib/utils/logger';
 
-const formatCurrency = (cents: number) => {
-  return formatCurrencyUtil(cents);
-};
+const formatCurrency = (cents: number) => formatCurrencyUtil(cents);
 
 export default function CreatorDashboard() {
   const { user, appUser } = useAuth();
@@ -72,7 +68,6 @@ export default function CreatorDashboard() {
   useEffect(() => {
     const checkStripeStatus = async () => {
       if (!user?.uid) return;
-
       try {
         const response = await fetch('/api/stripe/check-status', {
           method: 'POST',
@@ -80,7 +75,6 @@ export default function CreatorDashboard() {
           body: JSON.stringify({ userId: user.uid }),
         });
         const data = await response.json();
-
         if (data.success) {
           if (data.status?.onboardingComplete) {
             toast.success('Stripe Connect setup complete!');
@@ -122,55 +116,43 @@ export default function CreatorDashboard() {
   }, [appUser, router]);
 
   if (!user || !appUser) {
-    return (
-      <Layout>
-        <LoadingSpinner />
-      </Layout>
-    );
+    return <Layout><LoadingSpinner /></Layout>;
   }
 
   if (appUser.role !== 'creator') {
     return null;
   }
 
-  const rep = creatorData?.rep || 0;
-  // Rep level is now shown in header
   const trustScore = creatorData ? calculateTrustScore(creatorData) : 20;
   const balanceCents = balance !== null ? Math.round(balance * 100) : 0;
   const balanceDollars = balance || 0;
   const canUseInstant = canUseInstantWithdrawal(trustScore);
 
-
-  // Count linked socials
+  // Profile completion
   const socials = creatorData?.socials || {};
   const linkedSocials = [socials.tiktok, socials.instagram, socials.youtube, socials.x].filter(Boolean).length;
+  const hasPayment = !!creatorData?.stripe?.onboardingComplete;
+  const hasIdentity = !!creatorData?.stripe?.identityVerified;
+  const hasPhone = !!creatorData?.phoneVerified;
+  
+  const profileSteps = [
+    { id: 'socials', label: 'Link socials', done: linkedSocials >= 2, action: () => setProfileModalOpen(true) },
+    { id: 'payment', label: 'Add payment', done: hasPayment, action: () => setVerifyModalOpen(true) },
+    { id: 'identity', label: 'Verify identity', done: hasIdentity, action: () => setVerifyModalOpen(true) },
+  ];
+  const completedSteps = profileSteps.filter(s => s.done).length;
+  const profileComplete = completedSteps === profileSteps.length;
 
-  // Count verifications
-  const verifications = [
-    creatorData?.stripe?.onboardingComplete,
-    creatorData?.stripe?.identityVerified,
-    creatorData?.phoneVerified,
-  ].filter(Boolean).length;
-
-  // Calculate pending earnings (from submitted gigs not yet approved)
   const pendingEarnings = stats?.pendingEarnings || 0;
+  const totalEarnings = stats?.totalEarnings || 0;
+  const completedGigs = stats?.acceptedGigs || 0;
 
   const handleWithdraw = async () => {
     if (!user) return;
-
     const amount = parseFloat(withdrawAmount);
-    if (!amount || amount <= 0) {
-      toast.error('Enter a valid amount');
-      return;
-    }
-    if (amount < 1) {
-      toast.error('Minimum withdrawal is $1.00');
-      return;
-    }
-    if (amount > balanceDollars) {
-      toast.error(`Insufficient balance`);
-      return;
-    }
+    if (!amount || amount <= 0) { toast.error('Enter a valid amount'); return; }
+    if (amount < 1) { toast.error('Minimum withdrawal is $1.00'); return; }
+    if (amount > balanceDollars) { toast.error('Insufficient balance'); return; }
 
     setWithdrawing(true);
     try {
@@ -179,10 +161,8 @@ export default function CreatorDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, userId: user.uid }),
       });
-
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Withdrawal failed');
-
       toast.success(data.message || 'Withdrawal initiated!');
       setWithdrawModalOpen(false);
       setWithdrawAmount('');
@@ -196,235 +176,193 @@ export default function CreatorDashboard() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-b from-zinc-100 to-zinc-50 -mt-4">
-        <div className="max-w-lg mx-auto px-4 pb-6 space-y-5">
-
+      <div className="min-h-screen -mt-4">
+        <div className="max-w-lg mx-auto px-4 pb-6 space-y-4">
           
-          {/* Balance Card - Premium Design */}
-          <div className="relative overflow-hidden rounded-2xl">
-            {/* Background with mesh gradient effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-violet-500/10 via-transparent to-transparent" />
-
-            <div className="relative p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-zinc-500 text-[10px] font-semibold uppercase tracking-widest mb-1">Available Balance</p>
-                  {loadingBalance ? (
-                    <div className="h-9 w-32 bg-zinc-700/50 animate-pulse rounded-lg" />
-                  ) : (
-                    <p className="text-3xl font-bold text-white tracking-tight">
-                      {formatCurrency(balanceCents)}
-                    </p>
-                  )}
-                </div>
-                {balanceCents > 0 && (
-                  <button
-                    onClick={() => setWithdrawModalOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white text-zinc-900 rounded-xl font-semibold text-xs hover:bg-zinc-100 transition-all shadow-lg shadow-black/20"
-                  >
-                    <ArrowDownToLine className="w-3.5 h-3.5" />
-                    Withdraw
-                  </button>
+          {/* Balance Hero Card */}
+          <div className="relative overflow-hidden rounded-2xl bg-zinc-900">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/15 via-transparent to-transparent" />
+            
+            <div className="relative p-5">
+              {/* Balance */}
+              <div className="text-center mb-3">
+                <p className="text-zinc-500 text-[10px] font-medium uppercase tracking-wider mb-1">Available Balance</p>
+                {loadingBalance ? (
+                  <div className="h-12 w-36 mx-auto bg-zinc-800 animate-pulse rounded-lg" />
+                ) : (
+                  <p className="text-4xl font-black text-white tracking-tight">
+                    {formatCurrency(balanceCents)}
+                  </p>
                 )}
               </div>
 
-              {balanceCents === 0 ? (
+              {/* Pending row */}
+              {pendingEarnings > 0 && (
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Clock className="w-3 h-3 text-amber-400" />
+                  <span className="text-xs text-zinc-400">
+                    <span className="text-amber-400 font-semibold">{formatCurrency(Math.round(pendingEarnings * 100))}</span> pending
+                  </span>
+                </div>
+              )}
+
+              {/* Instant badge */}
+              <div className="flex items-center justify-center gap-1.5 mb-4">
+                {canUseInstant ? (
+                  <>
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-xs font-medium text-amber-400">Instant withdrawals unlocked</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                    <span className="text-xs text-zinc-500">ACH 2-3 days • Verify for instant</span>
+                  </>
+                )}
+              </div>
+
+              {/* Withdraw Button */}
+              {balanceCents > 0 ? (
+                <button
+                  onClick={() => setWithdrawModalOpen(true)}
+                  className="w-full py-3 bg-white text-zinc-900 rounded-xl font-semibold text-sm hover:bg-zinc-100 transition-all flex items-center justify-center gap-2"
+                >
+                  <ArrowDownToLine className="w-4 h-4" />
+                  Withdraw
+                </button>
+              ) : (
                 <Link href="/creator/gigs" className="block">
-                  <div className="flex items-center justify-between p-3 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                        <Briefcase className="w-4 h-4 text-white" />
-                      </div>
-                      <span className="text-sm font-medium text-white">Find your first gig</span>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                  <div className="w-full py-3 bg-emerald-500 text-white rounded-xl font-semibold text-sm hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
+                    <Briefcase className="w-4 h-4" />
+                    Find Your First Gig
                   </div>
                 </Link>
-              ) : (
-                <div className="flex items-center gap-2 px-3 py-2 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                  {canUseInstant ? (
-                    <>
-                      <div className="w-5 h-5 rounded-md bg-amber-500/20 flex items-center justify-center">
-                        <Zap className="w-3 h-3 text-amber-400" />
-                      </div>
-                      <span className="text-xs font-medium text-zinc-300">Instant payout enabled</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center">
-                        <Clock className="w-3 h-3 text-blue-400" />
-                      </div>
-                      <span className="text-xs text-zinc-400">ACH (2-3 days) • Verify for instant</span>
-                    </>
-                  )}
-                </div>
               )}
             </div>
           </div>
 
-          {/* Stats Row - Glass Cards */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-emerald-100 to-transparent rounded-bl-full" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mb-3 shadow-lg shadow-emerald-500/20">
-                  <TrendingUp className="w-5 h-5 text-white" />
-                </div>
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Earned</p>
-                {loadingStats ? (
-                  <div className="h-8 w-24 bg-zinc-100 animate-pulse rounded" />
-                ) : (
-                  <p className="text-2xl font-black text-zinc-900">
-                    {formatCurrency(Math.round((stats.totalEarnings || 0) * 100))}
-                  </p>
-                )}
-              </div>
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-white rounded-xl border border-zinc-200 p-3 text-center">
+              <p className="text-lg font-bold text-zinc-900">{completedGigs}</p>
+              <p className="text-[10px] text-zinc-500">Completed</p>
             </div>
-
-            <div className="relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-blue-100 to-transparent rounded-bl-full" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center mb-3 shadow-lg shadow-blue-500/20">
-                  <Briefcase className="w-5 h-5 text-white" />
-                </div>
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Completed</p>
-                {loadingStats ? (
-                  <div className="h-8 w-12 bg-zinc-100 animate-pulse rounded" />
-                ) : (
-                  <p className="text-2xl font-black text-zinc-900">{stats.acceptedGigs || 0}</p>
-                )}
-              </div>
+            <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-3 text-center">
+              <p className="text-lg font-bold text-emerald-600">{formatCurrency(Math.round(totalEarnings * 100))}</p>
+              <p className="text-[10px] text-emerald-500 font-medium">Earned</p>
+            </div>
+            <div className="bg-white rounded-xl border border-zinc-200 p-3 text-center">
+              <p className="text-lg font-bold text-zinc-900">{stats?.avgScore ? `${stats.avgScore}` : '—'}</p>
+              <p className="text-[10px] text-zinc-500">Avg Score</p>
             </div>
           </div>
 
-          {/* Pending Earnings Card */}
-          {pendingEarnings > 0 && (
-            <div className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-5 shadow-sm">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-amber-100 to-transparent rounded-bl-full" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                    <Clock className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-0.5">Pending</p>
-                    <p className="text-2xl font-black text-amber-900">
-                      {formatCurrency(Math.round(pendingEarnings * 100))}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-amber-700">Under Review</p>
-                  <p className="text-[10px] text-amber-600/70">Waiting for brand approval</p>
-                </div>
+          {/* Profile Completion Card */}
+          {!profileComplete && (
+            <div className="bg-white rounded-2xl border border-zinc-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-zinc-900">Complete Your Profile</h3>
+                <span className="text-xs font-semibold text-zinc-500">{completedSteps}/{profileSteps.length}</span>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="w-full h-2 bg-zinc-100 rounded-full mb-4 overflow-hidden">
+                <div 
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                  style={{ width: `${(completedSteps / profileSteps.length) * 100}%` }}
+                />
+              </div>
+
+              {/* Steps */}
+              <div className="space-y-2">
+                {profileSteps.map((step) => (
+                  <button
+                    key={step.id}
+                    onClick={step.action}
+                    disabled={step.done}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                      step.done 
+                        ? 'bg-emerald-50 cursor-default' 
+                        : 'bg-zinc-50 hover:bg-zinc-100 cursor-pointer'
+                    }`}
+                  >
+                    {step.done ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-zinc-300" />
+                    )}
+                    <span className={`text-sm font-medium ${step.done ? 'text-emerald-700' : 'text-zinc-700'}`}>
+                      {step.label}
+                    </span>
+                    {!step.done && (
+                      <ChevronRight className="w-4 h-4 text-zinc-400 ml-auto" />
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Quick Actions - Enhanced Cards */}
-          <div className="space-y-3">
-            {/* Link Socials */}
-            <button
-              onClick={() => setProfileModalOpen(true)}
-              className="w-full group relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 hover:border-orange-200 transition-all shadow-sm hover:shadow-lg hover:shadow-orange-500/10"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative flex items-center justify-between p-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 via-pink-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/25 group-hover:shadow-orange-500/40 group-hover:scale-105 transition-all">
-                    <Link2 className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-base font-bold text-zinc-900">Link Socials</p>
-                    <p className="text-xs text-zinc-500">{linkedSocials}/4 connected</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {linkedSocials === 4 && (
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    </div>
-                  )}
-                  <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
-                </div>
-              </div>
-            </button>
-
-            {/* Verify Account */}
-            <button
-              onClick={() => setVerifyModalOpen(true)}
-              className="w-full group relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 hover:border-emerald-200 transition-all shadow-sm hover:shadow-lg hover:shadow-emerald-500/10"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative flex items-center justify-between p-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:shadow-emerald-500/40 group-hover:scale-105 transition-all">
-                    <ShieldCheck className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-base font-bold text-zinc-900">Verify Account</p>
-                    <p className="text-xs text-zinc-500">{verifications}/3 verified</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {verifications === 3 && (
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    </div>
-                  )}
-                  <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
-                </div>
-              </div>
-            </button>
-
-            {/* Community */}
-            {creatorData?.communityId && (
+          {/* Quick Actions (shown when profile is complete) */}
+          {profileComplete && (
+            <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => setCommunityModalOpen(true)}
-                className="w-full group relative overflow-hidden bg-white rounded-2xl border border-zinc-200/80 hover:border-amber-200 transition-all shadow-sm hover:shadow-lg hover:shadow-amber-500/10"
+                onClick={() => setProfileModalOpen(true)}
+                className="bg-white rounded-xl border border-zinc-200 p-3 flex items-center gap-3 hover:border-zinc-300 transition-all"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-amber-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative flex items-center justify-between p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:shadow-amber-500/40 group-hover:scale-105 transition-all">
-                      <Trophy className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-base font-bold text-zinc-900">Community</p>
-                      <p className="text-xs text-zinc-500">{communityName || 'View leaderboard'}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <Link2 className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-zinc-900 text-sm">Socials</p>
+                  <p className="text-[10px] text-zinc-500">{linkedSocials}/4 linked</p>
                 </div>
               </button>
-            )}
-          </div>
-
-          {/* Find Gigs CTA - Enhanced */}
-          <Link href="/creator/gigs" className="block group">
-            <div className="relative overflow-hidden rounded-2xl">
-              {/* Animated gradient background */}
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 bg-[length:200%_100%] group-hover:animate-[shimmer_2s_linear_infinite]" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-
-              {/* Sparkle decorations */}
-              <div className="absolute top-3 right-12 w-2 h-2 bg-white/40 rounded-full" />
-              <div className="absolute top-6 right-6 w-1.5 h-1.5 bg-white/30 rounded-full" />
-              <div className="absolute bottom-4 right-20 w-1 h-1 bg-white/40 rounded-full" />
-
-              <div className="relative p-5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:rotate-3 transition-transform">
-                    <Sparkles className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-white font-bold text-lg">Browse Gigs</p>
-                    <p className="text-emerald-100 text-sm">Find your next opportunity</p>
-                  </div>
+              <button
+                onClick={() => setVerifyModalOpen(true)}
+                className="bg-white rounded-xl border border-zinc-200 p-3 flex items-center gap-3 hover:border-zinc-300 transition-all"
+              >
+                <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5 text-violet-600" />
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:translate-x-1 transition-transform">
+                <div className="text-left">
+                  <p className="font-semibold text-zinc-900 text-sm">Verified</p>
+                  <p className="text-[10px] text-violet-600">Complete ✓</p>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Community (if enrolled) */}
+          {creatorData?.communityId && (
+            <button
+              onClick={() => setCommunityModalOpen(true)}
+              className="w-full bg-white rounded-2xl border border-zinc-200 p-4 flex items-center gap-4 hover:border-zinc-300 transition-all"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-bold text-zinc-900">{communityName || 'Community'}</p>
+                <p className="text-xs text-zinc-500">View leaderboard</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-zinc-400" />
+            </button>
+          )}
+
+          {/* Browse Gigs CTA */}
+          <Link href="/creator/gigs" className="block">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 p-5">
+              <div className="absolute top-2 right-8 w-2 h-2 bg-white/30 rounded-full" />
+              <div className="absolute top-5 right-4 w-1.5 h-1.5 bg-white/20 rounded-full" />
+              <div className="absolute bottom-3 right-16 w-1 h-1 bg-white/30 rounded-full" />
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white font-bold text-lg">Browse Gigs</p>
+                  <p className="text-orange-100 text-sm">Find your next opportunity</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                   <ArrowRight className="w-5 h-5 text-white" />
                 </div>
               </div>
@@ -441,7 +379,6 @@ export default function CreatorDashboard() {
         userId={user?.uid}
         onRefresh={refetchCreatorData}
       />
-
       <VerifyModal
         isOpen={verifyModalOpen}
         onClose={() => setVerifyModalOpen(false)}
@@ -449,7 +386,6 @@ export default function CreatorDashboard() {
         userId={user?.uid}
         onRefresh={refetchCreatorData}
       />
-
       <SettingsModal
         isOpen={settingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
@@ -457,7 +393,6 @@ export default function CreatorDashboard() {
         userId={user?.uid}
         onRefresh={refetchCreatorData}
       />
-
       <CommunityModal
         isOpen={communityModalOpen}
         onClose={() => setCommunityModalOpen(false)}
@@ -476,9 +411,9 @@ export default function CreatorDashboard() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             {!creatorData?.stripe?.connectAccountId ? (
-              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <p className="text-sm font-semibold text-blue-900 mb-2">Payment Setup Required</p>
-                <p className="text-xs text-blue-700 mb-3">Set up your payment method to withdraw funds.</p>
+              <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                <p className="text-sm font-semibold text-zinc-900 mb-2">Payment Setup Required</p>
+                <p className="text-xs text-zinc-600 mb-3">Set up your payment method to withdraw.</p>
                 <Button
                   onClick={async () => {
                     try {
@@ -488,18 +423,15 @@ export default function CreatorDashboard() {
                         body: JSON.stringify({ userId: user?.uid }),
                       });
                       const data = await response.json();
-                      if (data.url) {
-                        window.location.href = data.url;
-                      } else {
-                        toast.error('Failed to create setup link');
-                      }
+                      if (data.url) window.location.href = data.url;
+                      else toast.error('Failed to create setup link');
                     } catch {
                       toast.error('Failed to start setup');
                     }
                   }}
                   className="w-full"
                 >
-                  Set Up Payment Method
+                  Set Up Payment
                 </Button>
               </div>
             ) : (
@@ -520,14 +452,14 @@ export default function CreatorDashboard() {
                     <button
                       type="button"
                       onClick={() => setWithdrawAmount((balanceDollars * 0.5).toFixed(2))}
-                      className="px-3 py-1 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200"
+                      className="px-3 py-1.5 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200"
                     >
                       50%
                     </button>
                     <button
                       type="button"
                       onClick={() => setWithdrawAmount(balanceDollars.toFixed(2))}
-                      className="px-3 py-1 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200"
+                      className="px-3 py-1.5 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200"
                     >
                       Max
                     </button>
@@ -538,19 +470,17 @@ export default function CreatorDashboard() {
                     {canUseInstant ? (
                       <>
                         <Zap className="w-4 h-4 text-amber-500" />
-                        <span className="text-sm font-semibold text-zinc-900">Instant Withdrawal</span>
+                        <span className="text-sm font-semibold text-zinc-900">Instant</span>
                       </>
                     ) : (
                       <>
                         <Clock className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm font-semibold text-zinc-900">ACH Withdrawal</span>
+                        <span className="text-sm font-semibold text-zinc-900">ACH Transfer</span>
                       </>
                     )}
                   </div>
                   <p className="text-xs text-zinc-600">
-                    {canUseInstant
-                      ? 'Arrives within minutes to your debit card.'
-                      : 'Arrives in 2-3 business days. Verify identity for instant.'}
+                    {canUseInstant ? 'Arrives within minutes.' : 'Arrives in 2-3 business days.'}
                   </p>
                 </div>
               </>
@@ -565,15 +495,9 @@ export default function CreatorDashboard() {
               disabled={withdrawing || !withdrawAmount || parseFloat(withdrawAmount) <= 0 || !creatorData?.stripe?.connectAccountId}
             >
               {withdrawing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Processing...
-                </>
+                <><Loader2 className="w-4 h-4 animate-spin mr-2" />Processing...</>
               ) : canUseInstant ? (
-                <>
-                  <Zap className="w-4 h-4 mr-2" />
-                  Withdraw Instantly
-                </>
+                <><Zap className="w-4 h-4 mr-2" />Withdraw Instantly</>
               ) : (
                 'Withdraw'
               )}
@@ -581,13 +505,6 @@ export default function CreatorDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <style jsx>{`
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
     </Layout>
   );
 }

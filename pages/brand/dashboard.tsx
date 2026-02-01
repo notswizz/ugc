@@ -11,7 +11,6 @@ import LoadingSpinner from '@/components/ui/loading-spinner';
 import { formatCurrencyFromDollars } from '@/lib/utils/formatters';
 import { logger } from '@/lib/utils/logger';
 import { isValidAmount } from '@/lib/utils/validation';
-import { DollarSign, Users, Clock, TrendingUp, Briefcase, CheckCircle2 } from 'lucide-react';
 
 export default function BrandDashboard() {
   const { user, appUser } = useAuth();
@@ -245,12 +244,8 @@ export default function BrandDashboard() {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{companyName || 'Giglet'}</h1>
-          {companyName && (
-            <p className="text-sm text-gray-500">Welcome back! Here's what's happening with your gigs.</p>
-          )}
-        </div>
+        {/* Company Name Header */}
+        <h1 className="text-2xl font-bold mb-6">{companyName || 'Dashboard'}</h1>
 
         {/* Balance Display */}
         <Card className="mb-6 border-blue-200 bg-blue-50/50">
@@ -310,69 +305,6 @@ export default function BrandDashboard() {
             )}
           </CardContent>
         </Card>
-
-        {/* Analytics Cards */}
-        {recentGigs.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="border-zinc-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-zinc-500">Total Spent</p>
-                    <p className="text-lg font-bold text-zinc-900">
-                      {formatCurrencyFromDollars(analytics.totalSpent)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-zinc-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-zinc-500">Creators</p>
-                    <p className="text-lg font-bold text-zinc-900">{analytics.totalCreators}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-zinc-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <Briefcase className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-zinc-500">Active Gigs</p>
-                    <p className="text-lg font-bold text-zinc-900">{analytics.activeGigs}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-zinc-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-zinc-500">Approval Rate</p>
-                    <p className="text-lg font-bold text-zinc-900">{analytics.completionRate.toFixed(0)}%</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         {/* Add Gig Button */}
         <div className="mb-8">

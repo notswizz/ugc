@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useCreatorData } from '@/components/dashboard/useCreatorData';
 import { getRepLevel } from '@/lib/rep/service';
-import { Home, Briefcase, UsersRound, Shield, Star, LogOut } from 'lucide-react';
+import { Home, Briefcase, UsersRound, Shield, Star, LogOut, DollarSign } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -31,56 +31,82 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 flex justify-center">
       <div className="w-full max-w-[428px] bg-white h-screen shadow-2xl flex flex-col overflow-hidden relative">
         {user && (
-          <header className="flex-shrink-0 z-50 w-full bg-white">
+          <header className="flex-shrink-0 z-50 w-full bg-gradient-to-r from-white via-orange-50/30 to-white border-b border-zinc-100/80 shadow-sm">
             <div className="px-4 py-3">
-              <div className="flex items-center justify-center gap-3">
-                <Link href={getDashboardPath()} className="hover:opacity-80 transition-opacity duration-200">
-                  <img
-                    src="/logo1.png"
-                    alt="Giglet Logo"
-                    className="h-9 w-auto"
-                  />
+              <div className="flex items-center justify-between">
+                {/* Logo + Brand */}
+                <Link href={getDashboardPath()} className="flex items-center gap-2.5 group">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-red-400 rounded-xl blur-lg opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+                    <img
+                      src="/logo1.png"
+                      alt="Giglet Logo"
+                      className="h-10 w-auto relative z-10 drop-shadow-sm"
+                    />
+                  </div>
                 </Link>
 
+                {/* Right Section */}
                 <div className="flex items-center gap-2">
                   {/* Rep Badge for Creators */}
                   {appUser?.role === 'creator' && creatorData && (() => {
                     const rep = creatorData.rep || 0;
                     const { level, title: levelLabel } = getRepLevel(rep);
                     return (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-violet-600 to-purple-600 rounded-xl">
-                        <div className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center">
-                          <span className="text-white text-[10px] font-bold">{level}</span>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 rounded-2xl shadow-lg shadow-purple-500/20">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/30">
+                            <span className="text-white text-xs font-black">{level}</span>
+                          </div>
+                          <span className="text-white text-xs font-bold tracking-tight">{levelLabel}</span>
                         </div>
-                        <span className="text-white text-xs font-semibold">{levelLabel}</span>
-                        <div className="w-px h-3 bg-white/30" />
-                        <Star className="w-3 h-3 text-amber-300" />
-                        <span className="text-violet-200 text-xs font-medium">{rep.toLocaleString()}</span>
+                        <div className="w-px h-4 bg-white/20" />
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                          <span className="text-white/90 text-xs font-semibold">{rep.toLocaleString()}</span>
+                        </div>
                       </div>
                     );
                   })()}
+                  
                   {/* Username Badge for Creators - Opens Settings */}
                   {appUser?.role === 'creator' && creatorData?.username && (
                     <button
                       onClick={() => router.push('/creator/dashboard?settings=true')}
-                      className="relative p-[2px] rounded-xl bg-gradient-to-r from-orange-400 via-pink-400 to-violet-400 hover:shadow-lg hover:shadow-orange-500/20 transition-shadow duration-200"
+                      className="relative group"
                       aria-label="Open settings"
                     >
-                      <div className="px-3 py-1.5 bg-gradient-to-r from-orange-50 via-pink-50 to-violet-50 rounded-[10px]">
-                        <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-pink-500 to-violet-500">
-                          @{creatorData.username}
-                        </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-pink-400 to-violet-400 rounded-2xl blur-md opacity-40 group-hover:opacity-60 transition-opacity duration-200" />
+                      <div className="relative p-[2px] rounded-2xl bg-gradient-to-r from-orange-400 via-pink-400 to-violet-400">
+                        <div className="px-4 py-2 bg-white rounded-[14px] flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 animate-pulse" />
+                          <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-pink-500 to-violet-500">
+                            @{creatorData.username}
+                          </span>
+                        </div>
                       </div>
                     </button>
                   )}
+                  
+                  {/* Admin Button */}
                   {appUser?.email === '7jackdsmith@gmail.com' && (
                     <Link href="/admin/dashboard">
-                      <button className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center hover:bg-violet-200 transition-colors duration-200" aria-label="Admin dashboard">
-                        <Shield className="w-4 h-4 text-violet-600" />
+                      <button className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center hover:from-violet-200 hover:to-purple-200 transition-all duration-200 shadow-sm hover:shadow-md" aria-label="Admin dashboard">
+                        <Shield className="w-4.5 h-4.5 text-violet-600" />
                       </button>
                     </Link>
                   )}
-                  {/* Brands can logout from their settings */}
+                  
+                  {/* Logout Button for Brands */}
+                  {appUser?.role === 'brand' && (
+                    <button
+                      onClick={handleLogout}
+                      className="w-10 h-10 rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-200 flex items-center justify-center hover:from-zinc-200 hover:to-zinc-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                      aria-label="Logout"
+                    >
+                      <LogOut className="w-4.5 h-4.5 text-zinc-600" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
